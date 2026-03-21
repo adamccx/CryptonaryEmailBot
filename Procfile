@@ -1,1 +1,1 @@
-worker: python cryptonary_bot.py
+worker: python3 cryptonary_bot.py
