@@ -140,7 +140,23 @@ def claude(prompt, max_tokens=900):
         return "".join(c.get("text", "") for c in data["content"])
 
 def clean_json(s):
-    return s.replace("```json", "").replace("```", "").strip()
+    s = s.replace("```json", "").replace("```", "").strip()
+    # Find the JSON array or object and extract it cleanly
+    start = -1
+    for i, c in enumerate(s):
+        if c in ('[', '{'):
+            start = i
+            break
+    if start >= 0:
+        s = s[start:]
+    end = -1
+    for i in range(len(s)-1, -1, -1):
+        if s[i] in (']', '}'):
+            end = i
+            break
+    if end >= 0:
+        s = s[:end+1]
+    return s
 
 def extract_text(v):
     if isinstance(v, str): return v
