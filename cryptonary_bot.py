@@ -1704,7 +1704,7 @@ def handle_callback(cb):
 
 def poll():
     offset = 0
-    print("Cryptonary Bot V5 running.")
+    print("Cryptonary Bot V9 running.")
     while True:
         try:
             url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=30&offset=" + str(offset)
@@ -1726,13 +1726,6 @@ def poll():
         except Exception as e:
             print("Poll error:", e)
             time.sleep(5)
-
-if __name__ == "__main__":
-    if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
-        print("ERROR: Set ANTHROPIC_KEY environment variable.")
-    else:
-        poll()
-
 
 # ── MAIN MENU ─────────────────────────────────────────────────────
 
@@ -2199,8 +2192,6 @@ def run_ad_analysis(chat_id):
 
 # ── PERSISTENCE ───────────────────────────────────────────────────
 
-import json as _json
-
 ANALYTICS_FILE = "analytics_data.json"
 
 def save_all_data():
@@ -2209,7 +2200,7 @@ def save_all_data():
                 "ad_log": {str(k): v for k, v in ad_log.items()},
                 "performance_data": {str(k): v for k, v in performance_data.items()}}
         with open(ANALYTICS_FILE, "w") as f:
-            _json.dump(data, f)
+            json.dump(data, f)
     except Exception as e:
         print("Analytics save error:", e)
 
@@ -2217,7 +2208,7 @@ def load_all_data():
     global email_log, ad_log, performance_data
     try:
         with open(ANALYTICS_FILE, "r") as f:
-            data = _json.load(f)
+            data = json.load(f)
         email_log = {int(k): v for k, v in data.get("email_log", {}).items()}
         ad_log = {int(k): v for k, v in data.get("ad_log", {}).items()}
         performance_data = {int(k): v for k, v in data.get("performance_data", {}).items()}
@@ -2226,3 +2217,8 @@ def load_all_data():
 
 load_all_data()
 
+if __name__ == "__main__":
+    if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
+        print("ERROR: Set ANTHROPIC_KEY environment variable.")
+    else:
+        poll()
