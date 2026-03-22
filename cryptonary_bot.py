@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V10
+Cryptonary Email Generator Bot - V9
 - Full feedback loop for emails and ads
 - Split test aggregation for emails
 - Video AIDA analytics + static ad analytics
@@ -381,6 +381,14 @@ def email_action_keyboard():
          {"text": "Tone", "callback_data": "tone_menu"},
          {"text": "Segments", "callback_data": "segments"}],
         [{"text": "Length", "callback_data": "length_email"}]
+    ]
+
+def ad_action_keyboard():
+    return [
+        [{"text": "Quick Edit", "callback_data": "ad_quick_edit"},
+         {"text": "Enhance", "callback_data": "ad_enhance"}],
+        [{"text": "Generate another set", "callback_data": "ads_again"},
+         {"text": "Mark Complete", "callback_data": "mark_complete"}]
     ]
 
 def social_action_keyboard():
@@ -1325,6 +1333,93 @@ def handle_message(msg):
         handle_ad_log_step(chat_id, text)
         return
 
+    if stage == "awaiting_ad_theme":
+        user_state[chat_id]["ad_theme"] = text
+        user_state[chat_id]["stage"] = "pick_ad_avatars"
+        show_avatar_menu(chat_id)
+        return
+
+    if stage == "awaiting_lp_context_text":
+        state["lp_context"] = text
+        generate_landing_page(chat_id)
+        return
+
+    if stage == "awaiting_lp_quick_edit":
+        instruction = text
+        lp_content = state.get("current_lp", "")
+        state["stage"] = "lp_ready"
+        send(chat_id, "Applying edit...")
+        try:
+            result = claude(
+                "Edit this Cryptonary landing page section. Instruction: " + instruction +
+                "\n\nApply BrandScript framework and copywriting principles. Keep all other sections intact. Only change what the instruction specifies.\n\nFULL PAGE:\n" + lp_content[:3000] +
+                "\n\nReturn only the edited section(s) as plain text.",
+                max_tokens=1500
+            )
+            send_plain(chat_id, result)
+            keyboard = [
+                [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
+                 {"text": "Regenerate section", "callback_data": "lp_regen"}],
+                [{"text": "Generate another page", "callback_data": "lp_again"},
+                 {"text": "Mark Complete", "callback_data": "mark_complete"}]
+            ]
+            send(chat_id, "Edit applied.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+        return
+
+    if stage == "awaiting_lp_regen_instruction":
+        instruction = text.strip()
+        section = state.get("lp_regen_section", "Hero")
+        cta_key = state.get("lp_cta", "pro")
+        cta = LP_CTA_DEFS.get(cta_key, LP_CTA_DEFS["pro"])
+        avatar_keys = state.get("selected_avatars", [])
+        avatar_descs = "\n".join([k + ": " + AVATARS_AD.get(k, ("",))[1] for k in avatar_keys])
+        context = sanitise(state.get("lp_context", ""))
+        state["stage"] = "lp_ready"
+        send(chat_id, "Regenerating " + section + "...")
+        try:
+            prompt = BRANDSCRIPT_PROMPT
+            prompt += "\n\nAVATAR(S): " + avatar_descs
+            prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            prompt += "\nPOSITIONING: " + cta["positioning"]
+            if context: prompt += "\nCONTEXT: " + context
+            if instruction: prompt += "\nSPECIFIC DIRECTION: " + instruction
+            prompt += "\n\nREGENERATE ONLY: " + section.upper() + " SECTION. Return as plain text with graphic recommendations."
+            result = claude(prompt, max_tokens=1200)
+            send_plain(chat_id, result)
+            keyboard = [
+                [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
+                 {"text": "Regenerate section", "callback_data": "lp_regen"}],
+                [{"text": "Generate another page", "callback_data": "lp_again"},
+                 {"text": "Mark Complete", "callback_data": "mark_complete"}]
+            ]
+            send(chat_id, "Section regenerated.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+        return
+
+    if stage == "awaiting_ad_quick_edit":
+        instruction = text
+        ad_content = state.get("current_ad", "")
+        label = state.get("current_ad_label", "AD")
+        state["stage"] = "ads_ready"
+        send(chat_id, "Applying edit...")
+        try:
+            result = claude("Edit this ad copy. Instruction: " + instruction + "\n\nKeep the same structure and format. Only change what specified.\n\nAD:\n" + ad_content + "\n\nReturn as plain string.", max_tokens=1500)
+            state["current_ad"] = result
+            send_plain(chat_id, label + result, ad_action_keyboard())
+        except Exception as e:
+            send(chat_id, "Error: " + str(e), ad_action_keyboard())
+        return
+
+    if stage == "awaiting_social_report":
+        user_state[chat_id]["report"] = text
+        user_state[chat_id]["context"] = ""
+        user_state[chat_id]["stage"] = "pick_social_formats"
+        show_standalone_social_menu(chat_id)
+        return
+
     if len(text) > 100:
         current_stage = user_state.get(chat_id, {}).get("stage", "idle")
         # Buffer multi-message pastes
@@ -1342,15 +1437,6 @@ def handle_message(msg):
                 full_report = user_state[chat_id].get("report_buffer", text)
                 user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
                 ask_context(chat_id)
-        elif current_stage == "awaiting_ad_theme":
-            user_state[chat_id]["ad_theme"] = text
-            user_state[chat_id]["stage"] = "pick_ad_avatars"
-            show_avatar_menu(chat_id)
-        elif current_stage == "awaiting_social_report":
-            user_state[chat_id]["report"] = text
-            user_state[chat_id]["context"] = ""
-            user_state[chat_id]["stage"] = "pick_social_formats"
-            show_standalone_social_menu(chat_id)
         else:
             # Legacy: treat as email report
             user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text, "buffer_timer": time.time(), "mode": "email"}
@@ -1387,6 +1473,10 @@ def handle_callback(cb):
         user_state[chat_id] = {"stage": "awaiting_social_report", "selected_social_formats": []}
         send(chat_id, "Paste your report or content to base social posts on:")
 
+    elif data == "mode_landing":
+        user_state[chat_id] = {"stage": "pick_lp_avatars", "selected_avatars": []}
+        show_lp_avatar_menu(chat_id)
+
     elif data.startswith("adavatar_"):
         avatar_key = data.replace("adavatar_", "")
         toggle_avatar(chat_id, avatar_key, message_id)
@@ -1418,6 +1508,23 @@ def handle_callback(cb):
         state["ad_type"] = "video"
         generate_all_ads(chat_id)
 
+    elif data == "ad_quick_edit":
+        state["stage"] = "awaiting_ad_quick_edit"
+        send(chat_id, "*Quick Edit — Ad Copy*\n\nType your instruction:")
+
+    elif data == "ad_enhance":
+        ad_content = state.get("current_ad", "")
+        if not ad_content:
+            send(chat_id, "No ad content found.", ad_action_keyboard())
+        else:
+            send(chat_id, "Analysing ad copy...")
+            try:
+                prompt = "Analyse this Cryptonary ad copy and give 6 specific improvements. Apply Hormozi, Cashvertising LF8, Cialdini, Ogilvy principles.\n\nAD:\n" + ad_content + "\n\nFormat:\n1. PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific fix]\n\nAnd so on for all 6."
+                raw = claude(prompt, max_tokens=1000)
+                send_plain(chat_id, "AD ENHANCEMENT SUGGESTIONS\n\n" + raw, ad_action_keyboard())
+            except Exception as e:
+                send(chat_id, "Error: " + str(e), ad_action_keyboard())
+
     elif data == "avatarpage_next":
         page = state.get("avatar_page", 0)
         show_avatar_menu(chat_id, page + 1)
@@ -1430,6 +1537,74 @@ def handle_callback(cb):
         state["selected_avatars"] = []
         state["selected_stages"] = []
         show_avatar_menu(chat_id)
+
+    elif data.startswith("lpavatar_"):
+        avatar_key = data.replace("lpavatar_", "")
+        toggle_lp_avatar(chat_id, avatar_key, message_id)
+
+    elif data == "lpavatarpage_next":
+        page = state.get("avatar_page", 0)
+        show_lp_avatar_menu(chat_id, page + 1)
+
+    elif data == "lpavatarpage_prev":
+        page = state.get("avatar_page", 0)
+        show_lp_avatar_menu(chat_id, max(0, page - 1))
+
+    elif data == "lpavatars_done":
+        selected = state.get("selected_avatars", [])
+        if not selected:
+            send(chat_id, "Please select at least one avatar.")
+        else:
+            show_lp_cta_menu(chat_id)
+
+    elif data == "lpcta_pro":
+        state["lp_cta"] = "pro"
+        state["stage"] = "awaiting_lp_context"
+        keyboard = [
+            [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
+            [{"text": "No — generate now", "callback_data": "lp_context_no"}]
+        ]
+        send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
+
+    elif data == "lpcta_inner_circle":
+        state["lp_cta"] = "inner_circle"
+        state["stage"] = "awaiting_lp_context"
+        keyboard = [
+            [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
+            [{"text": "No — generate now", "callback_data": "lp_context_no"}]
+        ]
+        send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
+
+    elif data == "lp_context_yes":
+        state["stage"] = "awaiting_lp_context_text"
+        send(chat_id, "Type your extra context:")
+
+    elif data == "lp_context_no":
+        state["lp_context"] = ""
+        generate_landing_page(chat_id)
+
+    elif data == "lp_quick_edit":
+        state["stage"] = "awaiting_lp_quick_edit"
+        send(chat_id, "*Quick Edit — Landing Page*\n\nWhich section and what to change?\n_e.g. Rewrite the hero headline / Make the value stack more specific / Shorten the FAQ_")
+
+    elif data == "lp_regen":
+        state["stage"] = "awaiting_lp_regen"
+        keyboard = []
+        for name in ["Hero", "Problem", "Guide", "Plan", "Value Stack", "Social Proof", "CTA Block", "FAQ", "Footer CTA"]:
+            keyboard.append([{"text": name, "callback_data": "lp_regen_" + name.lower().replace(" ", "_")}])
+        send(chat_id, "Which section to regenerate?", keyboard)
+
+    elif data.startswith("lp_regen_"):
+        section = data.replace("lp_regen_", "").replace("_", " ").title()
+        state["lp_regen_section"] = section
+        state["stage"] = "awaiting_lp_regen_instruction"
+        send(chat_id, "*Regenerate: " + section + "*\n\nAny specific direction? (or just tap send to regenerate as-is)")
+
+    elif data == "lp_again":
+        state["selected_avatars"] = []
+        state.pop("lp_cta", None)
+        state.pop("lp_context", None)
+        show_lp_avatar_menu(chat_id)
 
     elif data == "context_yes":
         user_state[chat_id]["stage"] = "awaiting_context_text"
@@ -1746,7 +1921,8 @@ def show_main_menu(chat_id):
     keyboard = [
         [{"text": "Emails", "callback_data": "mode_email"}],
         [{"text": "Ad Copy", "callback_data": "mode_ads"}],
-        [{"text": "Social Content", "callback_data": "mode_social"}]
+        [{"text": "Social Content", "callback_data": "mode_social"}],
+        [{"text": "Landing Page", "callback_data": "mode_landing"}]
     ]
     send(chat_id, "*Cryptonary Content Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -1907,12 +2083,8 @@ def generate_all_ads(chat_id):
             except Exception as e:
                 send(chat_id, "Error generating " + avatar_name + " / " + stage_key + ": " + str(e))
 
-    keyboard = [
-        [{"text": "Generate another set", "callback_data": "ads_again"}],
-        [{"text": "Mark Complete", "callback_data": "mark_complete"}]
-    ]
-    send(chat_id, "All " + str(total) + " ad set(s) generated.", keyboard)
-    state["stage"] = "ads_done"
+    state["stage"] = "ads_ready"
+    send(chat_id, "All " + str(total) + " ad set(s) generated.", ad_action_keyboard())
 
 
 # ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
@@ -2253,6 +2425,174 @@ def load_all_data():
         pass
 
 load_all_data()
+
+BRANDSCRIPT_PROMPT = """
+You are writing a Cryptonary landing page using the StoryBrand BrandScript framework.
+
+BRANDSCRIPT RULES:
+- The READER is the hero, not Cryptonary
+- Cryptonary is the GUIDE (wise, empathetic, has a plan)
+- Lead with the reader's dominant problem/desire, not our features
+- Every section earns the scroll to the next
+- One CTA, repeated at key moments
+
+COPY PRINCIPLES:
+- Hormozi: Stack specific value bullets before the ask. Make the math obvious. Transformation not subscription.
+- Cashvertising LF8: Lead with the avatar's dominant life force desire. Fear works when threat is real + solution is clear.
+- Cialdini: Social proof = what members DO (not just what they get). Authority = track record with specific wins. Scarcity = information gap.
+- Ogilvy: Headline is a promise. Subheads carry the narrative. Specifics beat generalities. One CTA, zero friction.
+
+CRYPTONARY PROOF POINTS (use these):
+- Called SOL at $10 (now $290+), WIF at $0.004 (1,200X), POPCAT (660X), SPX (227X)
+- HYPE airdrop average $28,500 for members
+- 300,000+ newsletter subscribers, 12,000+ Pro members
+- 7+ years, 3 full crypto cycles since 2017
+- Pro: $1,197/year | Inner Circle: $15K-$22K (portfolios $200K+)
+
+GRAPHIC RECOMMENDATION FORMAT (for each section):
+VISUAL DIRECTION: [What to show, why it works psychologically, where to place it]
+AI IMAGE PROMPT: [Ready-to-use Midjourney/DALL-E prompt, photorealistic style]
+"""
+
+LP_CTA_DEFS = {
+    "pro": {
+        "label": "Join Cryptonary Pro",
+        "price": "$1,197/year",
+        "cta_text": "Get Pro Access Now",
+        "alt_cta": "Start Making Better Trades",
+        "audience": "crypto investors and traders wanting research-backed guidance",
+        "positioning": "The research platform that puts you ahead of the market. Not a signal service — a complete intelligence layer.",
+        "urgency": "Markets don't wait. Every day without this costs you positioning."
+    },
+    "inner_circle": {
+        "label": "Apply for Inner Circle",
+        "price": "$15,000-$22,000",
+        "cta_text": "Apply for Inner Circle",
+        "alt_cta": "Apply Now — Limited Spots",
+        "audience": "high-net-worth crypto investors with $200K+ portfolios",
+        "positioning": "Private advisory for serious capital. Personal access to Co-Founder Asad for portfolio-level guidance.",
+        "urgency": "Inner Circle is application-only. Spots are strictly limited to maintain quality of service."
+    }
+}
+
+def show_lp_avatar_menu(chat_id, page=0):
+    state = user_state[chat_id]
+    selected = state.get("selected_avatars", [])
+    state["avatar_page"] = page
+    all_avatars = list(AVATARS_AD.items())
+    page_size = 7
+    start = page * page_size
+    page_avatars = all_avatars[start:start + page_size]
+    keyboard = []
+    for key, (name, _) in page_avatars:
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "lpavatar_" + key}])
+    nav = []
+    if page > 0:
+        nav.append({"text": "Previous", "callback_data": "lpavatarpage_prev"})
+    if start + page_size < len(all_avatars):
+        nav.append({"text": "Next page", "callback_data": "lpavatarpage_next"})
+    if nav:
+        keyboard.append(nav)
+    page_label = "(" + str(page+1) + "/2)"
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "lpavatars_done"}])
+    send(chat_id, "*Who is this landing page targeting?* " + page_label + "\n_(Select one or more avatars)_", keyboard)
+
+def toggle_lp_avatar(chat_id, avatar_key, message_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_avatars", [])
+    if avatar_key in selected: selected.remove(avatar_key)
+    else: selected.append(avatar_key)
+    state["selected_avatars"] = selected
+    page = state.get("avatar_page", 0)
+    all_avatars = list(AVATARS_AD.items())
+    page_size = 7
+    start = page * page_size
+    page_avatars = all_avatars[start:start + page_size]
+    keyboard = []
+    for key, (name, _) in page_avatars:
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "lpavatar_" + key}])
+    nav = []
+    if page > 0:
+        nav.append({"text": "Previous", "callback_data": "lpavatarpage_prev"})
+    if start + page_size < len(all_avatars):
+        nav.append({"text": "Next page", "callback_data": "lpavatarpage_next"})
+    if nav:
+        keyboard.append(nav)
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "lpavatars_done"}])
+    tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def show_lp_cta_menu(chat_id):
+    keyboard = [
+        [{"text": "Join Cryptonary Pro ($1,197/year)", "callback_data": "lpcta_pro"}],
+        [{"text": "Apply for Inner Circle ($15K-$22K)", "callback_data": "lpcta_inner_circle"}]
+    ]
+    send(chat_id, "*What is the CTA for this landing page?*", keyboard)
+
+def generate_landing_page(chat_id):
+    state = user_state[chat_id]
+    avatar_keys = state.get("selected_avatars", [])
+    cta_key = state.get("lp_cta", "pro")
+    context = sanitise(state.get("lp_context", ""))
+    cta = LP_CTA_DEFS.get(cta_key, LP_CTA_DEFS["pro"])
+
+    # Build avatar descriptions
+    avatar_names = []
+    avatar_descs = []
+    for key in avatar_keys:
+        name, desc = AVATARS_AD.get(key, ("General", ""))
+        avatar_names.append(name)
+        avatar_descs.append(name + ": " + desc)
+
+    avatar_summary = " / ".join(avatar_names) if avatar_names else "General"
+    avatar_detail = "\n".join(avatar_descs) if avatar_descs else "General crypto investor"
+
+    send(chat_id, "Writing landing page for " + avatar_summary + " — " + cta["label"] + "...")
+
+    sections = [
+        ("HERO SECTION", "Write the Hero section. This is above the fold. Include:\n- H1 headline (max 10 words — promise or provoke)\n- H2 subheadline (max 20 words — expand the promise)\n- Hero body copy (2-3 sentences — the reader's problem and Cryptonary as guide)\n- Primary CTA button text\n- Secondary soft CTA (e.g. 'See how it works')\n\nThen graphic recommendations."),
+        ("PROBLEM / VILLAIN SECTION", "Write the Problem section. Name the external problem (market noise, bad info), internal problem (fear of making wrong moves), and philosophical problem (serious investors deserve serious research). Make the reader feel understood.\n\nThen graphic recommendations."),
+        ("GUIDE SECTION", "Write the Guide section. Establish Cryptonary's empathy (we've been in the market since 2017, we've seen all of this before) and authority (specific track record wins). The guide doesn't brag — they demonstrate.\n\nThen graphic recommendations."),
+        ("THE PLAN", "Write the Plan section. Show 3-4 simple steps the reader takes to get the result:\n1. Join/Apply\n2. Get access to research/guidance\n3. Make informed decisions\n4. Build/protect wealth\n\nKeep it dead simple. Remove friction.\n\nThen graphic recommendations."),
+        ("VALUE STACK", "Write the Value Stack section. List everything included with specific bullet points. Each bullet answers 'so what?' Lead with outcomes not features. End with price reveal and value anchor (what this level of research normally costs).\n\nThen graphic recommendations."),
+        ("SOCIAL PROOF", "Write the Social Proof section. Use track record specifics, member outcomes, and testimonial structure. Format as 2-3 featured wins + a wall of shorter proof points.\n\nThen graphic recommendations."),
+        ("CTA BLOCK", "Write the primary CTA block. This should create urgency, restate the transformation, show the price, handle the last objection ('is this worth it'), and include the CTA button. Direct CTA and transitional CTA both.\n\nThen graphic recommendations."),
+        ("FAQ / OBJECTIONS", "Write 5 FAQs that handle the real objections for this avatar and CTA type. Format as question + concise punchy answer.\n\nThen graphic recommendations."),
+        ("FOOTER CTA", "Write the final footer CTA. Last chance. Restate the core promise in one line. CTA button. One final piece of social proof.\n\nThen graphic recommendations.")
+    ]
+
+    all_output = []
+    for section_name, section_instruction in sections:
+        try:
+            prompt = BRANDSCRIPT_PROMPT
+            prompt += "\n\nLANDING PAGE BRIEF:\nAVATAR(S): " + avatar_detail
+            prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            prompt += "\nCTA BUTTON TEXT: " + cta["cta_text"]
+            prompt += "\nPOSITIONING: " + cta["positioning"]
+            prompt += "\nURGENCY MECHANIC: " + cta["urgency"]
+            if context:
+                prompt += "\nEXTRA CONTEXT: " + context
+            prompt += "\n\nNOW WRITE:\n" + section_name + "\n" + section_instruction
+            prompt += "\n\nReturn as plain text. Section name in caps as header. Copy first, then graphic recommendations clearly labelled."
+
+            raw = claude(prompt, max_tokens=1200)
+            send_plain(chat_id, raw)
+            all_output.append(raw)
+            time.sleep(0.5)
+        except Exception as e:
+            send(chat_id, "Error on " + section_name + ": " + str(e))
+
+    state["current_lp"] = "\n\n---\n\n".join(all_output)
+    state["stage"] = "lp_ready"
+
+    keyboard = [
+        [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
+         {"text": "Regenerate section", "callback_data": "lp_regen"}],
+        [{"text": "Generate another page", "callback_data": "lp_again"},
+         {"text": "Mark Complete", "callback_data": "mark_complete"}]
+    ]
+    send(chat_id, "Landing page complete.", keyboard)
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
