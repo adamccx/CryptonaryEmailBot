@@ -163,6 +163,155 @@ def sanitise(text):
     return "".join(out)
 
 
+def parse_numbered_list(text, count):
+    """Parse a numbered list response into a list of strings."""
+    lines = text.strip().split("\n")
+    results = []
+    current = ""
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        # Check if line starts with a number
+        import re
+        m = re.match(r"^\d+\.\s*(.+)", line)
+        if m:
+            if current:
+                results.append(current.strip())
+            current = m.group(1)
+        else:
+            if current:
+                current += " " + line
+    if current:
+        results.append(current.strip())
+    # Pad or trim to expected count
+    while len(results) < count:
+        results.append("Alternative angle " + str(len(results)+1))
+    return results[:count]
+
+def parse_hooks(text):
+    """Parse numbered SUBJECT/PREVIEW format into list of dicts."""
+    import re
+    hooks = []
+    # Split by numbered entries
+    blocks = re.split(r"(?m)^\d+\.\s*", text.strip())
+    for block in blocks:
+        if not block.strip():
+            continue
+        subject = ""
+        preview = ""
+        for line in block.strip().split("\n"):
+            line = line.strip()
+            if line.upper().startswith("SUBJECT:"):
+                subject = line[8:].strip()
+            elif line.upper().startswith("PREVIEW:"):
+                preview = line[8:].strip()
+        if subject:
+            hooks.append({"subject": subject, "preview": preview or ""})
+    if not hooks:
+        # Fallback: try to parse as plain lines
+        lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
+        for i in range(0, len(lines)-1, 2):
+            hooks.append({"subject": lines[i], "preview": lines[i+1] if i+1 < len(lines) else ""})
+    while len(hooks) < 4:
+        hooks.append({"subject": "Alternative hook " + str(len(hooks)+1), "preview": ""})
+    return hooks[:4]
+
+def parse_subject_alternatives(text):
+    """Parse numbered PRINCIPLE/SUBJECT/PREVIEW/REASON format."""
+    import re
+    alts = []
+    blocks = re.split(r"(?m)^\d+\.\s*", text.strip())
+    for block in blocks:
+        if not block.strip():
+            continue
+        principle = ""
+        subject = ""
+        preview = ""
+        reason = ""
+        for line in block.strip().split("\n"):
+            line = line.strip()
+            if line.upper().startswith("PRINCIPLE:"):
+                principle = line[10:].strip()
+            elif line.upper().startswith("SUBJECT:"):
+                subject = line[8:].strip()
+            elif line.upper().startswith("PREVIEW:"):
+                preview = line[8:].strip()
+            elif line.upper().startswith("REASON:"):
+                reason = line[7:].strip()
+        if subject:
+            alts.append({"principle": principle, "subject": subject, "preview": preview, "reason": reason})
+    while len(alts) < 3:
+        alts.append({"principle": "Alternative", "subject": "Alternative subject " + str(len(alts)+1), "preview": "", "reason": ""})
+    return alts[:3]
+
+def parse_enhance_suggestions(text):
+    import re
+    suggestions = []
+    idx = 1
+    current = {"principle": "", "issue": "", "fix": ""}
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        num_match = re.match(r"^(\d+)\.\s*(.*)", line)
+        if num_match:
+            if current.get("issue") or current.get("fix"):
+                suggestions.append({"id": idx, "principle": current["principle"] or "Copywriting", "issue": current["issue"] or current["fix"][:50], "fix": current["fix"] or current["issue"]})
+                idx += 1
+            current = {"principle": "", "issue": "", "fix": ""}
+            rest = num_match.group(2)
+            if rest.upper().startswith("PRINCIPLE:"):
+                current["principle"] = rest[10:].strip()
+        elif line.upper().startswith("PRINCIPLE:"):
+            current["principle"] = line[10:].strip()
+        elif line.upper().startswith("ISSUE:"):
+            current["issue"] = line[6:].strip()
+        elif line.upper().startswith("FIX:"):
+            current["fix"] = line[4:].strip()
+    if current.get("issue") or current.get("fix"):
+        suggestions.append({"id": idx, "principle": current["principle"] or "Copywriting", "issue": current["issue"] or current["fix"][:50], "fix": current["fix"] or current["issue"]})
+    if not suggestions:
+        suggestions = [{"id": 1, "principle": "General", "issue": "Could not parse", "fix": "Please try again"}]
+    return suggestions
+
+
+def parse_delimited_emails(text):
+    """Parse FREE/PRO email delimiter format into dict."""
+    emails = {}
+    if "===FREE EMAIL START===" in text and "===FREE EMAIL END===" in text:
+        start = text.find("===FREE EMAIL START===") + len("===FREE EMAIL START===")
+        end = text.find("===FREE EMAIL END===")
+        emails["free"] = text[start:end].strip()
+    if "===PRO EMAIL START===" in text and "===PRO EMAIL END===" in text:
+        start = text.find("===PRO EMAIL START===") + len("===PRO EMAIL START===")
+        end = text.find("===PRO EMAIL END===")
+        emails["pro"] = text[start:end].strip()
+    # Fallback: if delimiters not found, try JSON
+    if not emails:
+        try:
+            emails = json.loads(clean_json(text))
+        except:
+            emails = {"free": text, "pro": text}
+    return emails
+
+def parse_delimited_segments(text):
+    """Parse HOT/WARM/COLD segment delimiter format into dict."""
+    segments = {}
+    for key in ["hot", "warm", "cold"]:
+        start_tag = "===" + key.upper() + " EMAIL START==="
+        end_tag = "===" + key.upper() + " EMAIL END==="
+        if start_tag in text and end_tag in text:
+            start = text.find(start_tag) + len(start_tag)
+            end = text.find(end_tag)
+            segments[key] = text[start:end].strip()
+    if not segments:
+        try:
+            segments = json.loads(clean_json(text))
+        except:
+            segments = {"hot": text, "warm": text, "cold": text}
+    return segments
+
 def extract_text(v):
     if isinstance(v, str): return v
     if isinstance(v, dict):
@@ -224,10 +373,11 @@ def gen_angles(chat_id):
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
     prompt += perf
-    prompt += "\n\nGenerate exactly 4 distinct email angles. Different emotional lenses or hook strategies. Apply copywriting principles. If performance data exists, weight toward high-performing patterns. Return ONLY a valid JSON array of 4 strings. No preamble, no markdown."
+    prompt += "\n\nGenerate exactly 4 distinct email angles. Different emotional lenses or hook strategies. Apply copywriting principles. If performance data exists, weight toward high-performing patterns. Format your response as a simple numbered list:\n1. [angle one]\n2. [angle two]\n3. [angle three]\n4. [angle four]\nNothing else. No JSON, no preamble."
     send(chat_id, "Finding angles...")
     try:
-        angles = json.loads(clean_json(claude(prompt)))
+        raw = claude(prompt)
+        angles = parse_numbered_list(raw, 4)
         user_state[chat_id]["angles"] = angles
         user_state[chat_id]["stage"] = "pick_angle"
         text = "*Pick an angle:*\n\n"
@@ -248,10 +398,10 @@ def gen_hooks(chat_id):
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
     prompt += perf
-    prompt += "\n\nAngle: " + angle + "\n\nWrite exactly 4 distinct subject line + preview combos. Ogilvy: promise benefit, provoke curiosity, or announce news. Specific numbers where possible. If performance data exists, learn from high performers. Return ONLY a valid JSON array of 4 objects with keys subject and preview. No markdown."
+    prompt += "\n\nAngle: " + angle + "\n\nWrite exactly 4 distinct subject line + preview text combos. Ogilvy: promise benefit, provoke curiosity, or announce news. Specific numbers where possible. Format each as:\n1. SUBJECT: [subject line]\nPREVIEW: [preview text]\n\n2. SUBJECT: [subject line]\nPREVIEW: [preview text]\n\nAnd so on for all 4. Nothing else."
     send(chat_id, "Writing hooks...")
     try:
-        hooks = json.loads(clean_json(claude(prompt)))
+        hooks = parse_hooks(claude(prompt))
         user_state[chat_id]["hooks"] = hooks
         user_state[chat_id]["stage"] = "pick_hook"
         text = "*Pick a hook:*\n\n"
@@ -290,10 +440,11 @@ def gen_emails(chat_id):
     prompt += "\nPreview: " + hook.get("preview", "")
     prompt += "\n\nFREE EMAIL CTA: " + CTA_INSTRUCTIONS["free"].get(free_cta, "")
     prompt += "\nPRO EMAIL CTA: " + CTA_INSTRUCTIONS["pro"].get(pro_cta, "")
-    prompt += "\n\nReturn a JSON object with keys free and pro. Each value is the complete email as a plain string including Subject Line and Preview at top then full body. Return ONLY valid raw JSON."
+    prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON.\n\n===FREE EMAIL START===\n[complete free email here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[complete pro email here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
-        emails = json.loads(clean_json(claude(prompt, max_tokens=2500)))
+        raw = claude(prompt, max_tokens=2500)
+        emails = parse_delimited_emails(raw)
         state["current_emails"] = emails
         state["stage"] = "emails_ready"
         state["email_record"] = {
@@ -350,10 +501,10 @@ def apply_quick_edit(chat_id, instruction):
             raw = claude(
                 "Edit these Cryptonary emails based on this instruction: " + instruction +
                 "\n\nKeep Adam's voice intact. Only change what the instruction specifies.\n\nEMAILS:\n" + email_text +
-                "\n\nReturn a JSON object with keys free and pro. Return ONLY valid raw JSON.",
+                "\n\nReturn the edited emails using this exact format. No JSON:\n\n===FREE EMAIL START===\n[edited free email]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[edited pro email]\n===PRO EMAIL END===",
                 max_tokens=2500
             )
-            edited = json.loads(clean_json(raw))
+            edited = parse_delimited_emails(raw)
             state["current_emails"] = edited
             state["stage"] = "emails_ready"
             if "free" in edited:
@@ -376,10 +527,10 @@ def gen_enhance(chat_id, mode="email"):
         try:
             raw = claude(
                 "Analyse this Cryptonary " + social_type + " and generate exactly 6 specific improvement suggestions. Each must reference a copywriting principle and give a concrete fix.\n\nCONTENT:\n" + content +
-                "\n\nReturn ONLY a valid JSON array of 6 objects with keys: id (1-6), principle, issue, fix. No markdown.",
+                "\n\nFormat as a numbered list:\n1. PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific improvement]\n\n2. PRINCIPLE: ...\nAnd so on for all 6. Nothing else.",
                 max_tokens=900
             )
-            suggestions = json.loads(clean_json(raw))
+            suggestions = parse_enhance_suggestions(raw)
             state["enhance_suggestions"] = suggestions
             state["selected_enhancements"] = []
             state["enhance_mode"] = "social"
@@ -404,10 +555,10 @@ def gen_enhance(chat_id, mode="email"):
         try:
             raw = claude(
                 "Analyse these Cryptonary emails against copywriting principles (Hormozi, Cashvertising LF8, Cialdini, Ogilvy). Generate exactly 8 specific, actionable improvement suggestions.\n\nEmails:\n" + email_text +
-                "\n\nReturn ONLY a valid JSON array of 8 objects with keys: id (1-8), principle, issue, fix. No markdown.",
+                "\n\nFormat as a numbered list:\n1. PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific improvement]\n\n2. PRINCIPLE: ...\nAnd so on for all 8. Nothing else.",
                 max_tokens=1200
             )
-            suggestions = json.loads(clean_json(raw))
+            suggestions = parse_enhance_suggestions(raw)
             state["enhance_suggestions"] = suggestions
             state["selected_enhancements"] = []
             state["enhance_mode"] = "email"
@@ -477,10 +628,10 @@ def apply_enhancements(chat_id):
             raw = claude(
                 "Rewrite these Cryptonary emails applying these improvements only. Keep Adam's voice intact.\n\nIMPROVEMENTS:\n" + improvements +
                 "\n\nORIGINAL EMAILS:\n" + email_text +
-                "\n\nReturn a JSON object with keys free and pro. Return ONLY valid raw JSON.",
+                "\n\nReturn the improved emails using this exact format. No JSON:\n\n===FREE EMAIL START===\n[improved free email]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[improved pro email]\n===PRO EMAIL END===",
                 max_tokens=2500
             )
-            improved = json.loads(clean_json(raw))
+            improved = parse_delimited_emails(raw)
             state["current_emails"] = improved
             state["stage"] = "emails_ready"
             if "free" in improved:
@@ -627,10 +778,10 @@ def gen_subject_ab(chat_id):
             "Generate 3 alternative subject lines for this Cryptonary email. Each uses a different copywriting principle.\n\nReport: " + report[:600] +
             "\nAngle: " + angle +
             "\nCurrent subject: " + current_subject +
-            "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nReturn ONLY a valid JSON array of 3 objects with keys: subject, preview, principle, reason (one sentence why it works). No markdown.",
+            "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nFormat each option as:\n1. PRINCIPLE: [principle name]\nSUBJECT: [subject line]\nPREVIEW: [preview text]\nREASON: [one sentence]\n\n2. PRINCIPLE: ...\nAnd so on for all 3. Nothing else.",
             max_tokens=700
         )
-        alternatives = json.loads(clean_json(raw))
+        alternatives = parse_subject_alternatives(raw)
         state["subject_alternatives"] = alternatives
         state["stage"] = "emails_ready"
         text = "*Alternative Subject Lines:*\n\n*Current:* " + current_subject + "\n\n"
@@ -707,10 +858,10 @@ def apply_tone(chat_id, tone_key):
             "Rewrite these Cryptonary emails in the following tone. Keep same content, facts, structure. Only change emotional delivery and language.\n\nTONE: " + tone_label +
             "\nINSTRUCTION: " + tone_instruction +
             "\n\nEMAILS:\n" + email_text +
-            "\n\nReturn a JSON object with keys free and pro. Return ONLY valid raw JSON.",
+            "\n\nRewrite and return the emails using this exact format. No JSON:\n\n===FREE EMAIL START===\n[rewritten free email]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[rewritten pro email]\n===PRO EMAIL END===",
             max_tokens=2500
         )
-        toned = json.loads(clean_json(raw))
+        toned = parse_delimited_emails(raw)
         state["current_emails"] = toned
         state["stage"] = "emails_ready"
         if "free" in toned:
@@ -748,10 +899,10 @@ def gen_segments(chat_id):
             "\n\nSEGMENT HOT: " + SEG_DEFS["hot"][1] +
             "\n\nSEGMENT WARM: " + SEG_DEFS["warm"][1] +
             "\n\nSEGMENT COLD: " + SEG_DEFS["cold"][1] +
-            "\n\nReturn a JSON object with keys hot, warm, cold. Each is the complete rewritten free email as a plain string. Return ONLY valid raw JSON.",
+            "\n\nReturn the 3 segment emails using this exact format. No JSON:\n\n===HOT EMAIL START===\n[hot segment email]\n===HOT EMAIL END===\n\n===WARM EMAIL START===\n[warm segment email]\n===WARM EMAIL END===\n\n===COLD EMAIL START===\n[cold segment email]\n===COLD EMAIL END===",
             max_tokens=3000
         )
-        segments = json.loads(clean_json(raw))
+        segments = parse_delimited_segments(raw)
         state["current_segments"] = segments
         state["stage"] = "segments_ready"
         for key, (label, _) in SEG_DEFS.items():
