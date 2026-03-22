@@ -23,39 +23,228 @@ ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "YOUR_ANTHROPIC_KEY_HERE")
 ssl._create_default_https_context = ssl._create_unverified_context
 
 BOOK_KNOWLEDGE = """
-COPYWRITING PRINCIPLES (Applied to Crypto Email Marketing)
+
+=== EXPANDED COPYWRITING KNOWLEDGE BASE ===
+
+--- EXISTING FOUNDATIONS ---
 
 FROM HORMOZI ($100M OFFERS / $100M LEADS):
-- Value Equation: Sell transformation not product. CTA = outcome: "Know What's Coming" not "Upgrade to Pro"
-- Grand Slam: Stack specific concrete value bullets before the ask. Each bullet = its own mini-dream.
-- Pain/Dream/Fix: Open on pain, paint dream, position Pro as mechanism.
-- Urgency must be real and tied to actual market events. Never manufactured.
-- Specificity sells: numbers, dates, exact levels beat vague claims.
-- Hook-Retain-Reward: Subject stops scroll, body earns each next sentence, reader rewarded even from free email.
+- Value Equation: Dream Outcome x Likelihood / Time x Effort = Value
+- Grand Slam Offer: Stack so much value the price feels embarrassing
+- Pain/Dream/Fix: Open on pain, paint the dream, position as mechanism
+- Specificity sells: numbers, dates, exact levels beat vague claims
+- Urgency must be real and tied to market events
 
 FROM CASHVERTISING (WHITMAN):
-- LF8 Desires: Freedom from fear in downturns. Superiority/winning in rallies. Social approval = community size. Comfortable living = financial freedom.
-- Fear works when threat is credible + reader vulnerable + solution clear. Always pair with immediate solution.
-- Repeat core benefit 3 times in different forms. Bucket brigade keeps momentum.
-- People buy better versions of themselves, not products.
+- LF8 Life Force Desires: survival/enjoyment of life, enjoyment of food/drink, freedom from fear/pain/danger, sexual companionship, comfortable living, to be superior/win, care for loved ones, social approval
+- Secondary Wants: information, curiosity, cleanliness, efficiency, convenience, dependability, expression of beauty/style, economy/profit, bargains
+- Fear works when threat is real + reader vulnerable + solution clear
+- Bucket brigade technique: keep them reading line by line
 
 FROM CIALDINI (INFLUENCE / PRE-SUASION):
-- Reciprocity: Give genuine value first, then the ask.
-- Consistency: Anchor their identity as a serious investor.
-- Social Proof: Show what Pro members are DOING, not just what they have access to.
-- Authority: Track record proof, not claims.
-- Scarcity: Information scarcity is most powerful.
-- Pre-Suasion: Subject primes emotional state. Everything before CTA builds to one emotional state.
-- Unity: Joining Pro = joining a group, not buying a product.
+- Reciprocity: Give genuine value first, then the ask
+- Commitment/Consistency: Anchor their identity as a serious investor
+- Social Proof: Show what members DO not just what they have access to
+- Authority: Track record with specific wins, not claims
+- Scarcity: Information gap is most powerful for Cryptonary
+- Liking: People buy from people they like and relate to
+- Unity: Joining Pro = joining a group, not buying a product
+- Pre-Suasion: What comes before the message primes the response
 
-FROM OGILVY:
-- Subject line is everything. Promise benefit, provoke curiosity, or announce news. Specifics beat generalities.
-- Every sentence earns the next.
-- P.S. is second most-read element. Use it for the sharpest proof point.
-- Facts tell. Stories sell. Put reader inside the story.
-- One CTA, one action, zero friction.
-- Honesty builds trust.
+FROM OGILVY ON ADVERTISING:
+- Headline is everything — 5x more people read the headline than the body
+- Promise a benefit or provoke curiosity in the headline
+- Specifics always outperform generalities
+- P.S. is the second most-read element — use it for the sharpest proof point
+- One CTA, one action, zero friction
+- Long copy outperforms short copy when the reader is interested
+
+--- NEW BOOKS ---
+
+FROM 50 SCIENTIFICALLY PROVEN WAYS TO GET TO YES (CIALDINI / GOLDSTEIN / MARTIN):
+- Social proof is most powerful when the group is similar to the reader ("investors like you")
+- Defaults are powerful — frame the desired action as the natural/obvious choice
+- Loss aversion: people work harder to avoid losing than to acquire gains — frame as "don't miss" not "get"
+- Labelling: tell people what they are ("you're the kind of investor who...") and they live up to it
+- Implementation intentions: "when X happens, I will do Y" — make the next step dead obvious
+- Rhyme as reason: messages that rhyme are judged as more truthful
+- Giving a reason increases compliance dramatically — always say why
+- Scarcity + exclusivity: not just limited, but "only for people who qualify"
+- Progress principle: showing partial progress increases motivation to complete ("you're 80% there")
+- Reciprocity of disclosure: when you share something personal, they trust you more
+- The "but you are free" technique: remind people they can say no — paradoxically increases yes rates
+- Consistency through small commitments: get agreement on small points before the big ask
+
+FROM EXPERT SECRETS (RUSSELL BRUNSON):
+- The Big Domino: find the ONE belief that, if they had it, all other objections disappear
+- The Epiphany Bridge: share the story of when YOU had the breakthrough they need to have
+- The New Opportunity: don't improve their existing approach — offer a completely new vehicle
+- Future pacing: help them vividly imagine life after the transformation
+- Stack: present each element of the offer with its standalone value before revealing the price
+- The origin story: people buy the founder's journey as much as the product
+- Identity shift: the goal is not to sell a product but to create a new identity in the buyer
+- Teach the "what" for free, sell the "how" — give the concept, sell the system
+- Attractive character: flaws make you relatable, not weak
+- Movement vs product: build a cause people want to belong to, not just a product they buy
+
+FROM BUILDING A STORYBRAND (MILLER):
+- The reader is ALWAYS the hero — the brand is the guide
+- Guide characteristics: empathy (I understand your struggle) + authority (I can help)
+- The 3 levels of problem: external (the market), internal (the fear/frustration), philosophical (it's not fair)
+- A clear plan removes the risk of action — people don't act when confused
+- Direct CTA + transitional CTA: "Buy now" AND "Learn more" — not everyone is ready
+- Stakes must be clear: what do they gain if they act? What do they lose if they don't?
+- Success should be painted explicitly — never assume they'll imagine it themselves
+- One message, one call to action — confusion kills conversion
+- Position the villain clearly — it's not a person, it's a force (market noise, bad information, complexity)
+
+FROM ALCHEMY (SUTHERLAND):
+- Logic is not what drives decisions — perceived value and meaning drive decisions
+- Reframing changes everything: the same thing positioned differently creates different desire
+- Psycho-logic over logic: people don't want the optimal solution, they want the one that feels right
+- Signalling: expensive or inconvenient things signal quality and commitment (application-only = exclusive)
+- The opposite of a good idea can also be a good idea — test counterintuitive angles
+- Loss aversion framing is more powerful than gain framing in almost every context
+- Context and environment change perception completely — same message, different result
+- The threshold effect: small price changes near a threshold ($997 vs $1,000) matter more than large changes elsewhere
+- Dare to be trivial: small, specific, seemingly irrelevant details make claims feel more credible
+- People don't know why they want things — emotion precedes rationalisation
+- Trust signals that are inefficient (e.g. a long sales page) paradoxically signal you have nothing to hide
+
+FROM MADE TO STICK (HEATH & HEATH):
+- SUCCESs framework: Simple, Unexpected, Concrete, Credible, Emotional, Story
+- Simple: find the core idea and hammer it relentlessly — "the lead"
+- Unexpected: break a pattern to get attention, then fill the gap with your message
+- Concrete: abstract ideas don't stick — sensory, specific language does
+- Credible: use details, statistics, and authorities — but also "testable credentials" (try it and see)
+- Emotional: people don't care about information, they care about what it means for THEM
+- Story: simulation (how to handle a situation) + inspiration (this is possible) = action
+- The curse of knowledge: the more you know, the harder it is to remember what it's like not to know
+- Ideas that stick violate expectations, then resolve the tension
+- Use names and individuals not statistics — "a child named Rokia" beats "10 million in poverty"
+
+FROM EVERYBODY WRITES (HANDLEY):
+- Writing is a habit not a talent — clarity comes from rewriting
+- The reader is always the most important person in the room — write for them, not for you
+- Lead with what matters most — bury the lead and you lose the reader
+- Use the word "you" more than any other word
+- Short sentences accelerate pace — vary length intentionally
+- Avoid weasel words: "very," "quite," "rather," "really" — delete them all
+- Read it out loud — if you stumble, the reader will too
+- Kill the passive voice — active voice is stronger, more direct, more credible
+- The best writing is rewriting — first draft is just raw material
+- Every piece of content should answer "so what?" and "what do I do next?"
+- Empathy maps: know what your reader feels, fears, wants, and hears
+
+FROM IDENTITY-BASED MARKETING / IDENTITY ECONOMICS:
+- People buy to affirm who they are or who they want to become — identity is the deepest motivator
+- "People like us do things like this" — Seth Godin's core identity principle
+- Reference groups matter: show who is already in, so the prospect can see themselves in that group
+- Status is a primary motivator — people want to move up in their reference group
+- Belonging and exclusion are two sides of the same lever — use both
+- Labels are self-fulfilling: "you're one of the serious investors" creates the behaviour
+- Values-based messaging outlasts feature-based messaging
+- Community signals identity: who else is in the room matters as much as what's in the room
+- The product is often just the ticket to the identity — Inner Circle is not advice, it's membership
+
+FROM BREAKTHROUGH ADVERTISING (SCHWARTZ):
+- Market sophistication: match the message to where the market's awareness is — don't shout "new" to a saturated market
+- The 5 levels of market awareness: unaware → problem aware → solution aware → product aware → most aware
+- Breakthrough copy does not create desire — it channels desire that already exists
+- The headline's job: stop the prospect, select the right prospect, pull them into the first line
+- Mass desire: tap into a pre-existing desire already present in the market
+- Mechanisms: "how it works" claims are more believable than "what it does" claims
+- Spread: your product's claimed ability to fulfil desire across multiple situations creates breadth
+- Fresh claims must feel NEW even if the product is not — reframe, repackage, rename
+- The most powerful headline states the end result the prospect most desires
+- Voice: write in the voice of the prospect's internal monologue, not your own
+
+FROM THIS IS MARKETING (GODIN):
+- Smallest viable market: don't try to reach everyone — reach the smallest group that matters most and make something specifically for them
+- Find the people who are already looking — don't interrupt people who aren't
+- People don't want what you make — they want how it will make them feel and who it will allow them to become
+- Tension and release: create tension (the status quo is not acceptable) then offer the release (the solution)
+- Permission marketing: earn the right to communicate, then use it carefully
+- Status roles: people want to be seen, respected, and safe — and they want to give status to others
+- Generous: show up with real value before asking for anything
+- Tension is the engine of change — without it, people stay where they are
+- The price is a signal — low price signals low value; pricing communicates positioning
+- Marketing is not about persuasion — it's about finding the people who already want what you have and letting them know it exists
+
+--- WRITING FRAMEWORKS ---
+
+The bot is aware of these frameworks and can apply them when appropriate:
+
+AIDA (Attention → Interest → Desire → Action)
+- Classic direct response structure
+- Attention: stop the scroll / open the email
+- Interest: hold them with a relevant problem or story
+- Desire: build the want through proof, benefits, transformation
+- Action: one clear CTA
+- Best for: ads, emails, landing pages
+
+PAS (Problem → Agitate → Solution)
+- Lean into the pain before offering the fix
+- Problem: name the exact problem
+- Agitate: make them feel how bad it is — the cost of inaction
+- Solution: position the product as the relief
+- Best for: short-form copy, ads, email openers
+
+PASTOR (Problem → Amplify → Story → Transformation → Offer → Response)
+- Extension of PAS with proof and story
+- Amplify: stakes — what happens if they don't solve this
+- Story: a real person who had the problem and fixed it
+- Transformation: the before/after contrast
+- Offer: the complete value stack
+- Response: the CTA
+- Best for: long-form sales pages, VSLs
+
+4 Ps (Promise → Picture → Proof → Push)
+- Promise: the headline benefit
+- Picture: paint the vivid future state
+- Proof: evidence it's real and achievable
+- Push: urgency to act now
+- Best for: landing page sections, email CTAs
+
+BAB (Before → After → Bridge)
+- Before: life with the problem
+- After: life with the problem solved
+- Bridge: how to get from before to after (the product)
+- Best for: social ads, short email hooks, carousel slides
+
+FAB (Features → Advantages → Benefits)
+- Features: what it is
+- Advantages: why that matters
+- Benefits: what the reader gets as a result
+- Best for: product descriptions, value stacks
+
+The 4 Us (Urgent → Unique → Useful → Ultra-specific)
+- Framework for evaluating headlines and hooks
+- Best for: auditing subject lines and ad headlines
+
+PPPP (Picture → Promise → Prove → Push)
+- Similar to 4Ps, more narrative-led
+- Best for: email sequences, story-led landing pages
+
+QUEST (Qualify → Understand → Educate → Stimulate → Transition)
+- Qualification-first approach — filter for the right reader
+- Best for: Inner Circle copy, high-ticket offers
+
+SLAP (Stop → Look → Act → Purchase)
+- Attention-focused framework for visual/social content
+- Best for: carousel slides, story sequences
+
+The Storybrand 7-Part Framework:
+1. Character (hero) who wants something
+2. Encounters a problem (villain/obstacle)
+3. Meets a guide (Cryptonary) who has empathy and authority
+4. Who gives them a plan
+5. And calls them to action
+6. That results in success
+7. And helps them avoid failure
 """
+
+
 
 CTA_OPTIONS = {
     "free": {
@@ -171,11 +360,11 @@ def send_plain(chat_id, text, keyboard=None):
                 time.sleep(0.3)
 
 
-def claude(prompt, max_tokens=900):
+def claude(prompt, max_tokens=900, system=None):
     payload = json.dumps({
         "model": "claude-sonnet-4-20250514",
         "max_tokens": max_tokens,
-        "system": VOICE_GUIDE,
+        "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
     }).encode()
     req = urllib.request.Request(
@@ -1354,7 +1543,8 @@ def handle_message(msg):
                 "Edit this Cryptonary landing page section. Instruction: " + instruction +
                 "\n\nApply BrandScript framework and copywriting principles. Keep all other sections intact. Only change what the instruction specifies.\n\nFULL PAGE:\n" + lp_content[:3000] +
                 "\n\nReturn only the edited section(s) as plain text.",
-                max_tokens=1500
+                max_tokens=1500,
+                system=BRANDSCRIPT_PROMPT
             )
             send_plain(chat_id, result)
             keyboard = [
@@ -1386,7 +1576,7 @@ def handle_message(msg):
             if context: prompt += "\nCONTEXT: " + context
             if instruction: prompt += "\nSPECIFIC DIRECTION: " + instruction
             prompt += "\n\nREGENERATE ONLY: " + section.upper() + " SECTION. Return as plain text with graphic recommendations."
-            result = claude(prompt, max_tokens=1200)
+            result = claude(prompt, max_tokens=1200, system=BRANDSCRIPT_PROMPT)
             send_plain(chat_id, result)
             keyboard = [
                 [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
@@ -1446,10 +1636,10 @@ def handle_message(msg):
                 user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
                 ask_context(chat_id)
     else:
-        if user_state.get(chat_id, {}).get("stage") == "idle":
+        stage = user_state.get(chat_id, {}).get("stage", "idle")
+        if stage == "idle":
             show_main_menu(chat_id)
-        else:
-            send(chat_id, "Use the buttons to navigate, or /start to reset.")
+        # Silently ignore short text in active flows — don't reset or confuse the user
 
 def handle_callback(cb):
     chat_id = cb["message"]["chat"]["id"]
@@ -1887,6 +2077,7 @@ def handle_callback(cb):
 
 def poll():
     offset = 0
+    processed_updates = set()
     print("Cryptonary Bot V9 running.", flush=True)
     while True:
         try:
@@ -1899,6 +2090,13 @@ def poll():
                 continue
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
+                # Deduplication: skip if already processed (handles brief 409 overlaps)
+                uid = update["update_id"]
+                if uid in processed_updates:
+                    continue
+                processed_updates.add(uid)
+                if len(processed_updates) > 500:
+                    processed_updates.clear()
                 try:
                     if "message" in update:
                         handle_message(update["message"])
@@ -2565,18 +2763,18 @@ def generate_landing_page(chat_id):
     all_output = []
     for section_name, section_instruction in sections:
         try:
-            prompt = BRANDSCRIPT_PROMPT
-            prompt += "\n\nLANDING PAGE BRIEF:\nAVATAR(S): " + avatar_detail
-            prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
-            prompt += "\nCTA BUTTON TEXT: " + cta["cta_text"]
-            prompt += "\nPOSITIONING: " + cta["positioning"]
-            prompt += "\nURGENCY MECHANIC: " + cta["urgency"]
+            user_prompt = "LANDING PAGE BRIEF:\nAVATAR(S): " + avatar_detail
+            user_prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            user_prompt += "\nCTA BUTTON TEXT: " + cta["cta_text"]
+            user_prompt += "\nPOSITIONING: " + cta["positioning"]
+            user_prompt += "\nURGENCY MECHANIC: " + cta["urgency"]
             if context:
-                prompt += "\nEXTRA CONTEXT: " + context
-            prompt += "\n\nNOW WRITE:\n" + section_name + "\n" + section_instruction
-            prompt += "\n\nReturn as plain text. Section name in caps as header. Copy first, then graphic recommendations clearly labelled."
+                user_prompt += "\nEXTRA CONTEXT: " + context
+            user_prompt += "\n\nNOW WRITE THIS SECTION:\n" + section_name
+            user_prompt += "\n\n" + section_instruction
+            user_prompt += "\n\nIMPORTANT: Return as plain text. Start with the section name in CAPS as a header. Write all copy first. Then at the end write GRAPHIC RECOMMENDATIONS: with visual direction and AI image prompt clearly labelled. Do NOT write emails. Write landing page copy only."
 
-            raw = claude(prompt, max_tokens=1200)
+            raw = claude(user_prompt, max_tokens=1200, system=BRANDSCRIPT_PROMPT)
             send_plain(chat_id, raw)
             all_output.append(raw)
             time.sleep(0.5)
