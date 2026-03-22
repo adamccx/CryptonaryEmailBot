@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V9
+Cryptonary Email Generator Bot - V10
 - Full feedback loop for emails and ads
 - Split test aggregation for emails
 - Video AIDA analytics + static ad analytics
