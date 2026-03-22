@@ -136,6 +136,20 @@ def clean_json(s):
     if end >= 0: s = s[:end+1]
     return s
 
+def sanitise(text):
+    if not text: return ""
+    # Replace smart quotes and special characters that break JSON
+    replacements = [
+        ("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'),
+        ("–", "-"), ("—", "-"), ("…", "..."),
+        ("â", "'"), ("â", '"'),
+        ("â", '"'), ("â", "-"),
+        ("â", "-"),
+    ]
+    for old_char, new_char in replacements:
+        text = text.replace(old_char, new_char)
+    return text
+
 def extract_text(v):
     if isinstance(v, str): return v
     if isinstance(v, dict):
@@ -188,8 +202,8 @@ def ask_context(chat_id):
     send(chat_id, "*Any extra context to factor in?*\n\n_Promos, discounts, Inner Circle open, upcoming events, factoids, PSAs..._", keyboard)
 
 def gen_angles(chat_id):
-    report = user_state[chat_id].get("report", "")
-    context = user_state[chat_id].get("context", "")
+    report = sanitise(user_state[chat_id].get("report", ""))
+    context = sanitise(user_state[chat_id].get("context", ""))
     perf = get_perf_context(chat_id)
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
@@ -212,8 +226,8 @@ def gen_angles(chat_id):
 
 def gen_hooks(chat_id):
     angle = user_state[chat_id].get("selected_angle", "")
-    report = user_state[chat_id].get("report", "")
-    context = user_state[chat_id].get("context", "")
+    report = sanitise(user_state[chat_id].get("report", ""))
+    context = sanitise(user_state[chat_id].get("context", ""))
     perf = get_perf_context(chat_id)
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
@@ -246,8 +260,8 @@ def ask_pro_cta(chat_id):
 
 def gen_emails(chat_id):
     state = user_state[chat_id]
-    report = state.get("report", "")
-    context = state.get("context", "")
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
     hook = state.get("selected_hook", {})
     free_cta = state.get("free_cta", "upgrade")
@@ -476,8 +490,8 @@ def show_social_menu(chat_id):
 
 def gen_social(chat_id, social_type):
     state = user_state[chat_id]
-    report = state.get("report", "")
-    context = state.get("context", "")
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
     emails = state.get("current_emails", {})
     free_ref = extract_text(emails.get("free", ""))[:400] if "free" in emails else ""
