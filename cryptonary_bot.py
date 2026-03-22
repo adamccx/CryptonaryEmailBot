@@ -141,17 +141,27 @@ def clean_json(s):
 
 def sanitise(text):
     if not text: return ""
-    # Replace smart quotes and special characters that break JSON
-    replacements = [
-        ("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'),
-        ("–", "-"), ("—", "-"), ("…", "..."),
-        ("â", "'"), ("â", '"'),
-        ("â", '"'), ("â", "-"),
-        ("â", "-"),
+    pairs = [
+        (u"\u2018", "'"), (u"\u2019", "'"), (u"\u201a", "'"),
+        (u"\u201c", '"'), (u"\u201d", '"'), (u"\u201e", '"'),
+        (u"\u2013", "-"), (u"\u2014", "-"), (u"\u2015", "-"),
+        (u"\u2026", "..."), (u"\u2022", "-"), (u"\u00b7", "-"),
     ]
-    for old_char, new_char in replacements:
-        text = text.replace(old_char, new_char)
-    return text
+    for a, b in pairs:
+        text = text.replace(a, b)
+    out = []
+    for ch in text:
+        cp = ord(ch)
+        if cp == 10 or cp == 9 or cp == 13:
+            out.append(ch)
+        elif cp < 32:
+            continue
+        elif 127 <= cp <= 159:
+            continue
+        else:
+            out.append(ch)
+    return "".join(out)
+
 
 def extract_text(v):
     if isinstance(v, str): return v
