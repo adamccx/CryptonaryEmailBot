@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V5
+Cryptonary Email Generator Bot - V6
+- Subject line A/B testing
+- Tone variants (Standard / Aggressive / Empathetic)
+- Audience segmentation for Free email (Hot / Warm / Cold)
 Clean flow with consistent Quick Edit / Enhance / Approve at every stage.
 """
 
@@ -162,7 +165,10 @@ def email_action_keyboard():
     return [
         [{"text": "Quick Edit", "callback_data": "quick_edit"},
          {"text": "Enhance", "callback_data": "enhance"},
-         {"text": "Approve", "callback_data": "approve_emails"}]
+         {"text": "Approve", "callback_data": "approve_emails"}],
+        [{"text": "Subject Lines", "callback_data": "subject_ab"},
+         {"text": "Tone", "callback_data": "tone_menu"},
+         {"text": "Segments", "callback_data": "segments"}]
     ]
 
 def social_action_keyboard():
@@ -595,6 +601,201 @@ def show_stats(chat_id):
         msg += "- " + r.get("subject", "")[:45] + "\n  " + str(r.get("open_rate", "?")) + "% open / " + str(r.get("click_rate", "?")) + "% click\n"
     send(chat_id, msg)
 
+
+# ── SUBJECT LINE A/B ─────────────────────────────────────────────
+
+def gen_subject_ab(chat_id):
+    state = user_state[chat_id]
+    emails = state.get("current_emails", {})
+    hook = state.get("selected_hook", {})
+    current_subject = hook.get("subject", "")
+    report = sanitise(state.get("report", ""))
+    angle = state.get("selected_angle", "")
+    send(chat_id, "Generating subject line alternatives...")
+    try:
+        raw = claude(
+            "Generate 3 alternative subject lines for this Cryptonary email. Each uses a different copywriting principle.\n\nReport: " + report[:600] +
+            "\nAngle: " + angle +
+            "\nCurrent subject: " + current_subject +
+            "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nReturn ONLY a valid JSON array of 3 objects with keys: subject, preview, principle, reason (one sentence why it works). No markdown.",
+            max_tokens=700
+        )
+        alternatives = json.loads(clean_json(raw))
+        state["subject_alternatives"] = alternatives
+        state["stage"] = "emails_ready"
+        text = "*Alternative Subject Lines:*\n\n*Current:* " + current_subject + "\n\n"
+        keyboard = []
+        for i, a in enumerate(alternatives):
+            text += "*" + str(i+1) + ". [" + a.get("principle","") + "]*\n"
+            text += a.get("subject","") + "\n"
+            text += "_" + a.get("preview","") + "_\n"
+            text += a.get("reason","") + "\n\n"
+            keyboard.append([{"text": "Use " + str(i+1) + ": " + a.get("subject","")[:35], "callback_data": "use_subject_" + str(i)}])
+        keyboard.append([{"text": "Keep current", "callback_data": "keep_subject"}])
+        send(chat_id, text, keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "emails_ready"
+
+def apply_subject(chat_id, idx):
+    state = user_state[chat_id]
+    alternatives = state.get("subject_alternatives", [])
+    if idx >= len(alternatives):
+        send(chat_id, "Invalid selection.", email_action_keyboard())
+        return
+    chosen = alternatives[idx]
+    emails = state.get("current_emails", {})
+    for key in ["free", "pro"]:
+        if key in emails:
+            email_str = extract_text(emails[key])
+            lines = email_str.split("\n")
+            new_lines = []
+            for line in lines:
+                if line.lower().startswith("subject line:") or line.lower().startswith("subject:"):
+                    new_lines.append("Subject Line: " + chosen.get("subject",""))
+                elif line.lower().startswith("preview:"):
+                    new_lines.append("Preview: " + chosen.get("preview",""))
+                else:
+                    new_lines.append(line)
+            emails[key] = "\n".join(new_lines)
+    state["current_emails"] = emails
+    if state.get("selected_hook"):
+        state["selected_hook"]["subject"] = chosen.get("subject","")
+    state["stage"] = "emails_ready"
+    send(chat_id, "Subject updated to: *" + chosen.get("subject","") + "*")
+    send(chat_id, "What next?", email_action_keyboard())
+
+# ── TONE VARIANTS ─────────────────────────────────────────────────
+
+TONE_DEFS = {
+    "standard": ("Standard", "Adam's default voice. Confident, direct, data-led. Short punchy sentences. Balanced urgency."),
+    "aggressive": ("Aggressive", "Bull market mode. High urgency, FOMO-driven. The opportunity is NOW. Stronger social proof. Reader will regret missing this. Shorter sentences. More bold statements. Commands not invitations."),
+    "empathetic": ("Empathetic", "Bear market mode. Reader is stressed, possibly down on portfolio. Adam is alongside them. Acknowledges the pain. Positions Cryptonary as steady hand in chaos. Calmer tone. Less urgency, more reassurance. CTA is a lifeline not a push.")
+}
+
+def show_tone_menu(chat_id):
+    keyboard = [
+        [{"text": "Standard", "callback_data": "tone_standard"}],
+        [{"text": "Aggressive (bull / FOMO)", "callback_data": "tone_aggressive"}],
+        [{"text": "Empathetic (bear / stressed reader)", "callback_data": "tone_empathetic"}],
+        [{"text": "Cancel", "callback_data": "cancel_tone"}]
+    ]
+    send(chat_id, "*Choose tone:*\n\nRewrites both emails in the selected tone. Same content, different emotional delivery.", keyboard)
+
+def apply_tone(chat_id, tone_key):
+    state = user_state[chat_id]
+    tone_label, tone_instruction = TONE_DEFS.get(tone_key, TONE_DEFS["standard"])
+    emails = state.get("current_emails", {})
+    free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
+    pro_email = extract_text(emails.get("pro", "")) if "pro" in emails else ""
+    email_text = ""
+    if free_email: email_text += "FREE EMAIL:\n" + free_email + "\n\n"
+    if pro_email: email_text += "PRO EMAIL:\n" + pro_email
+    send(chat_id, "Rewriting in " + tone_label + " tone...")
+    try:
+        raw = claude(
+            "Rewrite these Cryptonary emails in the following tone. Keep same content, facts, structure. Only change emotional delivery and language.\n\nTONE: " + tone_label +
+            "\nINSTRUCTION: " + tone_instruction +
+            "\n\nEMAILS:\n" + email_text +
+            "\n\nReturn a JSON object with keys free and pro. Return ONLY valid raw JSON.",
+            max_tokens=2500
+        )
+        toned = json.loads(clean_json(raw))
+        state["current_emails"] = toned
+        state["stage"] = "emails_ready"
+        if "free" in toned:
+            send(chat_id, "*FREE EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["free"]))
+        if "pro" in toned:
+            send(chat_id, "*PRO EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["pro"]))
+        send(chat_id, tone_label + " tone applied.", email_action_keyboard())
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "emails_ready"
+        send(chat_id, "What next?", email_action_keyboard())
+
+# ── AUDIENCE SEGMENTS ─────────────────────────────────────────────
+
+SEG_DEFS = {
+    "hot": ("Hot (last 30 days)", "This reader opens every email. Engaged, informed, trusts Cryptonary. Assume shared context. Reference recent calls briefly. Reward loyalty with insider-feeling language. Skip basic explanations. Treat as fellow serious investor. CTA feels like natural next step for someone already bought in."),
+    "warm": ("Warm (31-90 days)", "This reader has drifted. Knows Cryptonary but hasn't engaged lately. Re-establish value without being preachy. Reference what they may have missed as opportunity cost not guilt. Make them feel the gap between where they are and where engaged members are. Stronger hook than usual to cut through inertia. CTA feels like re-engaging with something good."),
+    "cold": ("Cold (90+ days / never opened)", "Almost a cold lead. May barely remember signing up. No assumed context or knowledge. Re-introduce Cryptonary value proposition clearly. Lead with strongest possible hook: a track record stat, specific win, market call that played out. Feels like a first impression. Lower assumed knowledge. CTA is low-friction and easy to say yes to.")
+}
+
+def gen_segments(chat_id):
+    state = user_state[chat_id]
+    emails = state.get("current_emails", {})
+    free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
+    if not free_email:
+        send(chat_id, "No free email found.", email_action_keyboard())
+        return
+    free_cta_key = state.get("free_cta", "upgrade")
+    free_cta_instruction = CTA_INSTRUCTIONS["free"].get(free_cta_key, "")
+    send(chat_id, "Writing 3 segment versions of the Free email...")
+    try:
+        raw = claude(
+            "Rewrite this Cryptonary Free email for 3 different audience segments. Same core content and CTA. Different tone, assumed knowledge, emotional approach.\n\nORIGINAL FREE EMAIL:\n" + free_email +
+            "\n\nCTA INSTRUCTION: " + free_cta_instruction +
+            "\n\nSEGMENT HOT: " + SEG_DEFS["hot"][1] +
+            "\n\nSEGMENT WARM: " + SEG_DEFS["warm"][1] +
+            "\n\nSEGMENT COLD: " + SEG_DEFS["cold"][1] +
+            "\n\nReturn a JSON object with keys hot, warm, cold. Each is the complete rewritten free email as a plain string. Return ONLY valid raw JSON.",
+            max_tokens=3000
+        )
+        segments = json.loads(clean_json(raw))
+        state["current_segments"] = segments
+        state["stage"] = "segments_ready"
+        for key, (label, _) in SEG_DEFS.items():
+            if key in segments:
+                send(chat_id, "*FREE EMAIL — " + label.upper() + "*\n\n" + extract_text(segments[key]))
+        keyboard = [
+            [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
+             {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
+             {"text": "Edit Cold", "callback_data": "seg_edit_cold"}],
+            [{"text": "Approve segments", "callback_data": "approve_segments"},
+             {"text": "Back to emails", "callback_data": "back_to_emails"}]
+        ]
+        send(chat_id, "3 segment versions ready.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "emails_ready"
+        send(chat_id, "What next?", email_action_keyboard())
+
+def ask_seg_edit(chat_id, segment):
+    user_state[chat_id]["stage"] = "awaiting_seg_edit"
+    user_state[chat_id]["seg_edit_target"] = segment
+    label = SEG_DEFS.get(segment, ("",))[0]
+    send(chat_id, "*Quick Edit — " + label + "*\n\nType your instruction:")
+
+def apply_seg_edit(chat_id, instruction):
+    state = user_state[chat_id]
+    segment = state.get("seg_edit_target", "hot")
+    segments = state.get("current_segments", {})
+    content = extract_text(segments.get(segment, ""))
+    label = SEG_DEFS.get(segment, ("",))[0]
+    send(chat_id, "Applying edit...")
+    try:
+        result = claude(
+            "Edit this Cryptonary Free email (" + label + " segment). Instruction: " + instruction +
+            "\n\nKeep segment tone intact. Only change what instruction specifies.\n\nEMAIL:\n" + content +
+            "\n\nReturn edited email as a plain string.",
+            max_tokens=1200
+        )
+        segments[segment] = result
+        state["current_segments"] = segments
+        state["stage"] = "segments_ready"
+        send(chat_id, "*EDITED — " + label.upper() + "*\n\n" + result)
+        keyboard = [
+            [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
+             {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
+             {"text": "Edit Cold", "callback_data": "seg_edit_cold"}],
+            [{"text": "Approve segments", "callback_data": "approve_segments"},
+             {"text": "Back to emails", "callback_data": "back_to_emails"}]
+        ]
+        send(chat_id, "Edit applied.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "segments_ready"
+
 # ── MESSAGE + CALLBACK HANDLERS ───────────────────────────────────
 
 def handle_message(msg):
@@ -604,7 +805,7 @@ def handle_message(msg):
 
     if text == "/start":
         user_state[chat_id] = {"stage": "idle"}
-        send(chat_id, "*Cryptonary Email Generator V5*\n\nPaste your report to get started.\n\n/stats — view performance\n/logperformance — log email results\n/help — how to use")
+        send(chat_id, "*Cryptonary Email Generator V6*\n\nPaste your report to get started.\n\n/stats — view performance\n/logperformance — log email results\n/help — how to use")
         return
     if text == "/stats":
         show_stats(chat_id)
@@ -633,6 +834,10 @@ def handle_message(msg):
     if stage == "awaiting_quick_edit":
         user_state[chat_id]["stage"] = user_state[chat_id].get("pre_edit_stage", "emails_ready")
         apply_quick_edit(chat_id, text)
+        return
+
+    if stage == "awaiting_seg_edit":
+        apply_seg_edit(chat_id, text)
         return
 
     if len(text) > 100:
@@ -756,6 +961,53 @@ def handle_callback(cb):
             [{"text": "Mark Complete", "callback_data": "mark_complete"}]
         ]
         send(chat_id, "Social content approved. Generate another format or mark complete?", keyboard)
+
+    elif data == "subject_ab":
+        gen_subject_ab(chat_id)
+
+    elif data.startswith("use_subject_"):
+        idx = int(data.replace("use_subject_", ""))
+        apply_subject(chat_id, idx)
+
+    elif data == "keep_subject":
+        state["stage"] = "emails_ready"
+        send(chat_id, "Keeping current subject.", email_action_keyboard())
+
+    elif data == "tone_menu":
+        show_tone_menu(chat_id)
+
+    elif data.startswith("tone_") and data != "tone_menu":
+        tone_key = data.replace("tone_", "")
+        if tone_key in ["standard", "aggressive", "empathetic"]:
+            apply_tone(chat_id, tone_key)
+
+    elif data == "cancel_tone":
+        state["stage"] = "emails_ready"
+        send(chat_id, "Tone change cancelled.", email_action_keyboard())
+
+    elif data == "segments":
+        gen_segments(chat_id)
+
+    elif data == "seg_edit_hot":
+        ask_seg_edit(chat_id, "hot")
+
+    elif data == "seg_edit_warm":
+        ask_seg_edit(chat_id, "warm")
+
+    elif data == "seg_edit_cold":
+        ask_seg_edit(chat_id, "cold")
+
+    elif data == "approve_segments":
+        state["stage"] = "emails_approved"
+        keyboard = [
+            [{"text": "Yes — create social content", "callback_data": "social_yes"}],
+            [{"text": "No — mark complete", "callback_data": "mark_complete"}]
+        ]
+        send(chat_id, "Segments approved. Want to create social content?", keyboard)
+
+    elif data == "back_to_emails":
+        state["stage"] = "emails_ready"
+        send(chat_id, "Back to emails.", email_action_keyboard())
 
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
