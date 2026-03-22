@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V6
+Cryptonary Email Generator Bot - V7
 - Subject line A/B testing
 - Tone variants (Standard / Aggressive / Empathetic)
 - Audience segmentation for Free email (Hot / Warm / Cold)
@@ -327,14 +327,16 @@ def email_action_keyboard():
          {"text": "Approve", "callback_data": "approve_emails"}],
         [{"text": "Subject Lines", "callback_data": "subject_ab"},
          {"text": "Tone", "callback_data": "tone_menu"},
-         {"text": "Segments", "callback_data": "segments"}]
+         {"text": "Segments", "callback_data": "segments"}],
+        [{"text": "Length", "callback_data": "length_email"}]
     ]
 
 def social_action_keyboard():
     return [
         [{"text": "Quick Edit", "callback_data": "social_quick_edit"},
          {"text": "Enhance", "callback_data": "social_enhance"},
-         {"text": "Approve", "callback_data": "approve_social"}]
+         {"text": "Approve", "callback_data": "approve_social"}],
+        [{"text": "Length", "callback_data": "length_social"}]
     ]
 
 def mark_complete_keyboard():
@@ -440,7 +442,7 @@ def gen_emails(chat_id):
     prompt += "\nPreview: " + hook.get("preview", "")
     prompt += "\n\nFREE EMAIL CTA: " + CTA_INSTRUCTIONS["free"].get(free_cta, "")
     prompt += "\nPRO EMAIL CTA: " + CTA_INSTRUCTIONS["pro"].get(pro_cta, "")
-    prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON.\n\n===FREE EMAIL START===\n[complete free email here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[complete pro email here]\n===PRO EMAIL END==="
+    prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
         raw = claude(prompt, max_tokens=2500)
@@ -645,52 +647,250 @@ def apply_enhancements(chat_id):
 
 # ── SOCIAL CONTENT ────────────────────────────────────────────────
 
-def show_social_menu(chat_id):
-    keyboard = [
-        [{"text": "Reel Script (45-60s)", "callback_data": "social_reel"}],
-        [{"text": "Carousel (5-8 slides)", "callback_data": "social_carousel"}],
-        [{"text": "Story — Single slide", "callback_data": "social_story_single"}],
-        [{"text": "Story — Multi slide", "callback_data": "social_story_multi"}],
-        [{"text": "Mark Complete", "callback_data": "mark_complete"}]
-    ]
-    send(chat_id, "*Social Content*\n\nChoose a format:", keyboard)
+def show_social_source_menu(chat_id):
+    state = user_state[chat_id]
+    emails = state.get("current_emails", {})
+    segments = state.get("current_segments", {})
+    keyboard = []
+    if "free" in emails:
+        keyboard.append([{"text": "Free email", "callback_data": "src_free"}])
+    if "pro" in emails:
+        keyboard.append([{"text": "Pro email", "callback_data": "src_pro"}])
+    if "hot" in segments:
+        keyboard.append([{"text": "Free — Hot segment", "callback_data": "src_hot"}])
+    if "warm" in segments:
+        keyboard.append([{"text": "Free — Warm segment", "callback_data": "src_warm"}])
+    if "cold" in segments:
+        keyboard.append([{"text": "Free — Cold segment", "callback_data": "src_cold"}])
+    keyboard.append([{"text": "Cancel", "callback_data": "back_to_done"}])
+    send(chat_id, "*Which email should social content be based on?*", keyboard)
 
-def gen_social(chat_id, social_type):
+def show_social_format_menu(chat_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_social_formats", [])
+    formats = [
+        ("Reel Script (45-60s)", "fmt_reel"),
+        ("Carousel (5-8 slides)", "fmt_carousel"),
+        ("Story — Single slide", "fmt_story_single"),
+        ("Story — Multi slide", "fmt_story_multi"),
+    ]
+    keyboard = []
+    for label, cb in formats:
+        is_sel = cb in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + label, "callback_data": cb}])
+    keyboard.append([{"text": "Generate selected (" + str(len(selected)) + ")", "callback_data": "gen_social_selected"}])
+    keyboard.append([{"text": "Back", "callback_data": "back_to_done"}])
+    send(chat_id, "*Select formats to generate:*\n_(tap to select multiple)_", keyboard)
+
+def toggle_social_format(chat_id, fmt_cb, message_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_social_formats", [])
+    if fmt_cb in selected:
+        selected.remove(fmt_cb)
+    else:
+        selected.append(fmt_cb)
+    state["selected_social_formats"] = selected
+    formats = [
+        ("Reel Script (45-60s)", "fmt_reel"),
+        ("Carousel (5-8 slides)", "fmt_carousel"),
+        ("Story — Single slide", "fmt_story_single"),
+        ("Story — Multi slide", "fmt_story_multi"),
+    ]
+    keyboard = []
+    for label, cb in formats:
+        is_sel = cb in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + label, "callback_data": cb}])
+    keyboard.append([{"text": "Generate selected (" + str(len(selected)) + ")", "callback_data": "gen_social_selected"}])
+    keyboard.append([{"text": "Back", "callback_data": "back_to_done"}])
+    tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def get_social_source_text(chat_id):
+    state = user_state[chat_id]
+    source = state.get("social_source", "free")
+    emails = state.get("current_emails", {})
+    segments = state.get("current_segments", {})
+    if source == "free":
+        return extract_text(emails.get("free", ""))
+    elif source == "pro":
+        return extract_text(emails.get("pro", ""))
+    elif source in ["hot", "warm", "cold"]:
+        return extract_text(segments.get(source, ""))
+    return extract_text(emails.get("free", ""))
+
+def gen_social_selected(chat_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_social_formats", [])
+    if not selected:
+        send(chat_id, "No formats selected. Tap the format names to select them first.")
+        return
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
+    angle = state.get("selected_angle", "")
+    source_email = get_social_source_text(chat_id)[:600]
+    source_label = state.get("social_source", "free")
+    fmt_map = {
+        "fmt_reel": ("Reel Script", gen_reel),
+        "fmt_carousel": ("Carousel", gen_carousel),
+        "fmt_story_single": ("Story (single)", lambda c: gen_story(c, multi=False)),
+        "fmt_story_multi": ("Story (multi)", lambda c: gen_story(c, multi=True)),
+    }
+    send(chat_id, "Generating " + str(len(selected)) + " format(s) based on " + source_label + " email...")
+    for fmt_cb in selected:
+        if fmt_cb in fmt_map:
+            label, fn = fmt_map[fmt_cb]
+            fn(chat_id)
+    state["selected_social_formats"] = []
+
+def gen_reel(chat_id):
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
-    emails = state.get("current_emails", {})
-    free_ref = extract_text(emails.get("free", ""))[:400] if "free" in emails else ""
-
-    base = "SOURCE:\nReport: " + report
-    if context: base += "\nContext: " + context
-    base += "\nAngle: " + angle
-    if free_ref: base += "\nFree email reference: " + free_ref
-
-    send(chat_id, "Generating " + social_type + "...")
+    reel_duration = state.get("reel_duration", 52)
+    source_email = get_social_source_text(chat_id)[:500]
+    word_count = int(reel_duration * 2.3)
     try:
-        if social_type == "Reel Script":
-            prompt = "Write a 45-60 second Instagram Reel voiceover script for Cryptonary.\n\n" + base + "\n\nRULES:\n- 120-140 words total\n- First 3 seconds must stop the scroll — pattern interrupt hook\n- Format: voiceover text on left, [B-roll instruction] on right for each line\n- Build to a CTA: follow Cryptonary for more\n- Adam's voice: punchy, direct, data-led\n- No fluff\n\nReturn as plain string."
-            max_tok = 800
-        elif social_type == "Carousel":
-            prompt = "Create an Instagram Carousel for Cryptonary. Mix of bold text and visual direction.\n\n" + base + "\n\nRULES:\n- 5-8 slides including cover and CTA final slide\n- Format: SLIDE N: [headline — max 8 words] + [visual direction in brackets]\n- Cover must stop the scroll\n- Mix bold text statements, data slides, and list slides\n- Each slide earns the next swipe\n- Final slide: follow for more / link in bio\n\nReturn as plain string."
-            max_tok = 900
-        elif social_type == "Story (single)":
-            prompt = "Create a single Instagram Story slide for Cryptonary.\n\n" + base + "\n\nRULES:\n- Format: SLIDE 1: [main text — max 15 words] + [background/visual direction in brackets] + [optional poll or sticker suggestion]\n- Vertical full screen — text must be large and readable\n- Urgent, direct, makes reader act now\n- CTA: swipe up or link in bio\n\nReturn as plain string."
-            max_tok = 400
-        else:
-            prompt = "Create a multi-slide Instagram Story for Cryptonary.\n\n" + base + "\n\nRULES:\n- 3-5 slides\n- Format per slide: SLIDE N: [main text — max 15 words] + [background/visual direction in brackets] + [optional poll or sticker]\n- Cliffhanger between each slide to drive tap-throughs\n- Final slide: swipe up or link in bio\n- Adam's voice: urgent, direct\n\nReturn as plain string."
-            max_tok = 700
+        result = claude(
+            "Write a " + str(reel_duration) + "-second Instagram Reel voiceover script for Cryptonary.\n\n" +
+            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+            "\nAngle: " + angle + "\nEmail reference: " + source_email +
+            "\n\nRULES:\n- Approximately " + str(word_count) + " words (matches " + str(reel_duration) + "s at natural pace)\n- First 3 seconds must stop the scroll\n- Format: voiceover text | [B-roll instruction] for each line\n- CTA at end: follow Cryptonary\n- Adam's voice: punchy, direct, data-led\n\nReturn as plain string.",
+            max_tokens=900
+        )
+        state["current_social"] = result
+        state["current_social_type"] = "Reel Script"
+        state["stage"] = "social_ready"
+        send(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s)*\n\n" + result)
+        send(chat_id, "Done.", social_action_keyboard())
+    except Exception as e:
+        send(chat_id, "Error generating reel: " + str(e))
 
-        result = claude(prompt, max_tokens=max_tok)
+def gen_carousel(chat_id):
+    state = user_state[chat_id]
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
+    angle = state.get("selected_angle", "")
+    slide_count = state.get("carousel_slides", 6)
+    source_email = get_social_source_text(chat_id)[:500]
+    try:
+        result = claude(
+            "Create a " + str(slide_count) + "-slide Instagram Carousel for Cryptonary.\n\n" +
+            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+            "\nAngle: " + angle + "\nEmail reference: " + source_email +
+            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Format: SLIDE N: [headline max 8 words] + [visual direction in brackets]\n- Mix bold text, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more\n\nReturn as plain string.",
+            max_tokens=900
+        )
+        state["current_social"] = result
+        state["current_social_type"] = "Carousel"
+        state["stage"] = "social_ready"
+        send(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
+        send(chat_id, "Done.", social_action_keyboard())
+    except Exception as e:
+        send(chat_id, "Error generating carousel: " + str(e))
+
+def gen_story(chat_id, multi=False):
+    state = user_state[chat_id]
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
+    angle = state.get("selected_angle", "")
+    story_slides = state.get("story_slides", 3) if multi else 1
+    source_email = get_social_source_text(chat_id)[:500]
+    slide_instruction = str(story_slides) + " slides" if multi else "1 single slide"
+    try:
+        result = claude(
+            "Create an Instagram Story for Cryptonary: " + slide_instruction + "\n\n" +
+            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+            "\nAngle: " + angle + "\nEmail reference: " + source_email +
+            "\n\nRULES:\n- Format per slide: SLIDE N: [text max 15 words] + [visual/background direction] + [optional sticker]\n- Cliffhanger between slides if multi\n- Final slide: swipe up or link in bio\n- Urgent, direct tone\n\nReturn as plain string.",
+            max_tokens=700
+        )
+        social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
         state["current_social"] = result
         state["current_social_type"] = social_type
         state["stage"] = "social_ready"
         send(chat_id, "*" + social_type.upper() + "*\n\n" + result)
-        send(chat_id, "Done. What would you like to do?", social_action_keyboard())
+        send(chat_id, "Done.", social_action_keyboard())
     except Exception as e:
-        send(chat_id, "Error: " + str(e))
+        send(chat_id, "Error generating story: " + str(e))
+
+# ── LENGTH CONTROL ─────────────────────────────────────────────────
+
+def show_length_menu(chat_id, mode="email"):
+    user_state[chat_id]["length_mode"] = mode
+    if mode == "email":
+        keyboard = [
+            [{"text": "Extend (add more detail)", "callback_data": "length_extend"}],
+            [{"text": "Shorten (tighten it up)", "callback_data": "length_shorten"}],
+            [{"text": "Cancel", "callback_data": "cancel_length"}]
+        ]
+        send(chat_id, "*Adjust length:*", keyboard)
+    else:
+        social_type = user_state[chat_id].get("current_social_type", "content")
+        is_reel = "Reel" in social_type
+        is_carousel = "Carousel" in social_type
+        is_story = "Story" in social_type
+        keyboard = []
+        if is_reel:
+            current = user_state[chat_id].get("reel_duration", 52)
+            keyboard.append([{"text": "Extend to " + str(current+15) + "s", "callback_data": "reel_extend"}])
+            keyboard.append([{"text": "Shorten to " + str(max(20, current-15)) + "s", "callback_data": "reel_shorten"}])
+        elif is_carousel:
+            current = user_state[chat_id].get("carousel_slides", 6)
+            keyboard.append([{"text": "Add 2 more slides (" + str(current+2) + " total)", "callback_data": "carousel_extend"}])
+            keyboard.append([{"text": "Remove 2 slides (" + str(max(3, current-2)) + " total)", "callback_data": "carousel_shorten"}])
+        elif is_story:
+            current = user_state[chat_id].get("story_slides", 3)
+            keyboard.append([{"text": "Add a slide (" + str(current+1) + " total)", "callback_data": "story_extend"}])
+            keyboard.append([{"text": "Remove a slide (" + str(max(1, current-1)) + " total)", "callback_data": "story_shorten"}])
+        else:
+            keyboard.append([{"text": "Extend", "callback_data": "length_extend"}])
+            keyboard.append([{"text": "Shorten", "callback_data": "length_shorten"}])
+        keyboard.append([{"text": "Cancel", "callback_data": "cancel_length"}])
+        send(chat_id, "*Adjust length:*", keyboard)
+
+def apply_length(chat_id, direction):
+    state = user_state[chat_id]
+    mode = state.get("length_mode", "email")
+    instruction = "Make this significantly longer. Add more detail, context, and depth. Keep Adam's voice." if direction == "extend" else "Make this significantly shorter. Cut anything that doesn't earn its place. Keep the core message and Adam's voice."
+    if mode == "social":
+        content = state.get("current_social", "")
+        social_type = state.get("current_social_type", "content")
+        send(chat_id, ("Extending" if direction == "extend" else "Shortening") + " " + social_type + "...")
+        try:
+            result = claude(instruction + "\n\nCONTENT:\n" + content + "\n\nReturn as plain string.", max_tokens=1200)
+            state["current_social"] = result
+            state["stage"] = "social_ready"
+            send(chat_id, "*" + social_type.upper() + " — " + direction.upper() + "ED*\n\n" + result)
+            send(chat_id, "Done.", social_action_keyboard())
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+            state["stage"] = "social_ready"
+    else:
+        emails = state.get("current_emails", {})
+        free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
+        pro_email = extract_text(emails.get("pro", "")) if "pro" in emails else ""
+        email_text = ""
+        if free_email: email_text += "FREE EMAIL:\n" + free_email + "\n\n"
+        if pro_email: email_text += "PRO EMAIL:\n" + pro_email
+        send(chat_id, ("Extending" if direction == "extend" else "Shortening") + " emails...")
+        try:
+            raw = claude(
+                instruction + "\n\nEMAILS:\n" + email_text +
+                "\n\nReturn using this format. No JSON:\n\n===FREE EMAIL START===\n[adjusted free email]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[adjusted pro email]\n===PRO EMAIL END===",
+                max_tokens=2500
+            )
+            adjusted = parse_delimited_emails(raw)
+            state["current_emails"] = adjusted
+            state["stage"] = "emails_ready"
+            if "free" in adjusted:
+                send(chat_id, "*FREE EMAIL — " + direction.upper() + "ED*\n\n" + extract_text(adjusted["free"]))
+            if "pro" in adjusted:
+                send(chat_id, "*PRO EMAIL — " + direction.upper() + "ED*\n\n" + extract_text(adjusted["pro"]))
+            send(chat_id, "Done.", email_action_keyboard())
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+            state["stage"] = "emails_ready"
+
 
 # ── PERFORMANCE TRACKING ──────────────────────────────────────────
 
@@ -763,13 +963,13 @@ def show_stats(chat_id):
     send(chat_id, msg)
 
 
-# ── SUBJECT LINE A/B ─────────────────────────────────────────────
+# ── SUBJECT LINE A/B (MULTI-SELECT) ─────────────────────────────
 
 def gen_subject_ab(chat_id):
     state = user_state[chat_id]
-    emails = state.get("current_emails", {})
     hook = state.get("selected_hook", {})
     current_subject = hook.get("subject", "")
+    current_preview = hook.get("preview", "")
     report = sanitise(state.get("report", ""))
     angle = state.get("selected_angle", "")
     send(chat_id, "Generating subject line alternatives...")
@@ -783,48 +983,88 @@ def gen_subject_ab(chat_id):
         )
         alternatives = parse_subject_alternatives(raw)
         state["subject_alternatives"] = alternatives
-        state["stage"] = "emails_ready"
-        text = "*Alternative Subject Lines:*\n\n*Current:* " + current_subject + "\n\n"
+        state["selected_subjects"] = []
+        state["stage"] = "subject_select"
+        text = "*Select subject lines to include:*\n_(tap to select multiple, then tap Done)_\n\n"
+        text += "*Original:* " + current_subject + "\n_" + current_preview + "_\n\n"
         keyboard = []
         for i, a in enumerate(alternatives):
             text += "*" + str(i+1) + ". [" + a.get("principle","") + "]*\n"
             text += a.get("subject","") + "\n"
             text += "_" + a.get("preview","") + "_\n"
             text += a.get("reason","") + "\n\n"
-            keyboard.append([{"text": "Use " + str(i+1) + ": " + a.get("subject","")[:35], "callback_data": "use_subject_" + str(i)}])
-        keyboard.append([{"text": "Keep current", "callback_data": "keep_subject"}])
+            keyboard.append([{"text": "[ ] " + str(i+1) + ". " + a.get("subject","")[:40], "callback_data": "sel_sub_" + str(i)}])
+        keyboard.append([{"text": "Done — apply selected", "callback_data": "apply_subjects"}])
+        keyboard.append([{"text": "Keep original only", "callback_data": "keep_subject"}])
         send(chat_id, text, keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
         state["stage"] = "emails_ready"
 
-def apply_subject(chat_id, idx):
+def toggle_subject_select(chat_id, idx, message_id):
     state = user_state[chat_id]
+    selected = state.get("selected_subjects", [])
     alternatives = state.get("subject_alternatives", [])
-    if idx >= len(alternatives):
-        send(chat_id, "Invalid selection.", email_action_keyboard())
-        return
-    chosen = alternatives[idx]
+    if idx in selected:
+        selected.remove(idx)
+    else:
+        selected.append(idx)
+    state["selected_subjects"] = selected
+    keyboard = []
+    for i, a in enumerate(alternatives):
+        is_sel = i in selected
+        label = ("[x] " if is_sel else "[ ] ") + str(i+1) + ". " + a.get("subject","")[:40]
+        keyboard.append([{"text": label, "callback_data": "sel_sub_" + str(i)}])
+    keyboard.append([{"text": "Done — apply selected (" + str(len(selected)) + ")", "callback_data": "apply_subjects"}])
+    keyboard.append([{"text": "Keep original only", "callback_data": "keep_subject"}])
+    tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def apply_subjects(chat_id):
+    state = user_state[chat_id]
+    selected_ids = state.get("selected_subjects", [])
+    alternatives = state.get("subject_alternatives", [])
+    hook = state.get("selected_hook", {})
+    original_subject = hook.get("subject", "")
+    original_preview = hook.get("preview", "")
     emails = state.get("current_emails", {})
+
+    # Build subject block with A/B/C labels
+    subject_block = "Subject A: " + original_subject + "\nPreview A: " + original_preview
+    labels = ["B", "C", "D"]
+    for li, idx in enumerate(selected_ids):
+        if idx < len(alternatives):
+            a = alternatives[idx]
+            label = labels[li] if li < len(labels) else str(li+2)
+            subject_block += "\nSubject " + label + ": " + a.get("subject","")
+            subject_block += "\nPreview " + label + ": " + a.get("preview","")
+
+    # Update both emails to have the multi-subject block at the top
     for key in ["free", "pro"]:
         if key in emails:
             email_str = extract_text(emails[key])
             lines = email_str.split("\n")
             new_lines = []
+            skip_next = False
+            replaced = False
             for line in lines:
-                if line.lower().startswith("subject line:") or line.lower().startswith("subject:"):
-                    new_lines.append("Subject Line: " + chosen.get("subject",""))
-                elif line.lower().startswith("preview:"):
-                    new_lines.append("Preview: " + chosen.get("preview",""))
-                else:
-                    new_lines.append(line)
+                if not replaced and (line.lower().startswith("subject") or line.lower().startswith("preview")):
+                    if not replaced:
+                        new_lines.append(subject_block)
+                        replaced = True
+                    if line.lower().startswith("preview"):
+                        skip_next = False
+                    continue
+                new_lines.append(line)
+            if not replaced:
+                new_lines.insert(0, subject_block)
             emails[key] = "\n".join(new_lines)
+
     state["current_emails"] = emails
-    if state.get("selected_hook"):
-        state["selected_hook"]["subject"] = chosen.get("subject","")
     state["stage"] = "emails_ready"
-    send(chat_id, "Subject updated to: *" + chosen.get("subject","") + "*")
+    count = len(selected_ids) + 1
+    send(chat_id, str(count) + " subject lines applied (A through " + ["B","C","D"][min(len(selected_ids)-1,2)] + " + original).")
     send(chat_id, "What next?", email_action_keyboard())
+
 
 # ── TONE VARIANTS ─────────────────────────────────────────────────
 
@@ -966,7 +1206,7 @@ def handle_message(msg):
 
     if text == "/start":
         user_state[chat_id] = {"stage": "idle"}
-        send(chat_id, "*Cryptonary Email Generator V6*\n\nPaste your report to get started.\n\n/stats — view performance\n/logperformance — log email results\n/help — how to use")
+        send(chat_id, "*Cryptonary Email Generator V7*\n\nPaste your report to get started.\n\n/stats — view performance\n/logperformance — log email results\n/help — how to use")
         return
     if text == "/stats":
         show_stats(chat_id)
@@ -1100,20 +1340,39 @@ def handle_callback(cb):
             [{"text": "Yes — create social content", "callback_data": "social_yes"}],
             [{"text": "No — mark complete", "callback_data": "mark_complete"}]
         ]
-        send(chat_id, "Emails approved. Want to create social content to accompany them?", keyboard)
+        send(chat_id, "Emails approved. Want to create social content?", keyboard)
 
     elif data == "social_yes":
-        show_social_menu(chat_id)
+        state["selected_social_formats"] = []
+        show_social_source_menu(chat_id)
 
-    elif data.startswith("social_"):
-        type_map = {
-            "social_reel": "Reel Script",
-            "social_carousel": "Carousel",
-            "social_story_single": "Story (single)",
-            "social_story_multi": "Story (multi)"
-        }
-        if data in type_map:
-            gen_social(chat_id, type_map[data])
+    elif data == "src_free":
+        state["social_source"] = "free"
+        show_social_format_menu(chat_id)
+
+    elif data == "src_pro":
+        state["social_source"] = "pro"
+        show_social_format_menu(chat_id)
+
+    elif data == "src_hot":
+        state["social_source"] = "hot"
+        show_social_format_menu(chat_id)
+
+    elif data == "src_warm":
+        state["social_source"] = "warm"
+        show_social_format_menu(chat_id)
+
+    elif data == "src_cold":
+        state["social_source"] = "cold"
+        show_social_format_menu(chat_id)
+
+    elif data.startswith("fmt_"):
+        toggle_social_format(chat_id, data, message_id)
+
+    elif data == "gen_social_selected":
+        gen_social_selected(chat_id)
+
+
 
     elif data == "approve_social":
         state["stage"] = "social_approved"
@@ -1169,6 +1428,61 @@ def handle_callback(cb):
     elif data == "back_to_emails":
         state["stage"] = "emails_ready"
         send(chat_id, "Back to emails.", email_action_keyboard())
+
+    elif data.startswith("sel_sub_"):
+        idx = int(data.replace("sel_sub_", ""))
+        toggle_subject_select(chat_id, idx, message_id)
+
+    elif data == "apply_subjects":
+        apply_subjects(chat_id)
+
+    elif data == "length_email":
+        show_length_menu(chat_id, mode="email")
+
+    elif data == "length_social":
+        show_length_menu(chat_id, mode="social")
+
+    elif data == "length_extend":
+        apply_length(chat_id, "extend")
+
+    elif data == "length_shorten":
+        apply_length(chat_id, "shorten")
+
+    elif data == "cancel_length":
+        mode = state.get("length_mode", "email")
+        if mode == "social":
+            send(chat_id, "Cancelled.", social_action_keyboard())
+        else:
+            send(chat_id, "Cancelled.", email_action_keyboard())
+
+    elif data == "back_to_done":
+        state["stage"] = "emails_ready"
+        send(chat_id, "Back to emails.", email_action_keyboard())
+
+    elif data == "reel_extend":
+        state["reel_duration"] = state.get("reel_duration", 52) + 15
+        gen_reel(chat_id)
+
+    elif data == "reel_shorten":
+        state["reel_duration"] = max(20, state.get("reel_duration", 52) - 15)
+        gen_reel(chat_id)
+
+    elif data == "carousel_extend":
+        state["carousel_slides"] = state.get("carousel_slides", 6) + 2
+        gen_carousel(chat_id)
+
+    elif data == "carousel_shorten":
+        state["carousel_slides"] = max(3, state.get("carousel_slides", 6) - 2)
+        gen_carousel(chat_id)
+
+    elif data == "story_extend":
+        state["story_slides"] = state.get("story_slides", 3) + 1
+        gen_story(chat_id, multi=True)
+
+    elif data == "story_shorten":
+        state["story_slides"] = max(1, state.get("story_slides", 3) - 1)
+        is_multi = state.get("story_slides", 1) > 1
+        gen_story(chat_id, multi=is_multi)
 
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
