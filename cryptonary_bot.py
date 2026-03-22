@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V7
+Cryptonary Email Generator Bot - V9
+- Full feedback loop for emails and ads
+- Split test aggregation for emails
+- Video AIDA analytics + static ad analytics
+- Pattern recognition and iteration suggestions
+- New entry point: Email / Ads / Social
+- Full ad creation flow with multi-select avatar + stage
+- Static (3 variants) and Video (AIDA + 3 hooks)
+- Logic breakdown per ad set
+- Standalone social flow
 - Subject line A/B testing
 - Tone variants (Standard / Aggressive / Empathetic)
 - Audience segmentation for Free email (Hot / Warm / Cold)
 Clean flow with consistent Quick Edit / Enhance / Approve at every stage.
 """
 
-import os, json, ssl, urllib.request, time
+import os, json, ssl, urllib.request, time, re
 
 TELEGRAM_TOKEN = "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y"
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "YOUR_ANTHROPIC_KEY_HERE")
@@ -110,10 +119,57 @@ def tg(method, data):
         return None
 
 def send(chat_id, text, keyboard=None):
-    data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-    if keyboard:
-        data["reply_markup"] = {"inline_keyboard": keyboard}
-    tg("sendMessage", data)
+    # Telegram max message length is 4096 chars - chunk if needed
+    max_len = 4000
+    if len(text) <= max_len:
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        if keyboard:
+            data["reply_markup"] = {"inline_keyboard": keyboard}
+        tg("sendMessage", data)
+    else:
+        # Send in chunks, keyboard only on last chunk
+        chunks = []
+        while len(text) > max_len:
+            # Break at last newline before limit
+            split_at = text.rfind("\n", 0, max_len)
+            if split_at == -1: split_at = max_len
+            chunks.append(text[:split_at])
+            text = text[split_at:].lstrip("\n")
+        chunks.append(text)
+        for i, chunk in enumerate(chunks):
+            is_last = (i == len(chunks) - 1)
+            data = {"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"}
+            if is_last and keyboard:
+                data["reply_markup"] = {"inline_keyboard": keyboard}
+            tg("sendMessage", data)
+            if not is_last:
+                time.sleep(0.3)  # avoid hitting rate limits
+
+def send_plain(chat_id, text, keyboard=None):
+    """Send without Markdown parsing - safe for raw Claude output."""
+    max_len = 4000
+    if len(text) <= max_len:
+        data = {"chat_id": chat_id, "text": text}
+        if keyboard:
+            data["reply_markup"] = {"inline_keyboard": keyboard}
+        tg("sendMessage", data)
+    else:
+        chunks = []
+        while len(text) > max_len:
+            split_at = text.rfind("\n", 0, max_len)
+            if split_at == -1: split_at = max_len
+            chunks.append(text[:split_at])
+            text = text[split_at:].lstrip("\n")
+        chunks.append(text)
+        for i, chunk in enumerate(chunks):
+            is_last = (i == len(chunks) - 1)
+            data = {"chat_id": chat_id, "text": chunk}
+            if is_last and keyboard:
+                data["reply_markup"] = {"inline_keyboard": keyboard}
+            tg("sendMessage", data)
+            if not is_last:
+                time.sleep(0.3)
+
 
 def claude(prompt, max_tokens=900):
     payload = json.dumps({
@@ -173,7 +229,6 @@ def parse_numbered_list(text, count):
         if not line:
             continue
         # Check if line starts with a number
-        import re
         m = re.match(r"^\d+\.\s*(.+)", line)
         if m:
             if current:
@@ -191,7 +246,6 @@ def parse_numbered_list(text, count):
 
 def parse_hooks(text):
     """Parse numbered SUBJECT/PREVIEW format into list of dicts."""
-    import re
     hooks = []
     # Split by numbered entries
     blocks = re.split(r"(?m)^\d+\.\s*", text.strip())
@@ -219,7 +273,6 @@ def parse_hooks(text):
 
 def parse_subject_alternatives(text):
     """Parse numbered PRINCIPLE/SUBJECT/PREVIEW/REASON format."""
-    import re
     alts = []
     blocks = re.split(r"(?m)^\d+\.\s*", text.strip())
     for block in blocks:
@@ -246,7 +299,6 @@ def parse_subject_alternatives(text):
     return alts[:3]
 
 def parse_enhance_suggestions(text):
-    import re
     suggestions = []
     idx = 1
     current = {"principle": "", "issue": "", "fix": ""}
@@ -341,8 +393,11 @@ def social_action_keyboard():
 
 def mark_complete_keyboard():
     return [
-        [{"text": "New email set", "callback_data": "start_over"},
-         {"text": "Log performance", "callback_data": "log_perf_start"}]
+        [{"text": "New session", "callback_data": "start_over"}],
+        [{"text": "Log email", "callback_data": "log_email_start"},
+         {"text": "Log ad", "callback_data": "log_ad_start"}],
+        [{"text": "Email report", "callback_data": "run_email_report"},
+         {"text": "Ad report", "callback_data": "run_ad_report"}]
     ]
 
 def get_perf_context(chat_id):
@@ -456,9 +511,9 @@ def gen_emails(chat_id):
             "timestamp": time.strftime("%Y-%m-%d %H:%M")
         }
         if "free" in emails:
-            send(chat_id, "*FREE EMAIL*\n\n" + extract_text(emails["free"]))
+            send_plain(chat_id, "FREE EMAIL\n\n" + extract_text(emails["free"]))
         if "pro" in emails:
-            send(chat_id, "*PRO EMAIL*\n\n" + extract_text(emails["pro"]))
+            send_plain(chat_id, "PRO EMAIL\n\n" + extract_text(emails["pro"]))
         send(chat_id, "Emails ready. What would you like to do?", email_action_keyboard())
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -486,7 +541,7 @@ def apply_quick_edit(chat_id, instruction):
             )
             state["current_social"] = result
             state["stage"] = "social_ready"
-            send(chat_id, "*EDITED " + social_type.upper() + "*\n\n" + result)
+            send_plain(chat_id, "*EDITED " + social_type.upper() + "*\n\n" + result)
             send(chat_id, "Edit applied.", social_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -510,9 +565,9 @@ def apply_quick_edit(chat_id, instruction):
             state["current_emails"] = edited
             state["stage"] = "emails_ready"
             if "free" in edited:
-                send(chat_id, "*EDITED FREE EMAIL*\n\n" + extract_text(edited["free"]))
+                send_plain(chat_id, "EDITED FREE EMAIL\n\n" + extract_text(edited["free"]))
             if "pro" in edited:
-                send(chat_id, "*EDITED PRO EMAIL*\n\n" + extract_text(edited["pro"]))
+                send_plain(chat_id, "EDITED PRO EMAIL\n\n" + extract_text(edited["pro"]))
             send(chat_id, "Edit applied.", email_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -614,7 +669,7 @@ def apply_enhancements(chat_id):
             )
             state["current_social"] = result
             state["stage"] = "social_ready"
-            send(chat_id, "*IMPROVED " + social_type.upper() + "*\n\n" + result)
+            send_plain(chat_id, "*IMPROVED " + social_type.upper() + "*\n\n" + result)
             send(chat_id, str(len(selected_ids)) + " improvements applied.", social_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -637,9 +692,9 @@ def apply_enhancements(chat_id):
             state["current_emails"] = improved
             state["stage"] = "emails_ready"
             if "free" in improved:
-                send(chat_id, "*IMPROVED FREE EMAIL*\n\n" + extract_text(improved["free"]))
+                send_plain(chat_id, "IMPROVED FREE EMAIL\n\n" + extract_text(improved["free"]))
             if "pro" in improved:
-                send(chat_id, "*IMPROVED PRO EMAIL*\n\n" + extract_text(improved["pro"]))
+                send_plain(chat_id, "IMPROVED PRO EMAIL\n\n" + extract_text(improved["pro"]))
             send(chat_id, str(len(selected_ids)) + " improvements applied.", email_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -760,7 +815,7 @@ def gen_reel(chat_id):
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
         state["stage"] = "social_ready"
-        send(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s)*\n\n" + result)
+        send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s)*\n\n" + result)
         send(chat_id, "Done.", social_action_keyboard())
     except Exception as e:
         send(chat_id, "Error generating reel: " + str(e))
@@ -783,7 +838,7 @@ def gen_carousel(chat_id):
         state["current_social"] = result
         state["current_social_type"] = "Carousel"
         state["stage"] = "social_ready"
-        send(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
+        send_plain(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
         send(chat_id, "Done.", social_action_keyboard())
     except Exception as e:
         send(chat_id, "Error generating carousel: " + str(e))
@@ -808,7 +863,7 @@ def gen_story(chat_id, multi=False):
         state["current_social"] = result
         state["current_social_type"] = social_type
         state["stage"] = "social_ready"
-        send(chat_id, "*" + social_type.upper() + "*\n\n" + result)
+        send_plain(chat_id, "*" + social_type.upper() + "*\n\n" + result)
         send(chat_id, "Done.", social_action_keyboard())
     except Exception as e:
         send(chat_id, "Error generating story: " + str(e))
@@ -860,7 +915,7 @@ def apply_length(chat_id, direction):
             result = claude(instruction + "\n\nCONTENT:\n" + content + "\n\nReturn as plain string.", max_tokens=1200)
             state["current_social"] = result
             state["stage"] = "social_ready"
-            send(chat_id, "*" + social_type.upper() + " — " + direction.upper() + "ED*\n\n" + result)
+            send_plain(chat_id, social_type.upper() + " — " + direction.upper() + "ED\n\n" + result)
             send(chat_id, "Done.", social_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -883,9 +938,9 @@ def apply_length(chat_id, direction):
             state["current_emails"] = adjusted
             state["stage"] = "emails_ready"
             if "free" in adjusted:
-                send(chat_id, "*FREE EMAIL — " + direction.upper() + "ED*\n\n" + extract_text(adjusted["free"]))
+                send_plain(chat_id, "FREE EMAIL — " + direction.upper() + "ED\n\n" + extract_text(adjusted["free"]))
             if "pro" in adjusted:
-                send(chat_id, "*PRO EMAIL — " + direction.upper() + "ED*\n\n" + extract_text(adjusted["pro"]))
+                send_plain(chat_id, "PRO EMAIL — " + direction.upper() + "ED\n\n" + extract_text(adjusted["pro"]))
             send(chat_id, "Done.", email_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -928,6 +983,7 @@ def log_step(chat_id, text):
             if chat_id not in performance_data:
                 performance_data[chat_id] = []
             performance_data[chat_id].append(record)
+            save_all_data()
             records = performance_data[chat_id]
             avg_open = sum(r.get("open_rate", 0) for r in records) / len(records)
             avg_click = sum(r.get("click_rate", 0) for r in records) / len(records)
@@ -1062,7 +1118,13 @@ def apply_subjects(chat_id):
     state["current_emails"] = emails
     state["stage"] = "emails_ready"
     count = len(selected_ids) + 1
-    send(chat_id, str(count) + " subject lines applied (A through " + ["B","C","D"][min(len(selected_ids)-1,2)] + " + original).")
+    label = ["B","C","D"][min(len(selected_ids)-1,2)] if selected_ids else "A"
+    send(chat_id, str(count) + " subject line(s) applied.")
+    # Show updated emails immediately
+    if "free" in emails:
+        send_plain(chat_id, "*FREE EMAIL (updated subjects)*\n\n" + extract_text(emails["free"]))
+    if "pro" in emails:
+        send_plain(chat_id, "*PRO EMAIL (updated subjects)*\n\n" + extract_text(emails["pro"]))
     send(chat_id, "What next?", email_action_keyboard())
 
 
@@ -1105,9 +1167,9 @@ def apply_tone(chat_id, tone_key):
         state["current_emails"] = toned
         state["stage"] = "emails_ready"
         if "free" in toned:
-            send(chat_id, "*FREE EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["free"]))
+            send_plain(chat_id, "*FREE EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["free"]))
         if "pro" in toned:
-            send(chat_id, "*PRO EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["pro"]))
+            send_plain(chat_id, "*PRO EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["pro"]))
         send(chat_id, tone_label + " tone applied.", email_action_keyboard())
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -1147,7 +1209,7 @@ def gen_segments(chat_id):
         state["stage"] = "segments_ready"
         for key, (label, _) in SEG_DEFS.items():
             if key in segments:
-                send(chat_id, "*FREE EMAIL — " + label.upper() + "*\n\n" + extract_text(segments[key]))
+                send_plain(chat_id, "*FREE EMAIL — " + label.upper() + "*\n\n" + extract_text(segments[key]))
         keyboard = [
             [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
              {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
@@ -1184,7 +1246,7 @@ def apply_seg_edit(chat_id, instruction):
         segments[segment] = result
         state["current_segments"] = segments
         state["stage"] = "segments_ready"
-        send(chat_id, "*EDITED — " + label.upper() + "*\n\n" + result)
+        send_plain(chat_id, "*EDITED — " + label.upper() + "*\n\n" + result)
         keyboard = [
             [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
              {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
@@ -1206,7 +1268,7 @@ def handle_message(msg):
 
     if text == "/start":
         user_state[chat_id] = {"stage": "idle"}
-        send(chat_id, "*Cryptonary Email Generator V7*\n\nPaste your report to get started.\n\n/stats — view performance\n/logperformance — log email results\n/help — how to use")
+        show_main_menu(chat_id)
         return
     if text == "/stats":
         show_stats(chat_id)
@@ -1215,8 +1277,22 @@ def handle_message(msg):
         user_state.setdefault(chat_id, {})
         start_log_performance(chat_id)
         return
+    if text == "/logemail":
+        user_state.setdefault(chat_id, {})
+        start_log_email(chat_id)
+        return
+    if text == "/logad":
+        user_state.setdefault(chat_id, {})
+        start_log_ad(chat_id)
+        return
+    if text == "/emailreport":
+        run_email_analysis(chat_id)
+        return
+    if text == "/adreport":
+        run_ad_analysis(chat_id)
+        return
     if text == "/help":
-        send(chat_id, "*How to use:*\n\n1. Paste your report\n2. Answer context question\n3. Pick angle\n4. Pick hook\n5. Pick Free CTA + Pro CTA\n6. Emails generated\n7. Quick Edit / Enhance / Approve\n8. Approve → social content option\n9. Quick Edit / Enhance / Approve on socials\n10. Approve → Mark Complete\n\n/logperformance — log results after sending\n/stats — performance summary")
+        send(chat_id, "*Cryptonary Content Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
         return
 
     stage = user_state.get(chat_id, {}).get("stage", "idle")
@@ -1241,11 +1317,53 @@ def handle_message(msg):
         apply_seg_edit(chat_id, text)
         return
 
+    if stage == "logging_email":
+        handle_email_log_step(chat_id, text)
+        return
+
+    if stage == "logging_ad":
+        handle_ad_log_step(chat_id, text)
+        return
+
     if len(text) > 100:
-        user_state[chat_id] = {"stage": "awaiting_context_choice", "report": text}
-        ask_context(chat_id)
+        current_stage = user_state.get(chat_id, {}).get("stage", "idle")
+        # Buffer multi-message pastes
+        if current_stage == "buffering_report":
+            user_state[chat_id]["report_buffer"] += "\n" + text
+            user_state[chat_id]["buffer_timer"] = time.time()
+            return
+        elif current_stage in ["idle", "awaiting_context_choice"] and user_state.get(chat_id, {}).get("buffer_timer"):
+            return
+        # Route based on what mode we're in
+        elif current_stage == "awaiting_email_report":
+            user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text, "buffer_timer": time.time(), "mode": "email"}
+            time.sleep(1.5)
+            if user_state.get(chat_id, {}).get("stage") == "buffering_report":
+                full_report = user_state[chat_id].get("report_buffer", text)
+                user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
+                ask_context(chat_id)
+        elif current_stage == "awaiting_ad_theme":
+            user_state[chat_id]["ad_theme"] = text
+            user_state[chat_id]["stage"] = "pick_ad_avatars"
+            show_avatar_menu(chat_id)
+        elif current_stage == "awaiting_social_report":
+            user_state[chat_id]["report"] = text
+            user_state[chat_id]["context"] = ""
+            user_state[chat_id]["stage"] = "pick_social_formats"
+            show_standalone_social_menu(chat_id)
+        else:
+            # Legacy: treat as email report
+            user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text, "buffer_timer": time.time(), "mode": "email"}
+            time.sleep(1.5)
+            if user_state.get(chat_id, {}).get("stage") == "buffering_report":
+                full_report = user_state[chat_id].get("report_buffer", text)
+                user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
+                ask_context(chat_id)
     else:
-        send(chat_id, "Paste your full report to get started, or /start to reset.")
+        if user_state.get(chat_id, {}).get("stage") == "idle":
+            show_main_menu(chat_id)
+        else:
+            send(chat_id, "Use the buttons to navigate, or /start to reset.")
 
 def handle_callback(cb):
     chat_id = cb["message"]["chat"]["id"]
@@ -1255,8 +1373,55 @@ def handle_callback(cb):
     state = user_state.get(chat_id, {})
 
     if data == "start_over":
-        user_state[chat_id] = {"stage": "idle"}
-        send(chat_id, "Ready. Paste your next report.")
+        show_main_menu(chat_id)
+
+    elif data == "mode_email":
+        user_state[chat_id] = {"stage": "awaiting_email_report"}
+        send(chat_id, "Paste your report:")
+
+    elif data == "mode_ads":
+        user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
+        send(chat_id, "*Ad Creation*\n\nPaste your campaign theme, report, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash opportunity, weekly market update..._")
+
+    elif data == "mode_social":
+        user_state[chat_id] = {"stage": "awaiting_social_report", "selected_social_formats": []}
+        send(chat_id, "Paste your report or content to base social posts on:")
+
+    elif data.startswith("adavatar_"):
+        avatar_key = data.replace("adavatar_", "")
+        toggle_avatar(chat_id, avatar_key, message_id)
+
+    elif data == "adavatars_done":
+        selected = state.get("selected_avatars", [])
+        if not selected:
+            send(chat_id, "Please select at least one avatar.")
+        else:
+            state["selected_stages"] = []
+            show_stage_menu(chat_id)
+
+    elif data.startswith("adstage_"):
+        stage_key = data.replace("adstage_", "")
+        toggle_stage(chat_id, stage_key, message_id)
+
+    elif data == "adstages_done":
+        selected = state.get("selected_stages", [])
+        if not selected:
+            send(chat_id, "Please select at least one funnel stage.")
+        else:
+            show_adtype_menu(chat_id)
+
+    elif data == "adtype_static":
+        state["ad_type"] = "static"
+        generate_all_ads(chat_id)
+
+    elif data == "adtype_video":
+        state["ad_type"] = "video"
+        generate_all_ads(chat_id)
+
+    elif data == "ads_again":
+        state["selected_avatars"] = []
+        state["selected_stages"] = []
+        show_avatar_menu(chat_id)
 
     elif data == "context_yes":
         user_state[chat_id]["stage"] = "awaiting_context_text"
@@ -1484,6 +1649,51 @@ def handle_callback(cb):
         is_multi = state.get("story_slides", 1) > 1
         gen_story(chat_id, multi=is_multi)
 
+    elif data == "log_email_start":
+        start_log_email(chat_id)
+
+    elif data == "log_ad_start":
+        start_log_ad(chat_id)
+
+    elif data == "run_email_report":
+        run_email_analysis(chat_id)
+
+    elif data == "run_ad_report":
+        run_ad_analysis(chat_id)
+
+    elif data == "email_log_ab_yes":
+        state["log_stage"] = "email_ab_variable"
+        send(chat_id, "What is the variable being tested? (e.g. 'name in subject line', 'curiosity gap vs data hook', 'short vs long preview')")
+
+    elif data == "email_log_ab_no":
+        state.get("log_data", {}).update({"ab_variable": None, "ab_label": None})
+        state["log_stage"] = "email_recipients"
+        send(chat_id, "How many recipients received this email?")
+
+    elif data.startswith("adlog_type_"):
+        ad_type = data.replace("adlog_type_", "")
+        state["log_data"] = {"ad_type": ad_type}
+        state["log_stage"] = "adlog_headline"
+        send(chat_id, "Enter the headline or first line of the ad:")
+
+    elif data.startswith("adlog_avatar_"):
+        avatar_key = data.replace("adlog_avatar_", "")
+        avatar_name = AVATARS_AD.get(avatar_key, ("Unknown",))[0]
+        if "log_data" not in state:
+            state["log_data"] = {}
+        state["log_data"]["avatar"] = avatar_name
+        state["log_stage"] = "adlog_stage"
+        keyboard = [[{"text": s.capitalize(), "callback_data": "adlog_stage_" + s}] for s in ["awareness","consideration","conversion"]]
+        send(chat_id, "Which funnel stage was this ad?", keyboard)
+
+    elif data.startswith("adlog_stage_"):
+        stage_name = data.replace("adlog_stage_", "")
+        if "log_data" not in state:
+            state["log_data"] = {}
+        state["log_data"]["stage"] = stage_name
+        state["log_stage"] = "adlog_date"
+        send(chat_id, "Date the ad ran? (e.g. 2026-03-22)")
+
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
 
@@ -1522,3 +1732,497 @@ if __name__ == "__main__":
         print("ERROR: Set ANTHROPIC_KEY environment variable.")
     else:
         poll()
+
+
+# ── MAIN MENU ─────────────────────────────────────────────────────
+
+def show_main_menu(chat_id):
+    user_state[chat_id] = {"stage": "idle"}
+    keyboard = [
+        [{"text": "Emails", "callback_data": "mode_email"}],
+        [{"text": "Ad Copy", "callback_data": "mode_ads"}],
+        [{"text": "Social Content", "callback_data": "mode_social"}]
+    ]
+    send(chat_id, "*Cryptonary Content Studio*\n\nWhat do you want to create?", keyboard)
+
+
+# ── AD CREATION FLOW ──────────────────────────────────────────────
+
+AVATARS_AD = {
+    "general":         ("General", "Broad appeal. Core fear: missing the move. Tone: direct, confident, data-led."),
+    "trader":          ("Trader", "Active, needs an edge. Core fear: missing the setup. Tone: fast, sharp, alpha."),
+    "investor":        ("Investor", "Long-term, wants conviction. Core fear: wrong long-term call. Tone: measured, premium."),
+    "passive_income":  ("Passive Income Seeker", "Wants yield without complexity. Core fear: losing while trying to earn. Tone: calm, reassuring."),
+    "portfolio":       ("Portfolio Builder", "Overwhelmed by token choices. Core fear: bad allocation. Tone: clear, structured."),
+    "skeptic":         ("Skeptic", "Has been burned. Only buys on receipts. Core fear: being scammed again. Tone: proof-first."),
+    "burned":          ("The Burned", "Lost money, wants redemption. Core fear: losing again. Tone: empathetic, offers a path."),
+    "student":         ("College Student", "Smart, low funds, wants escape. Core fear: missing window while broke. Tone: energetic, aspirational."),
+    "nine_to_five":    ("Burned-Out 9-5 Worker", "Wants an exit path. Core fear: trapped forever. Tone: emotional, freedom-focused."),
+    "boomer":          ("Boomer Near Retirement", "Risk-averse, wants returns. Core fear: losing retirement savings. Tone: conservative, proof-heavy."),
+    "side_hustle":     ("Side-Hustle Seeker", "Wants money now, clear steps. Core fear: wasting time. Tone: action-oriented, simple."),
+    "beginner":        ("Complete Beginner", "Zero knowledge, overwhelmed. Core fear: getting it wrong. Tone: warm, zero jargon."),
+    "chaser":          ("100X Chaser", "Degen, FOMO-driven. Core fear: missing the next 100X. Tone: high energy, exclusive access.")
+}
+
+FUNNEL_STAGES = {
+    "awareness":      "AWARENESS: Problem/curiosity focus. No price mention. Stop the scroll. Make them feel the problem or the opportunity.",
+    "consideration":  "CONSIDERATION: Education and proof. Build authority with track record. Use specific wins. Soft CTA.",
+    "conversion":     "CONVERSION: Clear offer. Price $1,197/year. Urgency. Transformation CTA. Make the math obvious."
+}
+
+AD_LOGIC_PROMPT = """
+CRYPTONARY TRACK RECORD (use these specifics):
+- Called SOL at $10 (now $290+), WIF at $0.004 (1,200X), POPCAT (660X), SPX (227X), HYPE airdrop avg $28,500
+- 7+ years, 3 full cycles since 2017
+- 300,000+ subscribers, 12,000+ Pro members
+
+COPYWRITING PRINCIPLES TO APPLY:
+- Hormozi: Sell transformation not product. Stack specific value bullets.
+- Cashvertising LF8: Lead with the avatar's dominant desire/fear.
+- Cialdini: Social proof (show what members DO), Authority (track record), Scarcity (information gap).
+- Ogilvy: Headline is everything. Specifics beat generalities. One CTA.
+"""
+
+def show_avatar_menu(chat_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_avatars", [])
+    keyboard = []
+    for key, (name, _) in AVATARS_AD.items():
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "adavatar_" + key}])
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
+    send(chat_id, "*Pick avatars:*\n_(tap to select multiple)_", keyboard)
+
+def show_stage_menu(chat_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_stages", [])
+    keyboard = []
+    for key in ["awareness", "consideration", "conversion"]:
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + key.capitalize(), "callback_data": "adstage_" + key}])
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adstages_done"}])
+    send(chat_id, "*Pick funnel stages:*\n_(tap to select multiple)_", keyboard)
+
+def show_adtype_menu(chat_id):
+    keyboard = [
+        [{"text": "Static — 3 copy variants", "callback_data": "adtype_static"}],
+        [{"text": "Video — AIDA script + 3 hook variants", "callback_data": "adtype_video"}]
+    ]
+    send(chat_id, "*Static or Video?*", keyboard)
+
+def toggle_avatar(chat_id, avatar_key, message_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_avatars", [])
+    if avatar_key in selected: selected.remove(avatar_key)
+    else: selected.append(avatar_key)
+    state["selected_avatars"] = selected
+    keyboard = []
+    for key, (name, _) in AVATARS_AD.items():
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "adavatar_" + key}])
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
+    tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def toggle_stage(chat_id, stage_key, message_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_stages", [])
+    if stage_key in selected: selected.remove(stage_key)
+    else: selected.append(stage_key)
+    state["selected_stages"] = selected
+    keyboard = []
+    for key in ["awareness", "consideration", "conversion"]:
+        is_sel = key in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + key.capitalize(), "callback_data": "adstage_" + key}])
+    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adstages_done"}])
+    tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def generate_all_ads(chat_id):
+    state = user_state[chat_id]
+    avatars = state.get("selected_avatars", [])
+    stages = state.get("selected_stages", [])
+    ad_type = state.get("ad_type", "static")
+    theme = sanitise(state.get("ad_theme", ""))
+
+    if not avatars or not stages:
+        send(chat_id, "Please select at least one avatar and one funnel stage.")
+        return
+
+    total = len(avatars) * len(stages)
+    send(chat_id, "Generating " + str(total) + " ad set(s)... This may take a moment.")
+
+    for avatar_key in avatars:
+        avatar_name, avatar_desc = AVATARS_AD.get(avatar_key, ("General", ""))
+        for stage_key in stages:
+            stage_instruction = FUNNEL_STAGES.get(stage_key, "")
+            try:
+                if ad_type == "static":
+                    prompt = "Write 3 Meta static ad variants for Cryptonary Pro.\n\nAVATAR: " + avatar_name + "\n" + avatar_desc
+                    if theme: prompt += "\n\nCAMPAIGN THEME/CONTEXT:\n" + theme
+                    prompt += "\n\nFUNNEL STAGE: " + stage_instruction
+                    prompt += "\n\n" + AD_LOGIC_PROMPT
+                    prompt += "\n\nFor EACH of the 3 variants write:\nVARIANT N:\nHEADLINE: [max 10 words, scroll-stopping]\nPRIMARY TEXT: [150-200 words, leads with avatar emotion, builds to CTA]\nDESCRIPTION: [max 20 words, reinforces headline]\nCTA BUTTON: [e.g. Learn More / Get Started / Join Now]\n\nThen after all 3 variants:\nLOGIC:\nHook mechanism: [what stops the scroll]\nLF8 desire: [which life force desire and why]\nCialdini principle: [which one and why]\nFunnel logic: [why this stage approach]\n\nReturn as plain text."
+                    raw = claude(prompt, max_tokens=1800)
+                    header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | STATIC*\n\n"
+                    send_plain(chat_id, header + raw)
+                else:
+                    # Video: AIDA script + 3 hook variants
+                    prompt = "Write a 30-45 second Meta video ad script for Cryptonary Pro using the AIDA formula.\n\nAVATAR: " + avatar_name + "\n" + avatar_desc
+                    if theme: prompt += "\n\nCAMPAIGN THEME/CONTEXT:\n" + theme
+                    prompt += "\n\nFUNNEL STAGE: " + stage_instruction
+                    prompt += "\n\n" + AD_LOGIC_PROMPT
+                    prompt += "\n\nSTRUCTURE:\n\nATTENTION (0-3 seconds): Pattern interrupt hook. Must stop the scroll.\n\nINTEREST (3-12 seconds): Agitate the problem or amplify the desire. Make them feel it.\n\nDESIRE (12-28 seconds): The solution. Specific proof points. Transformation.\n\nACTION (28-35 seconds): Clear CTA. What to do next.\n\nFormat each section as:\n[SECTION NAME]\nSPOKEN: [voiceover text]\nON SCREEN: [text overlays]\nVISUAL: [scene direction]\n\nThen write 3 ALTERNATIVE HOOKS (just the Attention section, different each time — pattern interrupt, question, bold claim):\n\nHOOK VARIANT 1:\nSPOKEN: ...\nON SCREEN: ...\nVISUAL: ...\n\nHOOK VARIANT 2: ...\nHOOK VARIANT 3: ...\n\nThen:\nLOGIC:\nHook mechanism: [what stops the scroll]\nLF8 desire: [which life force desire and why]\nCialdini principle: [which one and why]\nFunnel logic: [why this stage approach]\nAIDA breakdown: [one sentence per section on what it does psychologically]\n\nReturn as plain text."
+                    raw = claude(prompt, max_tokens=2000)
+                    header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | VIDEO*\n\n"
+                    send_plain(chat_id, header + raw)
+            except Exception as e:
+                send(chat_id, "Error generating " + avatar_name + " / " + stage_key + ": " + str(e))
+
+    keyboard = [
+        [{"text": "Generate another set", "callback_data": "ads_again"}],
+        [{"text": "Mark Complete", "callback_data": "mark_complete"}]
+    ]
+    send(chat_id, "All " + str(total) + " ad set(s) generated.", keyboard)
+    state["stage"] = "ads_done"
+
+
+# ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
+
+def show_standalone_social_menu(chat_id):
+    state = user_state[chat_id]
+    selected = state.get("selected_social_formats", [])
+    formats = [
+        ("Reel Script (45-60s)", "fmt_reel"),
+        ("Carousel (5-8 slides)", "fmt_carousel"),
+        ("Story — Single slide", "fmt_story_single"),
+        ("Story — Multi slide", "fmt_story_multi"),
+    ]
+    keyboard = []
+    for label, cb in formats:
+        is_sel = cb in selected
+        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + label, "callback_data": cb}])
+    keyboard.append([{"text": "Generate selected (" + str(len(selected)) + ")", "callback_data": "gen_social_selected"}])
+    send(chat_id, "*Select formats to generate:*\n_(tap to select multiple)_", keyboard)
+
+
+
+# ── FEEDBACK LOOP DATA STORE ──────────────────────────────────────
+# email_log: {chat_id: [{subject, preview, angle, cta, email_type, date, open_rate, ctr, ab_variable, ab_label}]}
+# ad_log:    {chat_id: [{ad_type, avatar, stage, headline, date, ...metrics}]}
+
+email_log = {}
+ad_log = {}
+
+
+# ── EMAIL LOGGING ─────────────────────────────────────────────────
+
+def start_log_email(chat_id):
+    user_state[chat_id]["log_stage"] = "email_subject"
+    user_state[chat_id]["stage"] = "logging_email"
+    user_state[chat_id]["log_data"] = {}
+    send(chat_id, "*Log Email Performance*\n\nEnter the subject line of the email:")
+
+def handle_email_log_step(chat_id, text):
+    state = user_state[chat_id]
+    log = state.get("log_data", {})
+    step = state.get("log_stage", "")
+
+    if step == "email_subject":
+        log["subject"] = text
+        state["log_stage"] = "email_date"
+        send(chat_id, "Date sent? (e.g. 2026-03-22)")
+
+    elif step == "email_date":
+        log["date"] = text
+        state["log_stage"] = "email_open"
+        send(chat_id, "Open rate? (enter number, e.g. 28.4)")
+
+    elif step == "email_open":
+        try:
+            log["open_rate"] = float(text)
+            state["log_stage"] = "email_ctr"
+            send(chat_id, "Click-through rate? (enter number, e.g. 3.2)")
+        except:
+            send(chat_id, "Please enter a number, e.g. 28.4")
+
+    elif step == "email_ctr":
+        try:
+            log["ctr"] = float(text)
+            state["log_stage"] = "email_ab"
+            keyboard = [
+                [{"text": "Yes — part of a split test", "callback_data": "email_log_ab_yes"}],
+                [{"text": "No — standalone email", "callback_data": "email_log_ab_no"}]
+            ]
+            send(chat_id, "Was this part of a split test?", keyboard)
+        except:
+            send(chat_id, "Please enter a number, e.g. 3.2")
+
+    elif step == "email_ab_variable":
+        log["ab_variable"] = text
+        state["log_stage"] = "email_ab_label"
+        send(chat_id, "What variant is this? (e.g. 'name in subject' or 'no name in subject')")
+
+    elif step == "email_ab_label":
+        log["ab_label"] = text
+        state["log_stage"] = "email_recipients"
+        send(chat_id, "How many recipients received this email? (enter number)")
+
+    elif step == "email_recipients":
+        try:
+            log["recipients"] = int(text.replace(",",""))
+            save_email_log(chat_id, log)
+        except:
+            send(chat_id, "Please enter a number, e.g. 12500")
+
+def save_email_log(chat_id, log):
+    if chat_id not in email_log:
+        email_log[chat_id] = []
+    email_log[chat_id].append(log)
+    save_all_data()
+    state = user_state[chat_id]
+    state["stage"] = "idle"
+    records = email_log[chat_id]
+    opens = [r["open_rate"] for r in records if "open_rate" in r]
+    ctrs = [r["ctr"] for r in records if "ctr" in r]
+    avg_open = round(sum(opens)/len(opens), 1) if opens else 0
+    avg_ctr = round(sum(ctrs)/len(ctrs), 1) if ctrs else 0
+    msg = "*Email logged.*\n\n"
+    msg += "Subject: _" + log.get("subject","") + "_\n"
+    msg += "Open: " + str(log.get("open_rate","?")) + "% | CTR: " + str(log.get("ctr","?")) + "%\n\n"
+    msg += "Your averages (" + str(len(records)) + " emails):\n"
+    msg += "Open: " + str(avg_open) + "% | CTR: " + str(avg_ctr) + "%"
+    if log.get("ab_variable"):
+        msg += "\n\nTagged as split test: _" + log["ab_variable"] + "_ — variant: _" + log.get("ab_label","") + "_"
+    keyboard = [[{"text": "Back to menu", "callback_data": "start_over"}]]
+    send(chat_id, msg, keyboard)
+
+
+# ── AD LOGGING ────────────────────────────────────────────────────
+
+def start_log_ad(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "logging_ad"
+    state["log_data"] = {}
+    keyboard = [
+        [{"text": "Video ad", "callback_data": "adlog_type_video"}],
+        [{"text": "Static ad", "callback_data": "adlog_type_static"}]
+    ]
+    send(chat_id, "*Log Ad Performance*\n\nVideo or Static?", keyboard)
+
+def handle_ad_log_step(chat_id, text):
+    state = user_state[chat_id]
+    log = state.get("log_data", {})
+    step = state.get("log_stage", "")
+
+    if step == "adlog_headline":
+        log["headline"] = text
+        state["log_stage"] = "adlog_avatar"
+        keyboard = [[{"text": name, "callback_data": "adlog_avatar_" + key}] for key, (name, _) in AVATARS_AD.items()]
+        send(chat_id, "Which avatar was this ad for?", keyboard)
+
+    elif step == "adlog_date":
+        log["date"] = text
+        ad_type = log.get("ad_type", "static")
+        if ad_type == "video":
+            state["log_stage"] = "adlog_v_attention"
+            send(chat_id, "3-second view rate? (Attention — 3s views / impressions as %, e.g. 12.5)")
+        else:
+            state["log_stage"] = "adlog_s_cpc"
+            send(chat_id, "Cost per click? (CPC in GBP/USD, e.g. 0.85)")
+
+    # VIDEO METRICS
+    elif step == "adlog_v_attention":
+        try:
+            log["attention"] = float(text)
+            state["log_stage"] = "adlog_v_interest"
+            send(chat_id, "Average watch time in seconds? (Interest, e.g. 18)")
+        except: send(chat_id, "Enter a number, e.g. 12.5")
+
+    elif step == "adlog_v_interest":
+        try:
+            log["interest"] = float(text)
+            state["log_stage"] = "adlog_v_desire"
+            send(chat_id, "Outbound CTR? (Desire — %, e.g. 2.4)")
+        except: send(chat_id, "Enter a number, e.g. 18")
+
+    elif step == "adlog_v_desire":
+        try:
+            log["desire"] = float(text)
+            state["log_stage"] = "adlog_v_purchases"
+            send(chat_id, "Number of purchases (Action)? (e.g. 3)")
+        except: send(chat_id, "Enter a number, e.g. 2.4")
+
+    elif step == "adlog_v_purchases":
+        try:
+            log["purchases"] = int(text)
+            state["log_stage"] = "adlog_v_cpp"
+            send(chat_id, "Cost per purchase? (e.g. 45.00)")
+        except: send(chat_id, "Enter a number, e.g. 3")
+
+    elif step == "adlog_v_cpp":
+        try:
+            log["cost_per_purchase"] = float(text)
+            save_ad_log(chat_id, log)
+        except: send(chat_id, "Enter a number, e.g. 45.00")
+
+    # STATIC METRICS
+    elif step == "adlog_s_cpc":
+        try:
+            log["cpc"] = float(text)
+            state["log_stage"] = "adlog_s_ctr"
+            send(chat_id, "Outbound CTR? (%, e.g. 1.8)")
+        except: send(chat_id, "Enter a number, e.g. 0.85")
+
+    elif step == "adlog_s_ctr":
+        try:
+            log["outbound_ctr"] = float(text)
+            state["log_stage"] = "adlog_s_purchases"
+            send(chat_id, "Number of purchases? (e.g. 5)")
+        except: send(chat_id, "Enter a number, e.g. 1.8")
+
+    elif step == "adlog_s_purchases":
+        try:
+            log["purchases"] = int(text)
+            state["log_stage"] = "adlog_s_cpp"
+            send(chat_id, "Cost per purchase? (e.g. 38.50)")
+        except: send(chat_id, "Enter a number, e.g. 5")
+
+    elif step == "adlog_s_cpp":
+        try:
+            log["cost_per_purchase"] = float(text)
+            save_ad_log(chat_id, log)
+        except: send(chat_id, "Enter a number, e.g. 38.50")
+
+def save_ad_log(chat_id, log):
+    if chat_id not in ad_log:
+        ad_log[chat_id] = []
+    ad_log[chat_id].append(log)
+    save_all_data()
+    user_state[chat_id]["stage"] = "idle"
+    msg = "*Ad logged.*\n\n"
+    msg += "Headline: _" + log.get("headline","")[:60] + "_\n"
+    msg += "Avatar: " + log.get("avatar","?") + " | Stage: " + log.get("stage","?") + "\n"
+    if log.get("ad_type") == "video":
+        msg += "Attention: " + str(log.get("attention","?")) + "% | Watch time: " + str(log.get("interest","?")) + "s | CTR: " + str(log.get("desire","?")) + "%\n"
+    else:
+        msg += "CPC: " + str(log.get("cpc","?")) + " | CTR: " + str(log.get("outbound_ctr","?")) + "%\n"
+    msg += "Purchases: " + str(log.get("purchases","?")) + " | CPP: " + str(log.get("cost_per_purchase","?"))
+    msg += "\n\nTotal ads logged: " + str(len(ad_log[chat_id]))
+    keyboard = [[{"text": "Back to menu", "callback_data": "start_over"}]]
+    send(chat_id, msg, keyboard)
+
+
+# ── ANALYSIS ─────────────────────────────────────────────────────
+
+def run_email_analysis(chat_id):
+    records = email_log.get(chat_id, [])
+    if len(records) < 2:
+        send(chat_id, "Need at least 2 logged emails to analyse. Log more with /logemail")
+        return
+    send(chat_id, "Analysing " + str(len(records)) + " emails...")
+
+    # Build summary for Claude
+    summary = "EMAIL PERFORMANCE DATA:\n\n"
+    for i, r in enumerate(records):
+        summary += str(i+1) + ". Subject: " + r.get("subject","") + "\n"
+        summary += "   Date: " + r.get("date","?") + " | Open: " + str(r.get("open_rate","?")) + "% | CTR: " + str(r.get("ctr","?")) + "%\n"
+        if r.get("ab_variable"):
+            summary += "   Split test: " + r["ab_variable"] + " — variant: " + r.get("ab_label","") + " | Recipients: " + str(r.get("recipients","?")) + "\n"
+        summary += "\n"
+
+    # Split test aggregation
+    ab_groups = {}
+    for r in records:
+        if r.get("ab_variable") and r.get("ab_label") and r.get("recipients"):
+            var = r["ab_variable"]
+            label = r["ab_label"]
+            if var not in ab_groups: ab_groups[var] = {}
+            if label not in ab_groups[var]: ab_groups[var][label] = {"recipients": 0, "opens": 0, "clicks": 0, "count": 0}
+            rec = r["recipients"]
+            ab_groups[var][label]["recipients"] += rec
+            ab_groups[var][label]["opens"] += int(rec * r.get("open_rate",0) / 100)
+            ab_groups[var][label]["clicks"] += int(rec * r.get("ctr",0) / 100)
+            ab_groups[var][label]["count"] += 1
+
+    if ab_groups:
+        summary += "\nSPLIT TEST AGGREGATED RESULTS:\n"
+        for var, labels in ab_groups.items():
+            summary += "\nVariable: " + var + "\n"
+            for label, data in labels.items():
+                agg_open = round(data["opens"] / data["recipients"] * 100, 1) if data["recipients"] else 0
+                agg_ctr = round(data["clicks"] / data["recipients"] * 100, 1) if data["recipients"] else 0
+                summary += "  " + label + ": " + str(agg_open) + "% open / " + str(agg_ctr) + "% CTR (" + str(data["count"]) + " emails, " + str(data["recipients"]) + " total recipients)\n"
+
+    prompt = "Analyse this Cryptonary email performance data and provide:\n\n1. TOP PERFORMERS — top 3 emails and exactly what made them work (subject style, angle type, CTA)\n2. WORST PERFORMERS — bottom 3 and what likely caused underperformance\n3. PATTERN RECOGNITION — what patterns emerge across the data (which subject styles, angles, CTAs consistently outperform)\n4. SPLIT TEST RESULTS — if split test data exists, declare the winner with the aggregated numbers and statistical context\n5. ITERATION IDEAS — for the top performers, give 3 specific variations to test next\n6. IMPROVEMENT SUGGESTIONS — for underperformers, give specific fixes based on the copywriting principles you know\n\n" + summary + "\n\nBe specific and actionable. Reference actual subject lines and numbers."
+    try:
+        analysis = claude(prompt, max_tokens=2000)
+        send_plain(chat_id, "EMAIL PERFORMANCE ANALYSIS\n\n" + analysis)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+
+def run_ad_analysis(chat_id):
+    records = ad_log.get(chat_id, [])
+    if len(records) < 2:
+        send(chat_id, "Need at least 2 logged ads to analyse. Log more with /logad")
+        return
+    send(chat_id, "Analysing " + str(len(records)) + " ads...")
+
+    video_ads = [r for r in records if r.get("ad_type") == "video"]
+    static_ads = [r for r in records if r.get("ad_type") == "static"]
+
+    summary = "AD PERFORMANCE DATA:\n\n"
+
+    if video_ads:
+        summary += "VIDEO ADS (" + str(len(video_ads)) + "):\n"
+        for i, r in enumerate(video_ads):
+            summary += str(i+1) + ". Headline: " + r.get("headline","")[:60] + "\n"
+            summary += "   Avatar: " + r.get("avatar","?") + " | Stage: " + r.get("stage","?") + " | Date: " + r.get("date","?") + "\n"
+            summary += "   ATTENTION (3s view rate): " + str(r.get("attention","?")) + "%\n"
+            summary += "   INTEREST (avg watch time): " + str(r.get("interest","?")) + "s\n"
+            summary += "   DESIRE (outbound CTR): " + str(r.get("desire","?")) + "%\n"
+            summary += "   ACTION: " + str(r.get("purchases","?")) + " purchases @ " + str(r.get("cost_per_purchase","?")) + " CPP\n\n"
+
+    if static_ads:
+        summary += "STATIC ADS (" + str(len(static_ads)) + "):\n"
+        for i, r in enumerate(static_ads):
+            summary += str(i+1) + ". Headline: " + r.get("headline","")[:60] + "\n"
+            summary += "   Avatar: " + r.get("avatar","?") + " | Stage: " + r.get("stage","?") + " | Date: " + r.get("date","?") + "\n"
+            summary += "   CPC: " + str(r.get("cpc","?")) + " | Outbound CTR: " + str(r.get("outbound_ctr","?")) + "%\n"
+            summary += "   ACTION: " + str(r.get("purchases","?")) + " purchases @ " + str(r.get("cost_per_purchase","?")) + " CPP\n\n"
+
+    prompt = "Analyse this Cryptonary Meta ad performance data and provide:\n\n1. TOP PERFORMERS — best 3 ads with exactly what made them work (avatar, stage, hook type, which metrics stood out)\n2. WORST PERFORMERS — bottom 3 and diagnose where they failed (for video: which AIDA stage had the biggest drop-off? for static: which metric was weakest?)\n3. PATTERN RECOGNITION — what patterns emerge? (which avatars convert best, which stages perform, which ad types win)\n4. VIDEO AIDA DIAGNOSIS — for video ads, map the drop-off: high attention but low interest = hook works but body fails. High desire but low action = landing page issue. Give specific diagnosis per video.\n5. ITERATION IDEAS FOR WINNERS — for top performers, give 3 specific variants to test next\n6. IMPROVEMENT SUGGESTIONS FOR LOSERS — specific creative fixes based on the AIDA failure point or static metric weakness\n\n" + summary + "\n\nBe specific. Reference actual headlines and numbers."
+    try:
+        analysis = claude(prompt, max_tokens=2000)
+        send_plain(chat_id, "AD PERFORMANCE ANALYSIS\n\n" + analysis)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+
+
+# ── PERSISTENCE ───────────────────────────────────────────────────
+
+import json as _json
+
+ANALYTICS_FILE = "analytics_data.json"
+
+def save_all_data():
+    try:
+        data = {"email_log": {str(k): v for k, v in email_log.items()},
+                "ad_log": {str(k): v for k, v in ad_log.items()},
+                "performance_data": {str(k): v for k, v in performance_data.items()}}
+        with open(ANALYTICS_FILE, "w") as f:
+            _json.dump(data, f)
+    except Exception as e:
+        print("Analytics save error:", e)
+
+def load_all_data():
+    global email_log, ad_log, performance_data
+    try:
+        with open(ANALYTICS_FILE, "r") as f:
+            data = _json.load(f)
+        email_log = {int(k): v for k, v in data.get("email_log", {}).items()}
+        ad_log = {int(k): v for k, v in data.get("ad_log", {}).items()}
+        performance_data = {int(k): v for k, v in data.get("performance_data", {}).items()}
+    except:
+        pass
+
+load_all_data()
+
