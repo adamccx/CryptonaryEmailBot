@@ -1418,6 +1418,14 @@ def handle_callback(cb):
         state["ad_type"] = "video"
         generate_all_ads(chat_id)
 
+    elif data == "avatarpage_next":
+        page = state.get("avatar_page", 0)
+        show_avatar_menu(chat_id, page + 1)
+
+    elif data == "avatarpage_prev":
+        page = state.get("avatar_page", 0)
+        show_avatar_menu(chat_id, max(0, page - 1))
+
     elif data == "ads_again":
         state["selected_avatars"] = []
         state["selected_stages"] = []
@@ -1776,15 +1784,28 @@ COPYWRITING PRINCIPLES TO APPLY:
 - Ogilvy: Headline is everything. Specifics beat generalities. One CTA.
 """
 
-def show_avatar_menu(chat_id):
+def show_avatar_menu(chat_id, page=0):
     state = user_state[chat_id]
     selected = state.get("selected_avatars", [])
+    state["avatar_page"] = page
+    all_avatars = list(AVATARS_AD.items())
+    page_size = 7
+    start = page * page_size
+    page_avatars = all_avatars[start:start + page_size]
     keyboard = []
-    for key, (name, _) in AVATARS_AD.items():
+    for key, (name, _) in page_avatars:
         is_sel = key in selected
         keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "adavatar_" + key}])
+    nav = []
+    if page > 0:
+        nav.append({"text": "Previous", "callback_data": "avatarpage_prev"})
+    if start + page_size < len(all_avatars):
+        nav.append({"text": "Next page", "callback_data": "avatarpage_next"})
+    if nav:
+        keyboard.append(nav)
     keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
-    send(chat_id, "*Pick avatars:*\n_(tap to select multiple)_", keyboard)
+    page_label = "(" + str(page+1) + "/2)" if len(all_avatars) > page_size else ""
+    send(chat_id, "*Pick avatars:* " + page_label + "\n_(tap to select multiple)_", keyboard)
 
 def show_stage_menu(chat_id):
     state = user_state[chat_id]
@@ -1809,10 +1830,22 @@ def toggle_avatar(chat_id, avatar_key, message_id):
     if avatar_key in selected: selected.remove(avatar_key)
     else: selected.append(avatar_key)
     state["selected_avatars"] = selected
+    page = state.get("avatar_page", 0)
+    all_avatars = list(AVATARS_AD.items())
+    page_size = 7
+    start = page * page_size
+    page_avatars = all_avatars[start:start + page_size]
     keyboard = []
-    for key, (name, _) in AVATARS_AD.items():
+    for key, (name, _) in page_avatars:
         is_sel = key in selected
         keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + name, "callback_data": "adavatar_" + key}])
+    nav = []
+    if page > 0:
+        nav.append({"text": "Previous", "callback_data": "avatarpage_prev"})
+    if start + page_size < len(all_avatars):
+        nav.append({"text": "Next page", "callback_data": "avatarpage_next"})
+    if nav:
+        keyboard.append(nav)
     keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
