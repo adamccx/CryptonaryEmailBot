@@ -16,7 +16,7 @@ Cryptonary Email Generator Bot - V9
 Clean flow with consistent Quick Edit / Enhance / Approve at every stage.
 """
 
-import os, json, ssl, urllib.request, time, re
+import os, json, ssl, urllib.request, time, re, traceback
 
 TELEGRAM_TOKEN = "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y"
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "YOUR_ANTHROPIC_KEY_HERE")
@@ -1712,7 +1712,7 @@ def handle_callback(cb):
 
 def poll():
     offset = 0
-    print("Cryptonary Bot V9 running.")
+    print("Cryptonary Bot V9 running.", flush=True)
     while True:
         try:
             url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=30&offset=" + str(offset)
@@ -1724,15 +1724,19 @@ def poll():
                 continue
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
-                if "message" in update:
-                    handle_message(update["message"])
-                elif "callback_query" in update:
-                    handle_callback(update["callback_query"])
+                try:
+                    if "message" in update:
+                        handle_message(update["message"])
+                    elif "callback_query" in update:
+                        handle_callback(update["callback_query"])
+                except Exception as e:
+                    print("Handler error:", e, flush=True)
+                    print(traceback.format_exc(), flush=True)
         except KeyboardInterrupt:
             print("Stopped.")
             break
         except Exception as e:
-            print("Poll error:", e)
+            print("Poll error:", e, flush=True)
             time.sleep(5)
 
 # ── MAIN MENU ─────────────────────────────────────────────────────
@@ -2252,6 +2256,6 @@ load_all_data()
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
-        print("ERROR: Set ANTHROPIC_KEY environment variable.")
+        print("ERROR: Set ANTHROPIC_KEY environment variable.", flush=True)
     else:
         poll()
