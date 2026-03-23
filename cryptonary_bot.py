@@ -975,6 +975,10 @@ def gen_social_selected(chat_id):
     if not selected:
         send(chat_id, "No formats selected. Tap the format names to select them first.")
         return
+    # If coming from standalone social with an angle but no hooks yet, generate hooks first
+    if state.get("social_angle") and not state.get("social_hooks"):
+        gen_social_hooks(chat_id)
+        return
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
@@ -997,13 +1001,15 @@ def gen_reel(chat_id):
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
-    angle = state.get("selected_angle", "")
+    angle = state.get("selected_angle", "") or state.get("social_angle", "")
     reel_duration = state.get("reel_duration", 52)
     source_email = get_social_source_text(chat_id)[:500]
+    hook = state.get("selected_social_hooks", {}).get("fmt_reel", "")
     word_count = int(reel_duration * 2.3)
     try:
         result = claude(
             "Write a " + str(reel_duration) + "-second Instagram Reel voiceover script for Cryptonary.\n\n" +
+            ("OPENING HOOK (use this as the first spoken line): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             "\n\nRULES:\n- Approximately " + str(word_count) + " words (matches " + str(reel_duration) + "s at natural pace)\n- First 3 seconds must stop the scroll\n- Format: voiceover text | [B-roll instruction] for each line\n- CTA at end: follow Cryptonary\n- Adam's voice: punchy, direct, data-led\n\nReturn as plain string.",
@@ -1021,12 +1027,14 @@ def gen_carousel(chat_id):
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
-    angle = state.get("selected_angle", "")
+    angle = state.get("selected_angle", "") or state.get("social_angle", "")
     slide_count = state.get("carousel_slides", 6)
     source_email = get_social_source_text(chat_id)[:500]
+    hook = state.get("selected_social_hooks", {}).get("fmt_carousel", "")
     try:
         result = claude(
             "Create a " + str(slide_count) + "-slide Instagram Carousel for Cryptonary.\n\n" +
+            ("COVER SLIDE HEADLINE (use this): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Format: SLIDE N: [headline max 8 words] + [visual direction in brackets]\n- Mix bold text, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more\n\nReturn as plain string.",
@@ -1044,13 +1052,16 @@ def gen_story(chat_id, multi=False):
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
-    angle = state.get("selected_angle", "")
+    angle = state.get("selected_angle", "") or state.get("social_angle", "")
     story_slides = state.get("story_slides", 3) if multi else 1
     source_email = get_social_source_text(chat_id)[:500]
+    fmt_key = "fmt_story_multi" if multi else "fmt_story_single"
+    hook = state.get("selected_social_hooks", {}).get(fmt_key, "")
     slide_instruction = str(story_slides) + " slides" if multi else "1 single slide"
     try:
         result = claude(
             "Create an Instagram Story for Cryptonary: " + slide_instruction + "\n\n" +
+            ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             "\n\nRULES:\n- Format per slide: SLIDE N: [text max 15 words] + [visual/background direction] + [optional sticker]\n- Cliffhanger between slides if multi\n- Final slide: swipe up or link in bio\n- Urgent, direct tone\n\nReturn as plain string.",
@@ -1606,8 +1617,7 @@ def handle_message(msg):
     if stage == "awaiting_social_report":
         user_state[chat_id]["report"] = text
         user_state[chat_id]["context"] = ""
-        user_state[chat_id]["stage"] = "pick_social_formats"
-        show_standalone_social_menu(chat_id)
+        gen_social_angles(chat_id)
         return
 
     if len(text) > 100:
@@ -1784,11 +1794,41 @@ def handle_callback(cb):
             keyboard.append([{"text": name, "callback_data": "lp_regen_" + name.lower().replace(" ", "_")}])
         send(chat_id, "Which section to regenerate?", keyboard)
 
+    elif data == "lp_now_regen":
+        section = state.get("lp_regen_section", "Hero")
+        state["stage"] = "lp_ready"
+        cta_key = state.get("lp_cta", "pro")
+        cta = LP_CTA_DEFS.get(cta_key, LP_CTA_DEFS["pro"])
+        avatar_keys = state.get("selected_avatars", [])
+        avatar_descs = "\n".join([k + ": " + AVATARS_AD.get(k, ("",))[1] for k in avatar_keys])
+        context = sanitise(state.get("lp_context", ""))
+        send(chat_id, "Regenerating " + section + "...")
+        try:
+            user_prompt = "LANDING PAGE BRIEF:\nAVATAR(S): " + avatar_descs
+            user_prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            user_prompt += "\nPOSITIONING: " + cta["positioning"]
+            if context: user_prompt += "\nCONTEXT: " + context
+            user_prompt += "\n\nREGENERATE ONLY: " + section.upper() + " SECTION. Return as plain text with graphic recommendations."
+            result = claude(user_prompt, max_tokens=1200, system=BRANDSCRIPT_PROMPT)
+            send_plain(chat_id, result)
+            keyboard = [
+                [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
+                 {"text": "Regenerate section", "callback_data": "lp_regen"}],
+                [{"text": "Generate another page", "callback_data": "lp_again"},
+                 {"text": "Mark Complete", "callback_data": "mark_complete"}]
+            ]
+            send(chat_id, "Section regenerated.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+
+
     elif data.startswith("lp_regen_"):
         section = data.replace("lp_regen_", "").replace("_", " ").title()
         state["lp_regen_section"] = section
         state["stage"] = "awaiting_lp_regen_instruction"
-        send(chat_id, "*Regenerate: " + section + "*\n\nAny specific direction? (or just tap send to regenerate as-is)")
+        keyboard = [[{"text": "Regenerate as-is", "callback_data": "lp_now_regen"}]]
+        send(chat_id, "*Regenerate: " + section + "*\n\nType a specific direction, or tap to regenerate as-is:", keyboard)
+
 
     elif data == "lp_again":
         state["selected_avatars"] = []
@@ -1883,6 +1923,38 @@ def handle_callback(cb):
     elif data == "social_yes":
         state["selected_social_formats"] = []
         show_social_source_menu(chat_id)
+
+    elif data.startswith("social_angle_"):
+        idx = int(data.replace("social_angle_", ""))
+        angles = state.get("social_angles", [])
+        if idx < len(angles):
+            state["social_angle"] = angles[idx]
+        state["stage"] = "pick_social_formats"
+        state["selected_social_formats"] = []
+        show_standalone_social_menu(chat_id)
+
+    elif data == "social_regen_angles":
+        state["stage"] = "awaiting_social_report"
+        gen_social_angles(chat_id)
+
+    elif data == "gen_social_confirmed":
+        gen_social_selected(chat_id)
+
+    elif data.startswith("social_hook_"):
+        # Format: social_hook_{fmt_idx}_{hook_idx}
+        parts = data.replace("social_hook_", "").split("_")
+        if len(parts) == 2:
+            fmt_idx = int(parts[0])
+            hook_idx = int(parts[1])
+            formats = state.get("selected_social_formats", [])
+            if fmt_idx < len(formats):
+                fmt = formats[fmt_idx]
+                hooks = state.get("social_hooks", {}).get(fmt, [])
+                if hook_idx < len(hooks):
+                    if "selected_social_hooks" not in state:
+                        state["selected_social_hooks"] = {}
+                    state["selected_social_hooks"][fmt] = hooks[hook_idx]
+            show_social_hook_picker(chat_id, fmt_idx + 1)
 
     elif data == "src_free":
         state["social_source"] = "free"
@@ -2286,6 +2358,126 @@ def generate_all_ads(chat_id):
 
 
 # ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
+
+def gen_social_angles(chat_id):
+    state = user_state[chat_id]
+    report = sanitise(state.get("report", ""))
+    send(chat_id, "Finding angles...")
+    try:
+        raw = claude(
+            "REPORT:\n" + report +
+            "\n\nGenerate exactly 4 distinct social media content angles for this crypto market update. Each angle should be a different creative lens or emotional hook — not just rephrasing the same idea. Think: what makes someone stop scrolling?\n\nFormat:\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else.",
+            max_tokens=500
+        )
+        angles = parse_numbered_list(raw, 4)
+        state["social_angles"] = angles
+        state["stage"] = "pick_social_angle"
+        text = "*Pick a content angle:*\n\n"
+        keyboard = []
+        for i, a in enumerate(angles):
+            text += str(i+1) + ". " + a + "\n\n"
+            keyboard.append([{"text": str(i+1) + ". " + a[:50], "callback_data": "social_angle_" + str(i)}])
+        keyboard.append([{"text": "Regenerate angles", "callback_data": "social_regen_angles"}])
+        send(chat_id, text, keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "idle"
+
+def gen_social_hooks(chat_id):
+    state = user_state[chat_id]
+    report = sanitise(state.get("report", ""))
+    angle = state.get("social_angle", "")
+    formats = state.get("selected_social_formats", [])
+    send(chat_id, "Writing hooks for your selected formats...")
+
+    format_hook_instructions = {
+        "fmt_reel": "REEL HOOK: Write 4 alternative opening spoken lines (first 3 seconds of a video). Must stop the scroll immediately. Punchy, direct, creates instant curiosity or tension. Max 15 words each.",
+        "fmt_carousel": "CAROUSEL COVER: Write 4 alternative cover slide headlines. Bold statement that makes someone swipe. Max 8 words each. Think: headline of a magazine, not a sentence.",
+        "fmt_story_single": "STORY HOOK: Write 4 alternative single-slide story text options. Immediate, bold, designed for someone who's already engaged. Max 12 words each.",
+        "fmt_story_multi": "STORY OPENING: Write 4 alternative opening slide lines for a multi-slide story. Creates a cliffhanger that pulls to the next slide. Max 12 words each."
+    }
+
+    format_labels = {
+        "fmt_reel": "Reel",
+        "fmt_carousel": "Carousel",
+        "fmt_story_single": "Story (single)",
+        "fmt_story_multi": "Story (multi)"
+    }
+
+    state["social_hooks"] = {}
+    state["selected_social_hooks"] = {}
+    state["stage"] = "pick_social_hooks"
+
+    for fmt in formats:
+        if fmt not in format_hook_instructions:
+            continue
+        instruction = format_hook_instructions[fmt]
+        label = format_labels.get(fmt, fmt)
+        try:
+            raw = claude(
+                "REPORT:\n" + report[:500] +
+                "\nANGLE: " + angle +
+                "\n\n" + instruction +
+                "\n\nFormat:\n1. [hook]\n2. [hook]\n3. [hook]\n4. [hook]\nNothing else.",
+                max_tokens=400
+            )
+            hooks = parse_numbered_list(raw, 4)
+            state["social_hooks"][fmt] = hooks
+        except Exception as e:
+            state["social_hooks"][fmt] = ["Hook option 1", "Hook option 2", "Hook option 3", "Hook option 4"]
+
+    # Show hook picker for first format
+    show_social_hook_picker(chat_id, 0)
+
+def show_social_hook_picker(chat_id, fmt_idx):
+    state = user_state[chat_id]
+    formats = state.get("selected_social_formats", [])
+    if fmt_idx >= len(formats):
+        # All hooks selected - show format menu confirmation and generate
+        show_standalone_social_menu_confirm(chat_id)
+        return
+
+    fmt = formats[fmt_idx]
+    state["current_hook_fmt_idx"] = fmt_idx
+    format_labels = {
+        "fmt_reel": "Reel",
+        "fmt_carousel": "Carousel",
+        "fmt_story_single": "Story (single)",
+        "fmt_story_multi": "Story (multi)"
+    }
+    label = format_labels.get(fmt, fmt)
+    hooks = state.get("social_hooks", {}).get(fmt, [])
+    remaining = len(formats) - fmt_idx
+
+    text = "*Pick a hook for " + label + ":*"
+    if remaining > 1:
+        text += " (" + str(remaining - 1) + " more after this)"
+    text += "\n\n"
+    keyboard = []
+    for i, h in enumerate(hooks):
+        text += str(i+1) + ". " + h + "\n\n"
+        keyboard.append([{"text": str(i+1) + ". " + h[:50], "callback_data": "social_hook_" + str(fmt_idx) + "_" + str(i)}])
+    send(chat_id, text, keyboard)
+
+def show_standalone_social_menu_confirm(chat_id):
+    state = user_state[chat_id]
+    formats = state.get("selected_social_formats", [])
+    selected_hooks = state.get("selected_social_hooks", {})
+    format_labels = {
+        "fmt_reel": "Reel Script",
+        "fmt_carousel": "Carousel",
+        "fmt_story_single": "Story (single)",
+        "fmt_story_multi": "Story (multi)"
+    }
+    summary = "*Ready to generate:*\n\n"
+    for fmt in formats:
+        hook = selected_hooks.get(fmt, "")
+        summary += format_labels.get(fmt, fmt) + "\n"
+        if hook:
+            summary += "_Hook: " + hook[:60] + "_\n"
+        summary += "\n"
+    keyboard = [[{"text": "Generate all", "callback_data": "gen_social_confirmed"}]]
+    send(chat_id, summary, keyboard)
 
 def show_standalone_social_menu(chat_id):
     state = user_state[chat_id]
