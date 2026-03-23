@@ -2206,10 +2206,28 @@ def handle_callback(cb):
         state.pop("ds_csv_text", None)
         start_ds_adverts(chat_id)
 
+    elif data.startswith("ad_filter_"):
+        ad_filter = data.replace("ad_filter_", "")
+        state["ds_ad_filter"] = ad_filter
+        state["stage"] = "ds_awaiting_ad_data"
+        state["ds_images"] = []
+        filter_label = {"all": "All ads", "video": "Video ads only", "static": "Static ads only"}.get(ad_filter, "All ads")
+        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
+        send(chat_id, "*" + filter_label + "*\n\nUpload your Meta Ads Manager screenshots or CSV. Send all then tap Done.", keyboard)
+
     elif data == "ds_social":
         state["ds_images"] = []
         state.pop("ds_csv_text", None)
         start_ds_social(chat_id)
+
+    elif data.startswith("social_filter_"):
+        social_filter = data.replace("social_filter_", "")
+        state["ds_social_filter"] = social_filter
+        state["stage"] = "ds_awaiting_social_data"
+        state["ds_images"] = []
+        filter_label = {"all": "All formats", "reels": "Reels only", "statics": "Statics only", "carousels": "Carousels only"}.get(social_filter, "All formats")
+        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_social"}]]
+        send(chat_id, "*" + filter_label + "*\n\nUpload your Minter screenshots or CSV. Send all then tap Done.", keyboard)
 
     elif data == "ds_emails":
         state["ds_images"] = []
@@ -3180,10 +3198,13 @@ def show_data_studio_menu(chat_id):
 
 def start_ds_adverts(chat_id):
     state = user_state[chat_id]
-    state["stage"] = "ds_awaiting_ad_data"
-    state["ds_images"] = []
-    keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
-    send(chat_id, "*Ad Performance Analysis*\n\nUpload your Meta Ads Manager screenshots or CSV.\n\nYou can send multiple images — upload all of them then tap Done.", keyboard)
+    state["stage"] = "ds_ad_format_filter"
+    keyboard = [
+        [{"text": "All ads", "callback_data": "ad_filter_all"}],
+        [{"text": "Video ads only", "callback_data": "ad_filter_video"}],
+        [{"text": "Static ads only", "callback_data": "ad_filter_static"}]
+    ]
+    send(chat_id, "*Ad Performance Analysis*\n\nWhich ad types do you want to analyse?", keyboard)
 
 def analyse_ads(chat_id):
     state = user_state[chat_id]
@@ -3204,10 +3225,12 @@ def analyse_ads(chat_id):
 
 META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle
 
-IMPORTANT: First count how many ads are visible across ALL images. State the total count. If fewer than 5 total, flag as SMALL SAMPLE and note conclusions are directional only.
+FILTER: Only analyse """ + {"all": "all ad types", "video": "VIDEO (VID) ads only — ignore any IMG/static ads", "static": "STATIC (IMG) ads only — ignore any VID/video ads"}.get(state.get("ds_ad_filter","all"), "all ad types") + """
+
+IMPORTANT: First count how many qualifying ads are visible. State total count.
 
 STEP 1 — DATA EXTRACTION:
-List every ad found with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
+List every qualifying ad with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
 
 STEP 2 — GRADING (A/B/C/D quartiles within cohort):
 Grade each ad on every metric. For CPP/CPC lower=better so invert grading.
@@ -3263,10 +3286,14 @@ Format clearly with headers for each step.
 
 def start_ds_social(chat_id):
     state = user_state[chat_id]
-    state["stage"] = "ds_awaiting_social_data"
-    state["ds_images"] = []
-    keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_social"}]]
-    send(chat_id, "*Instagram Performance Analysis*\n\nUpload your Minter.io screenshots or CSV.\n\nCovers Reels, Statics, and Carousels. Send all screenshots then tap Done.", keyboard)
+    state["stage"] = "ds_social_format_filter"
+    keyboard = [
+        [{"text": "All formats", "callback_data": "social_filter_all"}],
+        [{"text": "Reels only", "callback_data": "social_filter_reels"}],
+        [{"text": "Statics only", "callback_data": "social_filter_statics"}],
+        [{"text": "Carousels only", "callback_data": "social_filter_carousels"}]
+    ]
+    send(chat_id, "*Instagram Performance Analysis*\n\nWhich formats do you want to analyse?", keyboard)
 
 def analyse_social(chat_id):
     state = user_state[chat_id]
@@ -3277,47 +3304,67 @@ def analyse_social(chat_id):
         return
     send(chat_id, "Analysing your Instagram data...")
     try:
-        analysis_prompt = """Extract and analyse all Instagram performance data from this data.
+        analysis_prompt = """You are analysing Instagram performance data for Cryptonary.
 
-FORMAT DETECTION: Identify whether each post is a Reel, Static (feed image), or Carousel from the post name/type column.
+FORMAT FILTER: Only analyse """ + {"all": "all formats (Reels, Statics, and Carousels)", "reels": "REELS only — ignore Statics and Carousels", "statics": "STATICS only — ignore Reels and Carousels", "carousels": "CAROUSELS only — ignore Reels and Statics"}.get(state.get("ds_social_filter","all"), "all formats") + """
 
-METRICS TO EXTRACT:
-- Post name/caption snippet
-- Format (Reel/Static/Carousel)
-- Date (if available)
-- Reach
-- Likes, Comments, Saves, Shares
-- Views/View-through rate (Reels only)
-- Calculate: Engagement Rate = (Likes + Comments + Saves + Shares) / Reach × 100
+FORMAT DETECTION — look for these visual cues in the screenshots:
+- REELS: show a Views metric (in addition to likes/saves etc) — video posts
+- STATICS: single image posts — thumbnail has NO overlay indicator
+- CAROUSELS: multi-image posts — thumbnail has a small white square tile indicator in the corner
+
+If Minter shows a post type column, use that. Otherwise use the visual cues above.
+
+PRIMARY SUCCESS METRIC: Engagement Rate = (Likes + Comments + Saves + Shares) / Reach × 100
+Metric priority: Engagement Rate > Saves > Reach > Follows gained > Comments > Likes > Shares
+Views are Reels-only and graded separately.
 
 STEP 1 — DATA EXTRACTION:
-First state the total number of posts found across ALL images. If fewer than 5 total, flag as SMALL SAMPLE.
-List every post with all available metrics.
+State total posts found across ALL images combined.
+For each post extract: caption snippet, format (Reel/Static/Carousel), date if shown, Reach, Likes, Comments, Saves, Shares, Views (Reels only), Follows gained if shown.
+Calculate Engagement Rate for each post.
 
-STEP 2 — GRADING (A/B/C/D quartiles):
-Grade WITHIN format cohort first (Reels vs Reels, Statics vs Statics, Carousels vs Carousels).
-Then cross-format comparison on shared metrics.
-Engagement Rate is the primary grade metric.
-For Reels, view-through rate is graded separately as the Attention metric.
+STEP 2 — GRADING (A/B/C/D quartiles — higher ER = better):
+Grade WITHIN format cohort: Reels vs Reels, Statics vs Statics, Carousels vs Carousels.
+Then give an overall cross-format rank.
+Per-post rating: SCALE (mostly A/B) | KEEP (B/C) | REVIEW (C/D) | LEARN FROM (D)
+For Reels, also grade Views count separately.
 
-STEP 3 — CONTENT PATTERN ANALYSIS:
-Look for patterns in post names/captions:
-- What topics get the most saves?
-- What topics get the most comments?
-- What content drives the most reach?
-- Do declarative hooks outperform question hooks?
-- Does BTC/ETH/altcoin/airdrop content perform differently?
+STEP 3 — FORMAT BREAKDOWN:
+For each format present:
+- Count of posts
+- Average engagement rate
+- Average reach
+- Average saves
+- Best performer with ER%
+- Worst performer with ER%
+- What this format is best used for based on this data
 
-STEP 4 — FORMAT ANALYSIS:
-- Which format drives most reach? Most saves? Most engagement?
-- Are Carousels driving more saves than Statics?
-- Do Reels drive reach but fewer saves?
+STEP 4 — CROSS-FORMAT COMPARISON:
+Which format wins on: Engagement Rate / Reach / Saves / Follows gained?
+Overall format verdict: which delivers most value right now and for what goal?
 
-STEP 5 — PATTERN RECOGNITION:
-Identify the 3 strongest patterns across the data with evidence.
+STEP 5 — CONTENT PATTERN ANALYSIS:
+From captions and topics, identify:
+- Which topics drive most saves?
+- Which drive most comments?
+- Which drive most reach?
+- Any pricing/data posts vs opinion posts difference?
+- Any BTC vs altcoin vs airdrop vs general crypto difference?
 
-STEP 6 — IDEAS:
-Generate 5 specific new content ideas based on the patterns. Include: format, topic, hook style, why it should work based on the data.
+STEP 6 — PATTERN RECOGNITION:
+3 strongest patterns with specific post evidence.
+
+STEP 7 — IDEAS:
+5 specific content ideas. For each: format, topic, hook, why the data supports it.
+
+STEP 8 — TOTALS SUMMARY:
+- Total posts analysed: N
+- Overall average engagement rate: X%
+- Best format by ER: [format] at [avg ER%]
+- Best format by reach: [format]
+- Best single post: [caption] — [ER%]
+- Worst single post: [caption] — [ER%]
 
 Format clearly with headers."""
 
@@ -3354,13 +3401,9 @@ Format clearly with headers."""
 
 def start_ds_emails(chat_id):
     state = user_state[chat_id]
-    state["stage"] = "ds_awaiting_email_data"
+    state["stage"] = "ds_awaiting_email_splitvar"
     state["ds_images"] = []
-    keyboard = [
-        [{"text": "Standard analysis", "callback_data": "ds_analyse_emails"}],
-        [{"text": "Split test analysis", "callback_data": "ds_email_splittest"}]
-    ]
-    send(chat_id, "*Email Performance Analysis*\n\nUpload your Klaviyo/ESP screenshots or CSV.\n\nChoose standard analysis or split test aggregation.", keyboard)
+    send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_")
 
 def start_ds_email_splittest(chat_id):
     state = user_state[chat_id]
@@ -3418,14 +3461,24 @@ STEP 5 — SEGMENT BREAKDOWN:
 Did the same variant win across all audience types (30-day, 60-day, cancellers, never opened)?
 A variant that only wins on one segment type is a weaker universal signal.
 
-STEP 6 — VERDICT:
+STEP 6 — POOLED TOTALS:
+Add up across ALL campaigns combined:
+- Total A/B test recipients (sum of all test samples)
+- Total opens from all campaigns (sum of all raw opens = delivered × open_rate / 100)
+- Total clicks from all campaigns (sum of all raw clicks = delivered × ctr / 100)
+- Combined open rate = total opens / total delivered × 100
+- Combined CTR = total clicks / total delivered × 100
+
+Show this as a single TOTALS row alongside the per-segment table.
+
+STEP 7 — VERDICT:
 VARIABLE TESTED: """ + split_var + """
-CAMPAIGN BREAKDOWN: [table from step 2]
+CAMPAIGN BREAKDOWN: [table from step 2 with TOTALS row at bottom]
 WEIGHTED EVIDENCE: Content A represented X% of total test recipients | Content B represented Y%
 SEGMENT PATTERN: [which variant won which segments]
 WINNER: [Content A or B]
 CONFIDENCE: [INCONCLUSIVE under 5,000 total / DIRECTIONAL 5,000-20,000 / SIGNIFICANT 20,000+]
-RECOMMENDATION: [one clear, specific sentence — e.g. "Roll out Image version to all segments" or "Use Image for engaged segments, test further on cold audiences"]
+RECOMMENDATION: [one clear, specific sentence]
 """
     try:
         if split_var:
@@ -3504,13 +3557,9 @@ Generate 5 specific subject line and angle ideas based on what the patterns sugg
 
 def start_ds_landing(chat_id):
     state = user_state[chat_id]
-    state["stage"] = "ds_awaiting_landing_data"
+    state["stage"] = "ds_awaiting_landing_splitvar"
     state["ds_images"] = []
-    keyboard = [
-        [{"text": "Standard analysis", "callback_data": "ds_analyse_landing"}],
-        [{"text": "Split test analysis", "callback_data": "ds_landing_splittest"}]
-    ]
-    send(chat_id, "*Landing Page Analysis*\n\nUpload your GA4/analytics screenshots or CSV.\n\nChoose standard analysis or split test aggregation.", keyboard)
+    send(chat_id, "*Landing Page Split Test*\n\nWhat variable are you testing?\n\n_e.g. Hero headline A vs B, Pro vs Inner Circle CTA, With guarantee vs Without_")
 
 def start_ds_landing_splittest(chat_id):
     state = user_state[chat_id]
@@ -3630,21 +3679,26 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             # Quick validation - ask Claude what it can see in this image
             stage = state.get("stage", "")
             context_hint = "Meta Ads Manager data" if "ad" in stage else "Instagram analytics data" if "social" in stage else "email performance data" if "email" in stage else "landing page analytics data"
-            try:
-                check_payload = json.dumps({
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 150,
-                    "messages": [{"role": "user", "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
-                        {"type": "text", "text": "This should contain " + context_hint + ". In one short sentence: what data can you see? If there are rows/ads/posts, how many? If the data is cut off or unclear, say so. Be specific and brief."}
-                    ]}]
-                }).encode()
-                check_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=check_payload,
-                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-                with urllib.request.urlopen(check_req, timeout=30) as r:
-                    preview = json.loads(r.read())["content"][0]["text"].strip()
-            except:
-                preview = "Image received."
+            # For split test flows, skip preview to avoid partial data commentary
+            is_split = "split" in stage
+            if is_split:
+                preview = "Screenshot received."
+            else:
+                try:
+                    check_payload = json.dumps({
+                        "model": "claude-sonnet-4-20250514",
+                        "max_tokens": 150,
+                        "messages": [{"role": "user", "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
+                            {"type": "text", "text": "This should contain " + context_hint + ". In one short sentence: what data can you see? If there are rows/ads/posts, how many? If the data is cut off or unclear, say so. Be specific and brief."}
+                        ]}]
+                    }).encode()
+                    check_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=check_payload,
+                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                    with urllib.request.urlopen(check_req, timeout=30) as r:
+                        preview = json.loads(r.read())["content"][0]["text"].strip()
+                except:
+                    preview = "Image received."
 
             # Determine button label based on count
             ds_stage_map = {
