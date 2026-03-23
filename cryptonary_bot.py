@@ -4173,16 +4173,31 @@ def check_and_send_briefing():
 
 IDEA_ENGINE_SOURCES_FILE = "idea_sources.json"
 
-# Default saved sources — will expand when Adam shares his list
+# Cryptonary's source list
 DEFAULT_SOURCES = {
-    "instagram": [],
-    "twitter": [],
-    "facebook_pages": [],
+    "instagram": [
+        "cryptonary",
+        "altcoinpost", "coinsauce", "algoresearch", "daytrading",
+        "simplyougrow", "0x100x", "mange.marketing", "lukedavis.ig",
+        "watcher.guru", "moonpay", "coinbase", "cryptocomofficial",
+        "bitcoinmagazine"
+    ],
+    "twitter": [
+        "watcherguru", "trendingbitcoin", "capitalflows", "coindesk",
+        "bloomberg", "FT", "glxyresearch", "caprioleio",
+        "lookonchain", "wublockchain", "documentingbtc"
+    ],
+    "twitter_ads_inspiration": ["the_adprofessor"],
+    "facebook_pages": ["730238507162118"],
+    "facebook_urls": [
+        "https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=GB&is_targeted_country=false&media_type=all&search_type=page&sort_data[direction]=desc&sort_data[mode]=total_impressions&view_all_page_id=730238507162118"
+    ],
     "telegram": [],
     "reddit": ["cryptocurrency", "bitcoin", "ethfinance", "CryptoMarkets"],
     "own_accounts": {
         "instagram": "cryptonary",
-        "twitter": "cryptonary"
+        "twitter": "cryptonary",
+        "facebook_page_id": "730238507162118"
     }
 }
 
@@ -4258,16 +4273,15 @@ def fetch_source_content(sources):
         except Exception as e:
             print("Reddit fetch error " + sub + ":", e, flush=True)
 
-    # Facebook Ad Library — search for active crypto ads
-    for page in sources.get("facebook_pages", [])[:3]:
+    # Facebook Ad Library — use saved URL directly
+    for fb_url in sources.get("facebook_urls", [])[:2]:
         try:
-            url = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=GB&q=" + urllib.parse.quote(page)
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:5000]
-                fetched.append({"source": "FB Ads: " + page, "type": "facebook_ad", "content": html[:1000]})
+            req = urllib.request.Request(fb_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                html = r.read().decode("utf-8", errors="ignore")[:8000]
+                fetched.append({"source": "Cryptonary FB Ads Library", "type": "facebook_ad", "content": html[:2000]})
         except Exception as e:
-            print("FB Ad Library fetch error " + page + ":", e, flush=True)
+            print("FB Ad Library fetch error:", e, flush=True)
 
     # Telegram public channels
     for channel in sources.get("telegram", [])[:3]:
@@ -4286,14 +4300,42 @@ def fetch_source_content(sources):
         except Exception as e:
             print("Telegram fetch error " + channel + ":", e, flush=True)
 
-    # Instagram & Twitter via web search (most reliable fallback)
-    for handle in sources.get("instagram", [])[:2]:
+    # Twitter — fetch recent posts via search for each handle
+    all_twitter = sources.get("twitter", [])[:6]
+    ad_twitter = sources.get("twitter_ads_inspiration", [])
+    for handle in all_twitter:
         try:
-            search_url = "https://www.google.com/search?q=site:instagram.com+" + handle + "+crypto&num=3"
+            search_url = "https://www.google.com/search?q=%40" + handle + "+site:twitter.com+OR+site:x.com&num=3&tbs=qdr:w"
             req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=10) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:3000]
-                fetched.append({"source": "@" + handle + " (IG)", "type": "instagram", "content": html[:500]})
+                html = r.read().decode("utf-8", errors="ignore")[:2000]
+                fetched.append({"source": "@" + handle + " (X)", "type": "twitter", "content": html[:400]})
+        except Exception as e:
+            print("Twitter fetch error " + handle + ":", e, flush=True)
+
+    # Ad inspiration accounts - flagged separately
+    for handle in ad_twitter:
+        try:
+            search_url = "https://www.google.com/search?q=%40" + handle + "+site:twitter.com+OR+site:x.com&num=3&tbs=qdr:w"
+            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                html = r.read().decode("utf-8", errors="ignore")[:2000]
+                fetched.append({"source": "@" + handle + " (Ad Inspiration)", "type": "twitter_ads", "content": html[:400]})
+        except Exception as e:
+            print("Ad Twitter fetch error " + handle + ":", e, flush=True)
+
+    # Instagram — split into marketing inspiration vs crypto content
+    marketing_handles = {"mange.marketing", "lukedavis.ig", "simplyougrow", "daytrading"}
+    ig_handles = sources.get("instagram", [])
+    for handle in ig_handles[:8]:
+        try:
+            search_url = "https://www.google.com/search?q=site:instagram.com%2F" + handle + "&num=3&tbs=qdr:w"
+            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                html = r.read().decode("utf-8", errors="ignore")[:2000]
+                ig_type = "instagram_marketing" if handle in marketing_handles else ("instagram_own" if handle == "cryptonary" else "instagram")
+                label = "@" + handle + (" (Marketing Inspo)" if handle in marketing_handles else (" (Our IG)" if handle == "cryptonary" else " (IG)"))
+                fetched.append({"source": label, "type": ig_type, "content": html[:400]})
         except Exception as e:
             print("Instagram fetch error " + handle + ":", e, flush=True)
 
@@ -4313,8 +4355,16 @@ def generate_ideas(chat_id, idea_type="both"):
         source_summary = ""
         if fetched:
             source_summary = "LIVE SOURCE DATA:\n"
-            for item in fetched[:15]:
+            # Prioritise news sources and ad inspiration
+            news_items = [i for i in fetched if i["type"] in ("twitter", "reddit")]
+            ad_items = [i for i in fetched if i["type"] in ("twitter_ads", "facebook_ad", "instagram_marketing")]
+            other_items = [i for i in fetched if i["type"] not in ("twitter", "reddit", "twitter_ads", "facebook_ad")]
+            for item in (news_items[:6] + ad_items[:3] + other_items[:3]):
                 source_summary += "- [" + item["source"] + "] " + item["content"][:150] + "\n"
+            if ad_items:
+                source_summary += "\nAD INSPIRATION SOURCES (use for ad hook/angle ideas):\n"
+                for item in ad_items:
+                    source_summary += "- [" + item["source"] + "] " + item["content"][:200] + "\n"
         else:
             source_summary = "Note: Live source fetching returned limited data. Generate ideas based on current crypto market context and trends.\n"
 
