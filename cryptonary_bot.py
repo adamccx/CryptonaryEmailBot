@@ -1506,6 +1506,18 @@ def handle_message(msg):
         user_state[chat_id] = {"stage": "idle"}
         show_main_menu(chat_id)
         return
+
+    # URL detection — drop any link to get ideas or critique
+    url_match = URL_PATTERN.search(text)
+    if url_match and len(text.strip()) < 500 and text.strip().startswith("http"):
+        url = url_match.group(0)
+        user_state.setdefault(chat_id, {"stage": "idle"})
+        current_stage = user_state[chat_id].get("stage", "idle")
+        # Determine mode based on stage or default to ideas
+        mode = "critique" if current_stage == "ie_awaiting_screenshot_critique" else "ideas"
+        user_state[chat_id]["stage"] = "idea_engine_idle"
+        analyse_url(chat_id, url, mode=mode)
+        return
     if text == "/stats":
         show_stats(chat_id)
         return
@@ -2643,7 +2655,13 @@ def poll():
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique"]
                             if stage in content_stages:
-                                handle_content_file(chat_id, doc, "pdf" if "pdf" in mime else "doc")
+                                if "pdf" in mime:
+                                    ftype = "pdf"
+                                elif "word" in mime or "docx" in mime or "officedocument" in mime:
+                                    ftype = "doc"
+                                else:
+                                    ftype = "doc"
+                                handle_content_file(chat_id, doc, ftype)
                             elif stage in ie_stages_doc:
                                 handle_ie_screenshot(chat_id, doc, stage)
                             else:
@@ -4955,15 +4973,29 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             with urllib.request.urlopen(req, timeout=60) as r:
                 extracted = json.loads(r.read())["content"][0]["text"]
 
+        elif file_type == "doc":
+            # Try as docx first, fallback to plain text
+            try:
+                import io
+                from docx import Document as _Document
+                doc = _Document(io.BytesIO(file_bytes))
+                extracted = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])[:8000]
+                if not extracted.strip():
+                    raise ValueError("Empty docx")
+            except Exception:
+                try:
+                    extracted = file_bytes.decode("utf-8")[:8000]
+                except:
+                    extracted = file_bytes.decode("latin-1")[:8000]
         else:
-            # Plain text / CSV / doc — decode directly
+            # Plain text / CSV
             try:
                 extracted = file_bytes.decode("utf-8")[:8000]
             except:
                 extracted = file_bytes.decode("latin-1")[:8000]
 
         if not extracted or len(extracted.strip()) < 20:
-            send(chat_id, "Could not extract content from this file. Try pasting the text directly.")
+            send(chat_id, "Could not extract readable content from this file.\n\nSupported: PDF, image/screenshot, CSV, .docx, plain text.\n\nTry pasting the text directly instead.")
             return
 
         # Show preview and proceed
@@ -5006,14 +5038,14 @@ def handle_content_file(chat_id, file_info, file_type="image"):
 # ══════════════════════════════════════════════════════════════════
 
 def handle_ie_screenshot(chat_id, file_info, stage):
-    """Handle screenshot uploads for Idea Engine — ideas or critique."""
+    """Handle file uploads for Idea Engine — images, PDFs, CSVs."""
     try:
         import base64
         file_id = file_info.get("file_id")
         path_data = tg("getFile", {"file_id": file_id})
         file_path = path_data.get("result", {}).get("file_path", "")
         if not file_path:
-            send(chat_id, "Could not download the image.")
+            send(chat_id, "Could not download the file.")
             return
 
         url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
@@ -5021,12 +5053,51 @@ def handle_ie_screenshot(chat_id, file_info, stage):
         with urllib.request.urlopen(req, timeout=30) as r:
             file_bytes = r.read()
 
+        user_state[chat_id]["stage"] = "idea_engine_idle"
+
+        # Detect file type and extract content
+        mime_type = file_info.get("mime_type", "")
+        is_pdf = "pdf" in mime_type or file_path.endswith(".pdf")
+        is_csv = "csv" in mime_type or file_path.endswith(".csv") or file_path.endswith(".txt")
+        is_doc = "word" in mime_type or "docx" in mime_type or "officedocument" in mime_type
+
+        if is_pdf:
+            # Use Claude API document extraction
+            encoded = base64.b64encode(file_bytes).decode()
+            send(chat_id, "Reading PDF...")
+            payload = json.dumps({
+                "model": "claude-sonnet-4-20250514", "max_tokens": 2000,
+                "messages": [{"role": "user", "content": [
+                    {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
+                    {"type": "text", "text": "Extract the key content from this document — headlines, copy, data, analysis. Return as plain text."}
+                ]}]
+            }).encode()
+            req2 = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            with urllib.request.urlopen(req2, timeout=60) as r:
+                text_content = json.loads(r.read())["content"][0]["text"]
+            _process_ie_text_content(chat_id, stage, text_content, "PDF")
+            return
+
+        elif is_csv or is_doc:
+            if is_doc:
+                try:
+                    import io
+                    from docx import Document as _Doc
+                    doc = _Doc(io.BytesIO(file_bytes))
+                    text_content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])[:6000]
+                except:
+                    text_content = file_bytes.decode("utf-8", errors="ignore")[:6000]
+            else:
+                text_content = file_bytes.decode("utf-8", errors="ignore")[:6000]
+            _process_ie_text_content(chat_id, stage, text_content, "document")
+            return
+
+        # Default: treat as image
         mime = "image/jpeg"
         if file_path.endswith(".png"): mime = "image/png"
         elif file_path.endswith(".webp"): mime = "image/webp"
         encoded = base64.b64encode(file_bytes).decode()
-
-        user_state[chat_id]["stage"] = "idea_engine_idle"
 
         if stage == "ie_awaiting_screenshot_ideas":
             send(chat_id, "Analysing and generating ideas...")
@@ -5130,6 +5201,140 @@ OVERALL RATING: [A/B/C/D] — [one sentence verdict]"""
         print("IE screenshot error:", e, flush=True)
         send(chat_id, "Error analysing screenshot: " + str(e))
         user_state[chat_id]["stage"] = "idea_engine_idle"
+
+# ══════════════════════════════════════════════════════════════════
+# LINK / URL ANALYSIS ENGINE
+# ══════════════════════════════════════════════════════════════════
+
+import re as _url_re
+
+URL_PATTERN = _url_re.compile(
+    r'https?://[^\s<>"{}|\\^`\[\]]+'
+)
+
+def detect_url_type(url):
+    """Classify a URL so we know how to handle it."""
+    url_lower = url.lower()
+    if "twitter.com" in url_lower or "x.com" in url_lower:
+        return "tweet"
+    elif "instagram.com" in url_lower:
+        return "instagram"
+    elif "facebook.com/ads/library" in url_lower:
+        return "fb_ads"
+    elif "facebook.com" in url_lower:
+        return "facebook"
+    elif "tiktok.com" in url_lower:
+        return "tiktok"
+    elif "youtube.com" in url_lower or "youtu.be" in url_lower:
+        return "youtube"
+    elif "reddit.com" in url_lower:
+        return "reddit"
+    elif "t.me" in url_lower:
+        return "telegram"
+    else:
+        return "webpage"
+
+def fetch_url_content(url, url_type):
+    """Fetch content from a URL and return text + any screenshot data."""
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+            encoding = r.headers.get_content_charset() or "utf-8"
+            html = raw.decode(encoding, errors="ignore")
+
+        import re as _re
+        # Strip HTML tags for readable text
+        text = _re.sub(r'<script[^>]*>.*?</script>', '', html, flags=_re.DOTALL)
+        text = _re.sub(r'<style[^>]*>.*?</style>', '', text, flags=_re.DOTALL)
+        text = _re.sub(r'<[^>]+>', ' ', text)
+        text = _re.sub(r'\s+', ' ', text).strip()
+        return text[:6000]
+    except Exception as e:
+        return ""
+
+def analyse_url(chat_id, url, mode="ideas"):
+    """Fetch a URL and analyse it for ideas or critique."""
+    state = user_state.get(chat_id, {})
+    url_type = detect_url_type(url)
+
+    type_labels = {
+        "tweet": "tweet",
+        "instagram": "Instagram post",
+        "fb_ads": "Facebook Ad Library",
+        "facebook": "Facebook post",
+        "tiktok": "TikTok",
+        "youtube": "YouTube",
+        "reddit": "Reddit post",
+        "telegram": "Telegram post",
+        "webpage": "webpage"
+    }
+    label = type_labels.get(url_type, "page")
+    send(chat_id, "Fetching " + label + "...")
+
+    text_content = fetch_url_content(url, url_type)
+
+    if not text_content or len(text_content.strip()) < 50:
+        send(chat_id, "Could not read content from that link. The page may require login or block bots.\\n\\nTry screenshotting it and uploading the image instead.")
+        return
+
+    _process_ie_text_content(chat_id, state.get("stage", "idea_engine_idle"), text_content,
+                              label + " (" + url + ")", mode=mode)
+
+def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=None):
+    """Process extracted text content for ideas or critique."""
+    # Determine mode from stage if not specified
+    if mode is None:
+        mode = "critique" if "critique" in stage else "ideas"
+
+    if mode == "ideas" or stage == "ie_awaiting_screenshot_ideas":
+        send(chat_id, "Generating ideas from " + source_label + "...")
+        ctx = get_content_context(chat_id)
+        try:
+            result = claude(
+                "CONTENT FROM " + source_label.upper() + ":\\n" + text_content[:3000] +
+                "\\n\\nAnalyse this content and generate 6 Cryptonary content ideas inspired by it.\\n\\n" +
+                "For each idea:\\n" +
+                "IDEA [N]: [Format] — [Hook/Concept]\\n" +
+                "AVATAR: [which of Cryptonary\\'s 13 avatars]\\n" +
+                "OBJECTIVE: [Awareness/Consideration/Conversion]\\n" +
+                "INSPIRED BY: [what specifically in this content sparked it]\\n" +
+                "WHY IT WORKS: [one sentence — specific principle]\\n---" +
+                ctx,
+                max_tokens=1500,
+                system=VOICE_GUIDE
+            )
+            user_state[chat_id]["last_ideas"] = result
+            user_state[chat_id]["stage"] = "idea_engine_idle"
+            send_plain(chat_id, "*IDEAS FROM " + source_label.upper() + "*\\n\\n" + result)
+            keyboard = [
+                [{"text": "Develop into social", "callback_data": "ie_develop"},
+                 {"text": "Develop into ad", "callback_data": "ie_develop_ad"}],
+                [{"text": "Generate more ideas", "callback_data": "ie_generate_all"}],
+                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+            ]
+            send(chat_id, "Ideas generated.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+
+    else:  # critique mode
+        send(chat_id, "Critiquing " + source_label + "...")
+        try:
+            result = claude(
+                "Critique this content from " + source_label + ":\\n\\n" + text_content[:3000],
+                max_tokens=1200,
+                system=CRITIQUE_SYSTEM
+            )
+            user_state[chat_id]["stage"] = "idea_engine_idle"
+            send_plain(chat_id, "CRITIQUE OF " + source_label.upper() + "\\n\\n" + result)
+            keyboard = [
+                [{"text": "Get ideas from this", "callback_data": "ie_screenshot_ideas"}],
+                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+            ]
+            send(chat_id, "Critique complete.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
