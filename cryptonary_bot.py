@@ -1540,24 +1540,24 @@ def handle_message(msg):
         return
 
     if stage == "ds_awaiting_email_splitvar":
-        state["ds_split_var"] = text
-        state["stage"] = "ds_awaiting_email_data"
-        state["ds_images"] = []
+        user_state[chat_id]["ds_split_var"] = text
+        user_state[chat_id]["stage"] = "ds_awaiting_email_split_data"
+        user_state[chat_id]["ds_images"] = []
         keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_emails_split"}]]
         send(chat_id, "Got it. Now upload your email performance screenshots or CSV.", keyboard)
         return
 
     if stage == "ds_awaiting_landing_splitvar":
-        state["ds_split_var"] = text
-        state["stage"] = "ds_awaiting_landing_data"
-        state["ds_images"] = []
+        user_state[chat_id]["ds_split_var"] = text
+        user_state[chat_id]["stage"] = "ds_awaiting_landing_split_data"
+        user_state[chat_id]["ds_images"] = []
         keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_landing_split"}]]
         send(chat_id, "Got it. Now upload your landing page screenshots or CSV.", keyboard)
         return
 
-    if stage in ("ds_awaiting_followup", "ds_analysis_done") and state.get("last_ds_analysis"):
-        last_analysis = state.get("last_ds_analysis", "")
-        state["stage"] = "ds_analysis_done"
+    if stage in ("ds_awaiting_followup", "ds_analysis_done") and user_state.get(chat_id, {}).get("last_ds_analysis"):
+        last_analysis = user_state[chat_id].get("last_ds_analysis", "")
+        user_state[chat_id]["stage"] = "ds_analysis_done"
         send(chat_id, "Working on it...")
         try:
             result = claude(
@@ -3204,7 +3204,7 @@ def analyse_ads(chat_id):
 
 META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle
 
-IMPORTANT: First count how many ads are in the data. If fewer than 5, flag this as a small sample.
+IMPORTANT: First count how many ads are visible across ALL images. State the total count. If fewer than 5 total, flag as SMALL SAMPLE and note conclusions are directional only.
 
 STEP 1 — DATA EXTRACTION:
 List every ad found with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
@@ -3291,6 +3291,7 @@ METRICS TO EXTRACT:
 - Calculate: Engagement Rate = (Likes + Comments + Saves + Shares) / Reach × 100
 
 STEP 1 — DATA EXTRACTION:
+First state the total number of posts found across ALL images. If fewer than 5 total, flag as SMALL SAMPLE.
 List every post with all available metrics.
 
 STEP 2 — GRADING (A/B/C/D quartiles):
@@ -3377,26 +3378,61 @@ def analyse_emails(chat_id, split_var=None):
     send(chat_id, "Analysing your email data...")
     split_instruction = ""
     if split_var:
-        split_instruction = f"""
-SPLIT TEST ANALYSIS FOR: {split_var}
+        split_instruction = """
+THIS IS A SPLIT TEST ANALYSIS FOR: """ + split_var + """
 
-CRITICAL — POOL RAW NUMBERS, NEVER AVERAGE PERCENTAGES:
-For each variant of the test, calculate:
-- Total recipients (sum all sends for that variant)
-- Total opens = sum of (recipients × open_rate) for each send
-- Total clicks = sum of (recipients × ctr) for each send
-- Pooled open rate = total opens / total recipients × 100
-- Pooled CTR = total clicks / total recipients × 100
+IMPORTANT CONTEXT:
+- Content A = """ + split_var.split(" vs ")[0].strip() if " vs " in split_var else "Content A (Image)" + """
+- Content B = """ + split_var.split(" vs ")[1].strip() if " vs " in split_var else "Content B (No Image)" + """
+- Each Brevo campaign ran A/B where both versions were sent to a random sample simultaneously
+- The TIMELINE at the bottom of each screenshot is the only reliable source — ignore Brevo's winner declaration, we are deciding the winner ourselves based on the aggregated data
+- The A/B sample is ALWAYS split 50/50, so each variant received half the total test sample
 
-Statistical confidence:
-- Under 1,000 combined recipients = INCONCLUSIVE (keep running)
-- 1,000–5,000 = DIRECTIONAL (lean toward winner)
-- 5,000+ = SIGNIFICANT (act on this)
+STEP 1 — EXTRACT FROM EACH CAMPAIGN TIMELINE:
+For each screenshot, find from the timeline text:
+- Campaign name and audience segment
+- Total A/B test sample size: the number from "have been sent to X random subscribers"
+- Each variant's sample = total / 2
+- Which version had more openers: from "Version X with subject line won the highest Open rate with N openers which represents a rate of Y%"
+- Winner's openers (N) and rate (Y%)
+- Loser's openers: cannot be directly read — note as unknown
 
-Declare a winner with the pooled numbers and confidence level.
+STEP 2 — BUILD THE COMPARISON TABLE:
+Show each campaign as a row:
+| Campaign | Segment | Total Sample | Each Variant Sample | Winner | Winner Openers | Winner Rate |
+
+STEP 3 — WEIGHTED AGGREGATION:
+Weight each win by the size of that campaign's total A/B sample.
+- Content A total weighted sample = sum of total test samples for campaigns A won
+- Content B total weighted sample = sum of total test samples for campaigns B won
+- Content A % of total evidence = A weighted sample / (A + B weighted sample) × 100
+
+This tells you what % of all test recipients lived in campaigns where A performed better.
+
+STEP 4 — WINNER OPEN RATE COMPARISON:
+For campaigns A won: what was the winner's open rate?
+For campaigns B won: what was the winner's open rate?
+Higher rates on larger samples = stronger signal.
+
+STEP 5 — SEGMENT BREAKDOWN:
+Did the same variant win across all audience types (30-day, 60-day, cancellers, never opened)?
+A variant that only wins on one segment type is a weaker universal signal.
+
+STEP 6 — VERDICT:
+VARIABLE TESTED: """ + split_var + """
+CAMPAIGN BREAKDOWN: [table from step 2]
+WEIGHTED EVIDENCE: Content A represented X% of total test recipients | Content B represented Y%
+SEGMENT PATTERN: [which variant won which segments]
+WINNER: [Content A or B]
+CONFIDENCE: [INCONCLUSIVE under 5,000 total / DIRECTIONAL 5,000-20,000 / SIGNIFICANT 20,000+]
+RECOMMENDATION: [one clear, specific sentence — e.g. "Roll out Image version to all segments" or "Use Image for engaged segments, test further on cold audiences"]
 """
     try:
-        analysis_prompt = """Extract and analyse all email performance data.
+        if split_var:
+            # For split tests, skip standard analysis entirely - just run the split calculation
+            analysis_prompt = split_instruction
+        else:
+            analysis_prompt = """Extract and analyse all email performance data.
 
 METRICS TO EXTRACT per email:
 - Subject line
@@ -3429,6 +3465,11 @@ Which patterns correlate with higher open rates and CTR?
 STEP 5 — IDEAS:
 Generate 5 specific subject line and angle ideas based on what the patterns suggest.
 """ + split_instruction
+
+        if split_var:
+            send_msg = "Running split test calculation..."
+        else:
+            send_msg = "Running full analysis..."
 
         if images:
             content_blocks = []
@@ -3524,7 +3565,7 @@ STEP 4 — TRAFFIC SOURCE BREAKDOWN: Does CVR vary by source?
 STEP 5 — PATTERN RECOGNITION: What page variants, sections, or CTAs correlate with higher CVR?
 
 STEP 6 — IDEAS: 5 specific test hypotheses based on the patterns.
-""" + split_instruction + ctx
+""" + ctx
 
         if images:
             content_blocks = []
@@ -3610,7 +3651,9 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                 "ds_awaiting_ad_data": "ds_analyse_ads",
                 "ds_awaiting_social_data": "ds_analyse_social",
                 "ds_awaiting_email_data": "ds_analyse_emails",
-                "ds_awaiting_landing_data": "ds_analyse_landing"
+                "ds_awaiting_email_split_data": "ds_analyse_emails_split",
+                "ds_awaiting_landing_data": "ds_analyse_landing",
+                "ds_awaiting_landing_split_data": "ds_analyse_landing_split"
             }
             analyse_cb = ds_stage_map.get(stage, "ds_analyse_ads")
 
@@ -3618,25 +3661,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                 [{"text": "Analyse this", "callback_data": analyse_cb}],
                 [{"text": "Add another screenshot", "callback_data": "ds_add_more_" + stage}]
             ]
-            # Extract item count from preview for pre-analysis checklist
-            import re as _re2
-            count_match = _re2.search(r'([0-9]+)\s*(ads?|emails?|posts?|rows?|campaigns?|records?)', preview.lower())
-            item_count = int(count_match.group(1)) if count_match else 0
-
-            data_type_map = {
-                "ds_awaiting_ad_data": "ads",
-                "ds_awaiting_social_data": "social",
-                "ds_awaiting_email_data": "emails",
-                "ds_awaiting_landing_data": "landing"
-            }
-            data_type = data_type_map.get(stage, "ads")
-            checklist_status, checklist_msg = get_preanalysis_checklist(data_type, item_count) if item_count > 0 else ("OK", "")
-
             msg = "Got it. " + preview
-            if checklist_status == "TOO_SMALL":
-                msg += "\n\n⚠️ " + checklist_msg
-            elif checklist_status == "SMALL":
-                msg += "\n\n" + checklist_msg
             if count > 1:
                 msg += "\n\n" + str(count) + " images queued."
             send(chat_id, msg, keyboard)
