@@ -570,6 +570,7 @@ def email_action_keyboard():
          {"text": "Tone", "callback_data": "tone_menu"},
          {"text": "Segments", "callback_data": "segments"}],
         [{"text": "Length", "callback_data": "length_email"},
+         {"text": "Add Context", "callback_data": "add_context_email"},
          {"text": "Critique", "callback_data": "critique_email"}]
     ]
 
@@ -677,7 +678,6 @@ def gen_hooks(chat_id):
         for i, h in enumerate(hooks):
             text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "hook_" + str(i)}])
-        keyboard.append([{"text": "✏️ Write my own hook", "callback_data": "custom_hook"}])
         keyboard.append([{"text": "✏️ Write my own hook", "callback_data": "custom_hook"}])
         keyboard.append([{"text": "Regenerate hooks", "callback_data": "regen_hooks"}])
         send(chat_id, text, keyboard)
@@ -1576,6 +1576,14 @@ def handle_message(msg):
         handle_ad_log_step(chat_id, text)
         return
 
+    if stage == "awaiting_additional_context":
+        existing_context = user_state[chat_id].get("context", "")
+        new_context = (existing_context + " " + text).strip() if existing_context else text
+        user_state[chat_id]["context"] = new_context
+        send(chat_id, "Context added. Regenerating emails with: _" + text[:100] + "_")
+        gen_emails(chat_id)
+        return
+
     if stage == "awaiting_critique_apply":
         apply_critique_fix(chat_id, text.strip())
         return
@@ -2131,6 +2139,10 @@ def handle_callback(cb):
             state["stage"] = "emails_ready"
             send(chat_id, "Enhancement skipped.", email_action_keyboard())
 
+    elif data == "add_context_email":
+        state["stage"] = "awaiting_additional_context"
+        send(chat_id, "Add any extra context to factor in — promo, event, angle tweak, anything:\n\n_The emails will be regenerated with this added._")
+
     elif data == "approve_emails":
         state["stage"] = "emails_approved"
         # Save content metadata + actual approved copy for voice learning
@@ -2508,9 +2520,60 @@ def handle_callback(cb):
         content_type = data.replace("critique_", "")
         run_critique(chat_id, content_type)
 
+    elif data.startswith("toggle_critique_"):
+        num = int(data.replace("toggle_critique_", ""))
+        selected = state.get("critique_selected_fixes", [])
+        if num in selected:
+            selected.remove(num)
+        else:
+            selected.append(num)
+        state["critique_selected_fixes"] = selected
+        # Rebuild keyboard showing selections
+        total = state.get("critique_fixes_available", 6)
+        keyboard = []
+        for i in range(1, total + 1):
+            tick = "[x]" if i in selected else "[ ]"
+            keyboard.append([{"text": tick + " Fix " + str(i), "callback_data": "toggle_critique_" + str(i)}])
+        keyboard.append([{"text": "Apply selected (" + str(len(selected)) + ")", "callback_data": "apply_critique_selected"},
+                         {"text": "Apply all", "callback_data": "apply_critique_all"}])
+        keyboard.append([{"text": "Ignore all", "callback_data": "ignore_critique"}])
+        try:
+            tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id,
+                "reply_markup": json.dumps({"inline_keyboard": keyboard})})
+        except:
+            send(chat_id, str(len(selected)) + " fix(es) selected.", keyboard)
+
+    elif data == "apply_critique_selected":
+        selected = state.get("critique_selected_fixes", [])
+        if not selected:
+            send(chat_id, "No fixes selected. Tap the fix numbers to select them first.")
+        else:
+            apply_critique_fixes(chat_id, selected)
+
+    elif data == "apply_critique_all":
+        total = state.get("critique_fixes_available", 6)
+        apply_critique_fixes(chat_id, list(range(1, total + 1)))
+
     elif data.startswith("apply_critique_"):
         num = data.replace("apply_critique_", "")
-        apply_critique_fix(chat_id, num)
+        apply_critique_fixes(chat_id, [int(num)])
+
+    elif data == "revert_critique":
+        original = state.get("critique_original", "")
+        content_type = state.get("critique_content_type", "email")
+        if original:
+            if content_type == "email":
+                emails = parse_delimited_emails(original) if "===FREE EMAIL" in original else {"free": original[:len(original)//2], "pro": original[len(original)//2:]}
+                state["current_emails"] = emails
+                send(chat_id, "Reverted to previous version.", email_action_keyboard())
+            elif content_type == "ad":
+                state["current_ad_output"] = original
+                send(chat_id, "Reverted to previous version.", ad_action_keyboard())
+            elif content_type == "social":
+                state["current_social"] = original
+                send(chat_id, "Reverted to previous version.", social_action_keyboard())
+        else:
+            send(chat_id, "No previous version to revert to.")
 
     elif data == "ignore_critique":
         # Just dismiss and show content keyboard
@@ -4769,8 +4832,8 @@ def run_critique(chat_id, content_type):
         send(chat_id, "Critique error: " + str(e))
         print("Critique error:", e, flush=True)
 
-def apply_critique_fix(chat_id, fix_number):
-    """Apply a specific critique fix to the content."""
+def apply_critique_fixes(chat_id, fix_numbers):
+    """Apply one or more critique fixes, show diff, offer revert."""
     state = user_state[chat_id]
     critique = state.get("current_critique", "")
     original = state.get("critique_original", "")
@@ -4780,46 +4843,54 @@ def apply_critique_fix(chat_id, fix_number):
         send(chat_id, "No active critique to apply.")
         return
 
-    send(chat_id, "Applying fix " + str(fix_number) + "...")
+    fix_list = ", ".join(str(n) for n in fix_numbers)
+    send(chat_id, "Applying fix" + ("es " if len(fix_numbers) > 1 else " ") + fix_list + "...")
 
     try:
+        fix_instruction = ("fixes " + fix_list) if len(fix_numbers) > 1 else ("fix " + fix_list)
         result = claude(
             "ORIGINAL CONTENT:\n" + original[:1500] +
             "\n\nCRITIQUE:\n" + critique[:1000] +
-            "\n\nApply ONLY fix number " + str(fix_number) + " from the critique above. " +
-            "Return the full revised content with that specific change applied. " +
-            "Do not apply any other changes. Do not explain what you changed.",
+            "\n\nApply ONLY " + fix_instruction + " from the critique above. " +
+            "Return the full revised content with those specific changes applied. " +
+            "Do not apply other changes. Do not explain what you changed.",
             max_tokens=1500
         )
 
-        # Update state with revised content
+        # Store previous version for revert
+        state["critique_pre_fix"] = original
+
+        # Update state
         if content_type == "email":
-            # Re-parse and update
-            emails = {"free": result[:len(result)//2], "pro": result[len(result)//2:]}
-            state["current_emails"] = emails
+            improved = parse_delimited_emails(result)
+            if improved:
+                state["current_emails"] = improved
+            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
         elif content_type == "ad":
             state["current_ad_output"] = result
+            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
         elif content_type == "social":
             state["current_social"] = result
+            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
 
-        send_plain(chat_id, "Fix " + str(fix_number) + " applied:\n\n" + result)
-
-        # Save as voice example since this is a refined, improved version
+        # Save as voice example
         save_voice_example(chat_id, result[:600], "critique_fix_" + content_type)
 
-        # Show action keyboard
         kb_map = {"email": email_action_keyboard, "ad": ad_action_keyboard, "social": social_action_keyboard}
         kb_fn = kb_map.get(content_type, email_action_keyboard)
-
-        # Offer to apply more fixes
         keyboard = kb_fn()
-        keyboard.insert(0, [{"text": "Apply another fix", "callback_data": "critique_" + content_type}])
-        state["stage"] = "awaiting_critique_apply"
-        send(chat_id, "Fix applied. Apply another or proceed:", keyboard)
+        keyboard.insert(0, [{"text": "Revert changes", "callback_data": "revert_critique"},
+                             {"text": "Critique again", "callback_data": "critique_" + content_type}])
+        state["stage"] = "emails_ready" if content_type == "email" else "social_ready" if content_type == "social" else "ads_ready"
+        send(chat_id, "Fix applied. Revert if needed or proceed:", keyboard)
 
     except Exception as e:
         send(chat_id, "Error applying fix: " + str(e))
         print("Apply fix error:", e, flush=True)
+
+# Keep old single-fix function as alias for backward compat
+def apply_critique_fix(chat_id, fix_number):
+    apply_critique_fixes(chat_id, [int(fix_number)])
 
 # ══════════════════════════════════════════════════════════════════
 # CONTENT STUDIO FILE HANDLER
