@@ -1499,6 +1499,21 @@ def handle_message(msg):
     if text == "/adreport":
         run_ad_analysis(chat_id)
         return
+    if text == "/briefing":
+        user_state.setdefault(chat_id, {})
+        generate_briefing(chat_id)
+        return
+
+    if text == "/imageprompt" or text.startswith("/imageprompt "):
+        user_state.setdefault(chat_id, {"stage": "idle"})
+        brief = text.replace("/imageprompt", "").strip()
+        if brief:
+            generate_image_prompts(chat_id, brief)
+        else:
+            user_state[chat_id]["stage"] = "awaiting_image_brief"
+            send(chat_id, "*Image Prompt Generator*\n\nDescribe what you need.\n\n_e.g. Hero image for Inner Circle landing page, premium dark crypto wealth theme_\n_e.g. Static ad for Passive Income avatar, warm lifestyle feel_\n_e.g. Carousel cover slide, Bitcoin price breakout energy_")
+        return
+
     if text == "/help":
         send(chat_id, "*Cryptonary Content Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
         return
@@ -1536,6 +1551,48 @@ def handle_message(msg):
     if stage == "awaiting_ad_theme":
         user_state[chat_id]["ad_theme"] = text
         user_state[chat_id]["stage"] = "pick_ad_avatars"
+        show_avatar_menu(chat_id)
+        return
+
+    if stage == "awaiting_image_brief":
+        user_state[chat_id]["stage"] = "idle"
+        generate_image_prompts(chat_id, text)
+        return
+
+    if stage.startswith("ie_awaiting_source_"):
+        source_type = stage.replace("ie_awaiting_source_", "")
+        sources = load_idea_sources()
+        key_map = {"instagram": "instagram", "twitter": "twitter",
+                   "facebook": "facebook_pages", "telegram": "telegram", "reddit": "reddit"}
+        key = key_map.get(source_type)
+        if key:
+            if key not in sources: sources[key] = []
+            val = text.strip().lstrip("@").lstrip("/")
+            if val not in sources[key]:
+                sources[key].append(val)
+                save_idea_sources(sources)
+                send(chat_id, "Added " + val + " to " + source_type + " sources.")
+            else:
+                send(chat_id, val + " is already in your sources.")
+        user_state[chat_id]["stage"] = "idea_engine_idle"
+        show_ie_manage_sources(chat_id)
+        return
+
+    if stage == "ie_awaiting_develop":
+        idea_text = text
+        last_ideas = user_state[chat_id].get("last_ideas", "")
+        user_state[chat_id]["stage"] = "awaiting_social_report"
+        user_state[chat_id]["report"] = "IDEA TO DEVELOP:\n" + idea_text + "\n\nFULL IDEAS CONTEXT:\n" + last_ideas[:500]
+        user_state[chat_id]["social_angle"] = idea_text[:100]
+        show_standalone_social_menu(chat_id)
+        return
+
+    if stage == "ie_awaiting_develop_ad":
+        idea_text = text
+        last_ideas = user_state[chat_id].get("last_ideas", "")
+        user_state[chat_id]["stage"] = "pick_ad_avatars"
+        user_state[chat_id]["ad_theme"] = idea_text
+        user_state[chat_id]["report"] = last_ideas[:500]
         show_avatar_menu(chat_id)
         return
 
@@ -2267,6 +2324,51 @@ def handle_callback(cb):
         # Keep current stage, just prompt for more
         send(chat_id, "Send your next screenshot:")
 
+    elif data == "briefing_refresh":
+        generate_briefing(chat_id)
+
+    elif data == "open_idea_engine":
+        show_idea_engine_menu(chat_id)
+
+    elif data == "ie_generate_all":
+        generate_ideas(chat_id, "both")
+
+    elif data == "ie_generate_social":
+        generate_ideas(chat_id, "social")
+
+    elif data == "ie_generate_ads":
+        generate_ideas(chat_id, "ads")
+
+    elif data == "ie_manage_sources":
+        show_ie_manage_sources(chat_id)
+
+    elif data == "ie_develop":
+        state["stage"] = "ie_awaiting_develop"
+        send(chat_id, "Type the idea number or paste the idea you want to develop into social content:")
+
+    elif data == "ie_develop_ad":
+        state["stage"] = "ie_awaiting_develop_ad"
+        send(chat_id, "Type the idea number or paste the idea you want to develop into an ad:")
+
+    elif data == "ie_imageprompt_again":
+        brief = state.get("last_image_brief", "")
+        if brief:
+            generate_image_prompts(chat_id, brief)
+        else:
+            send(chat_id, "Use /imageprompt [description] to generate new prompts.")
+
+    elif data.startswith("ie_add_"):
+        source_type = data.replace("ie_add_", "")
+        state["stage"] = "ie_awaiting_source_" + source_type
+        prompts = {
+            "instagram": "Enter Instagram handle (without @):",
+            "twitter": "Enter Twitter/X handle (without @):",
+            "facebook": "Enter Facebook page name:",
+            "telegram": "Enter Telegram channel name (without t.me/):",
+            "reddit": "Enter subreddit name (without r/):"
+        }
+        send(chat_id, prompts.get(source_type, "Enter the source name:"))
+
     elif data == "ds_followup":
         state["stage"] = "ds_awaiting_followup"
         send(chat_id, "Ask your follow-up question:")
@@ -2284,6 +2386,11 @@ def poll():
     processed_updates = set()
     print("Cryptonary Bot V9 running.", flush=True)
     while True:
+        # Check if weekly briefing should be sent
+        try:
+            check_and_send_briefing()
+        except Exception as e:
+            print("Briefing check error:", e, flush=True)
         try:
             url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=30&offset=" + str(offset)
             req = urllib.request.Request(url)
@@ -2338,9 +2445,10 @@ def show_main_menu(chat_id):
     user_state[chat_id] = {"stage": "idle"}
     keyboard = [
         [{"text": "Cryptonary Content Studio", "callback_data": "open_content_studio"}],
-        [{"text": "Cryptonary Data Studio", "callback_data": "open_data_studio"}]
+        [{"text": "Cryptonary Data Studio", "callback_data": "open_data_studio"}],
+        [{"text": "Cryptonary Idea Engine", "callback_data": "open_idea_engine"}]
     ]
-    send(chat_id, "*Cryptonary HQ*\n\nWhat would you like to do?", keyboard)
+    send(chat_id, "*Cryptonary OS*\n\nWhat would you like to do?", keyboard)
 
 
 # ── AD CREATION FLOW ──────────────────────────────────────────────
@@ -3863,6 +3971,455 @@ def get_preanalysis_checklist(data_type, item_count):
 
 # Load on startup
 load_content_stores()
+
+# ══════════════════════════════════════════════════════════════════
+# WEEKLY BRIEFING ENGINE
+# ══════════════════════════════════════════════════════════════════
+
+BRIEFING_CHAT_IDS_FILE = "briefing_subscribers.json"
+
+def load_briefing_subscribers():
+    try:
+        with open(BRIEFING_CHAT_IDS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_briefing_subscribers(ids):
+    try:
+        with open(BRIEFING_CHAT_IDS_FILE, "w") as f:
+            json.dump(ids, f)
+    except Exception as e:
+        print("Briefing subscriber save error:", e, flush=True)
+
+def fetch_market_data():
+    """Fetch BTC price, Fear & Greed index, and top crypto news."""
+    results = {}
+    try:
+        # BTC price from CoinGecko public API
+        req = urllib.request.Request(
+            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_7d_change=true",
+            headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+            btc = data.get("bitcoin", {})
+            results["btc_price"] = btc.get("usd", 0)
+            results["btc_24h"] = round(btc.get("usd_24h_change", 0), 1)
+            results["btc_7d"] = round(btc.get("usd_7d_change", 0), 1)
+    except Exception as e:
+        results["btc_price"] = 0
+        results["btc_24h"] = 0
+        results["btc_7d"] = 0
+        print("BTC price fetch error:", e, flush=True)
+
+    try:
+        # Fear & Greed from alternative.me
+        req = urllib.request.Request(
+            "https://api.alternative.me/fng/?limit=1",
+            headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+            fng = data.get("data", [{}])[0]
+            results["fng_value"] = fng.get("value", "N/A")
+            results["fng_label"] = fng.get("value_classification", "N/A")
+    except Exception as e:
+        results["fng_value"] = "N/A"
+        results["fng_label"] = "N/A"
+        print("Fear & Greed fetch error:", e, flush=True)
+
+    return results
+
+def get_last_week_performance(chat_id):
+    """Summarise last week's content and performance from stored data."""
+    summary = []
+    records = content_metadata.get(chat_id, [])
+    insights = pattern_insights.get(chat_id, [])
+    email_records = email_log.get(chat_id, [])
+    ad_records = ad_log.get(chat_id, [])
+
+    # Content created in last 7 days
+    from datetime import datetime as _datetime, timedelta as _timedelta
+    week_ago = (_datetime.now() - _timedelta(days=7)).strftime("%Y-%m-%d")
+    recent = [r for r in records if r.get("date","") >= week_ago]
+    if recent:
+        email_count = len([r for r in recent if r.get("type") == "email"])
+        ad_count = len([r for r in recent if r.get("type") == "ad"])
+        summary.append(str(len(recent)) + " pieces created last week (" + str(email_count) + " emails, " + str(ad_count) + " ads)")
+
+    # Best logged email
+    if email_records:
+        best = max(email_records, key=lambda r: r.get("open_rate", 0))
+        summary.append("Best email: " + best.get("subject","")[:50] + " — " + str(best.get("open_rate","?")) + "% open / " + str(best.get("ctr","?")) + "% CTR")
+
+    # Recent insights
+    recent_insights = [i for i in insights if i.get("date","") >= week_ago]
+    if recent_insights:
+        summary.append("Recent pattern: " + recent_insights[-1].get("insight",""))
+
+    return summary
+
+def generate_briefing(chat_id):
+    """Generate and send the full weekly briefing."""
+    send(chat_id, "Generating your weekly briefing...")
+
+    # Register this chat for auto-briefing
+    subscribers = load_briefing_subscribers()
+    if chat_id not in subscribers:
+        subscribers.append(chat_id)
+        save_briefing_subscribers(subscribers)
+
+    # Fetch live data
+    market = fetch_market_data()
+    perf_summary = get_last_week_performance(chat_id)
+
+    # Build context for Claude
+    market_context = ""
+    if market.get("btc_price"):
+        price = "${:,.0f}".format(market["btc_price"])
+        market_context += "BTC: " + price + " (" + str(market["btc_7d"]) + "% 7d, " + str(market["btc_24h"]) + "% 24h)\n"
+    if market.get("fng_value") != "N/A":
+        market_context += "Fear & Greed: " + str(market["fng_value"]) + " (" + market["fng_label"] + ")\n"
+
+    perf_context = "\n".join(perf_summary) if perf_summary else "No performance data logged yet."
+
+    try:
+        # Use web search for news via Claude
+        news_prompt = "Search for the top 3 most important crypto/Bitcoin news stories from the past 7 days. For each give: headline, one sentence summary, and why it matters for crypto investors and marketers. Be specific with dates and numbers."
+
+        briefing_prompt = """You are the chief strategist for Cryptonary, a crypto research platform with 300K+ subscribers.
+
+Generate a weekly Monday morning briefing for Adam (Co-Founder). Be direct, specific, and actionable.
+
+MARKET DATA:
+""" + market_context + """
+
+LAST WEEK'S PERFORMANCE:
+""" + perf_context + """
+
+STRUCTURE THE BRIEFING EXACTLY AS:
+
+MARKET PULSE
+[BTC price, 7d change, Fear & Greed with one line on what it means for content tone this week]
+
+TOP STORIES THIS WEEK
+[3 most important crypto stories from the past 7 days with specific numbers and why each matters for Cryptonary's content]
+
+LAST WEEK RECAP
+[Summary of what was created and best performance metrics. If no data: note that logging performance in Data Studio will make this section more useful over time]
+
+THIS WEEK'S CONTENT PLAN
+[Specific recommendations based on market conditions and news:]
+- Monday email angle: [specific suggestion based on market mood]
+- Mid-week content: [social or email suggestion]
+- Ad focus: [which avatar/stage to push given current market sentiment]
+- Social: [1-2 specific post ideas tied to the week's news]
+
+TONE RECOMMENDATION
+[Based on Fear & Greed + price action: Standard / Aggressive / Empathetic and why]
+
+Keep it tight. Every line should be actionable. No fluff."""
+
+        result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM)
+
+        # Format header
+        from datetime import datetime as _dt2
+        date_str = _dt2.now().strftime("%A %d %B %Y")
+        header = "CRYPTONARY WEEKLY BRIEFING\n" + date_str + "\n\n"
+
+        send_plain(chat_id, header + result)
+
+        keyboard = [
+            [{"text": "Generate Monday email", "callback_data": "mode_email"},
+             {"text": "Generate social content", "callback_data": "mode_social"}],
+            [{"text": "Generate ads", "callback_data": "mode_ads"},
+             {"text": "Refresh briefing", "callback_data": "briefing_refresh"}]
+        ]
+        send(chat_id, "Briefing complete. What do you want to create first?", keyboard)
+
+    except Exception as e:
+        print("Briefing error:", e, flush=True)
+        send(chat_id, "Error generating briefing: " + str(e))
+
+
+# ── AUTO BRIEFING SCHEDULER ───────────────────────────────────────
+# Runs inside the poll loop - checks if it's Monday 7-8am GMT and sends briefing
+
+_last_briefing_date = None
+
+def check_and_send_briefing():
+    """Called from poll loop. Sends briefing to all subscribers on Monday 7-8am GMT."""
+    global _last_briefing_date
+    from datetime import datetime as _dt3
+    now = _dt3.utcnow()
+    today = now.strftime("%Y-%m-%d")
+
+    # Monday = 0, hour 7
+    if now.weekday() == 0 and now.hour == 7 and _last_briefing_date != today:
+        _last_briefing_date = today
+        subscribers = load_briefing_subscribers()
+        print("Sending weekly briefing to", len(subscribers), "subscribers", flush=True)
+        for chat_id in subscribers:
+            try:
+                generate_briefing(chat_id)
+                time.sleep(2)  # avoid rate limits between sends
+            except Exception as e:
+                print("Briefing send error for", chat_id, ":", e, flush=True)
+
+# ══════════════════════════════════════════════════════════════════
+# CRYPTONARY IDEA ENGINE
+# ══════════════════════════════════════════════════════════════════
+
+IDEA_ENGINE_SOURCES_FILE = "idea_sources.json"
+
+# Default saved sources — will expand when Adam shares his list
+DEFAULT_SOURCES = {
+    "instagram": [],
+    "twitter": [],
+    "facebook_pages": [],
+    "telegram": [],
+    "reddit": ["cryptocurrency", "bitcoin", "ethfinance", "CryptoMarkets"],
+    "own_accounts": {
+        "instagram": "cryptonary",
+        "twitter": "cryptonary"
+    }
+}
+
+def load_idea_sources():
+    try:
+        with open(IDEA_ENGINE_SOURCES_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return DEFAULT_SOURCES.copy()
+
+def save_idea_sources(sources):
+    try:
+        with open(IDEA_ENGINE_SOURCES_FILE, "w") as f:
+            json.dump(sources, f)
+    except Exception as e:
+        print("Sources save error:", e, flush=True)
+
+def show_idea_engine_menu(chat_id):
+    user_state[chat_id] = {"stage": "idea_engine_idle"}
+    sources = load_idea_sources()
+    source_count = (len(sources.get("instagram",[])) + len(sources.get("twitter",[])) +
+                   len(sources.get("facebook_pages",[])) + len(sources.get("telegram",[])) +
+                   len(sources.get("reddit",[])))
+    keyboard = [
+        [{"text": "Generate ideas now", "callback_data": "ie_generate_all"}],
+        [{"text": "Social ideas only", "callback_data": "ie_generate_social"},
+         {"text": "Ad ideas only", "callback_data": "ie_generate_ads"}],
+        [{"text": "Manage sources (" + str(source_count) + " saved)", "callback_data": "ie_manage_sources"}]
+    ]
+    send(chat_id, "*Cryptonary Idea Engine*\n\nPulls from live sources — competitor ads, trending crypto content, market narratives — and generates specific content and ad ideas with avatar, objective, and why it works.\n\nWhat do you want?", keyboard)
+
+def show_ie_manage_sources(chat_id):
+    sources = load_idea_sources()
+    msg = "*Manage Sources*\n\n"
+    if sources.get("instagram"):
+        msg += "Instagram: " + ", ".join("@" + s for s in sources["instagram"]) + "\n"
+    if sources.get("twitter"):
+        msg += "Twitter: " + ", ".join("@" + s for s in sources["twitter"]) + "\n"
+    if sources.get("facebook_pages"):
+        msg += "Facebook: " + ", ".join(sources["facebook_pages"]) + "\n"
+    if sources.get("telegram"):
+        msg += "Telegram: " + ", ".join("t.me/" + s for s in sources["telegram"]) + "\n"
+    if sources.get("reddit"):
+        msg += "Reddit: " + ", ".join("r/" + s for s in sources["reddit"]) + "\n"
+    keyboard = [
+        [{"text": "Add Instagram account", "callback_data": "ie_add_instagram"}],
+        [{"text": "Add Twitter account", "callback_data": "ie_add_twitter"}],
+        [{"text": "Add Facebook page", "callback_data": "ie_add_facebook"}],
+        [{"text": "Add Telegram channel", "callback_data": "ie_add_telegram"}],
+        [{"text": "Add Reddit community", "callback_data": "ie_add_reddit"}],
+        [{"text": "Back", "callback_data": "open_idea_engine"}]
+    ]
+    send(chat_id, msg, keyboard)
+
+def fetch_source_content(sources):
+    """Fetch live content from all saved sources using web search."""
+    fetched = []
+
+    # Reddit — most reliable
+    for sub in sources.get("reddit", [])[:3]:
+        try:
+            url = "https://www.reddit.com/r/" + sub + "/hot.json?limit=5"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = json.loads(r.read())
+                posts = data.get("data", {}).get("children", [])
+                for p in posts[:3]:
+                    post = p.get("data", {})
+                    title = post.get("title", "")
+                    score = post.get("score", 0)
+                    if title:
+                        fetched.append({"source": "r/" + sub, "type": "reddit", "content": title, "score": score})
+        except Exception as e:
+            print("Reddit fetch error " + sub + ":", e, flush=True)
+
+    # Facebook Ad Library — search for active crypto ads
+    for page in sources.get("facebook_pages", [])[:3]:
+        try:
+            url = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=GB&q=" + urllib.parse.quote(page)
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                html = r.read().decode("utf-8", errors="ignore")[:5000]
+                fetched.append({"source": "FB Ads: " + page, "type": "facebook_ad", "content": html[:1000]})
+        except Exception as e:
+            print("FB Ad Library fetch error " + page + ":", e, flush=True)
+
+    # Telegram public channels
+    for channel in sources.get("telegram", [])[:3]:
+        try:
+            url = "https://t.me/s/" + channel
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                html = r.read().decode("utf-8", errors="ignore")
+                # Extract message text from HTML
+                import re as _re
+                msgs = _re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', html, _re.DOTALL)
+                for msg in msgs[:3]:
+                    clean = _re.sub(r'<[^>]+>', '', msg).strip()[:200]
+                    if clean:
+                        fetched.append({"source": "t.me/" + channel, "type": "telegram", "content": clean})
+        except Exception as e:
+            print("Telegram fetch error " + channel + ":", e, flush=True)
+
+    # Instagram & Twitter via web search (most reliable fallback)
+    for handle in sources.get("instagram", [])[:2]:
+        try:
+            search_url = "https://www.google.com/search?q=site:instagram.com+" + handle + "+crypto&num=3"
+            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                html = r.read().decode("utf-8", errors="ignore")[:3000]
+                fetched.append({"source": "@" + handle + " (IG)", "type": "instagram", "content": html[:500]})
+        except Exception as e:
+            print("Instagram fetch error " + handle + ":", e, flush=True)
+
+    return fetched
+
+def generate_ideas(chat_id, idea_type="both"):
+    """Generate ideas from all sources."""
+    send(chat_id, "Scanning sources and generating ideas...")
+    sources = load_idea_sources()
+    ctx = get_content_context(chat_id)
+
+    try:
+        # Fetch live content
+        fetched = fetch_source_content(sources)
+
+        # Build source summary for Claude
+        source_summary = ""
+        if fetched:
+            source_summary = "LIVE SOURCE DATA:\n"
+            for item in fetched[:15]:
+                source_summary += "- [" + item["source"] + "] " + item["content"][:150] + "\n"
+        else:
+            source_summary = "Note: Live source fetching returned limited data. Generate ideas based on current crypto market context and trends.\n"
+
+        # Also fetch trending crypto news
+        market = fetch_market_data()
+        market_line = ""
+        if market.get("btc_price"):
+            market_line = "Current BTC: ${:,.0f} | Fear & Greed: {} ({})".format(
+                market["btc_price"], market.get("fng_value","?"), market.get("fng_label","?"))
+
+        type_instruction = {
+            "social": "Generate SOCIAL CONTENT ideas only (Reels, Carousels, Stories).",
+            "ads": "Generate AD COPY ideas only (Meta static and video ads).",
+            "both": "Generate a mix of SOCIAL CONTENT ideas and AD ideas."
+        }.get(idea_type, "Generate a mix of social and ad ideas.")
+
+        prompt = """You are the creative strategist for Cryptonary, a crypto research platform.
+
+MARKET CONTEXT: """ + market_line + """
+
+""" + source_summary + """
+
+""" + ctx + """
+
+""" + type_instruction + """
+
+Generate exactly 8 specific, actionable content ideas. For each idea:
+
+IDEA [N]: [Format] — [Hook/Concept in one punchy line]
+AVATAR: [Which of these avatars: Trader / Investor / Passive Income / Portfolio Builder / 100X Chaser / Skeptic / Burned / Student / 9-5 Worker / Boomer / Side Hustle / Beginner / Universal]
+OBJECTIVE: [Awareness / Consideration / Conversion] — [what action it drives]
+INSPIRED BY: [which source or trend inspired this]
+WHY IT WORKS: [one sentence — specific psychological principle or copywriting mechanic]
+---
+
+Rules:
+- Ideas must be specific to Cryptonary's content — crypto research, market analysis, portfolio strategy, airdrops, passive income
+- No generic ideas. Every idea should have a specific angle, hook, or narrative
+- Mix formats: include Reels, Carousels, Static ads, and Video ads
+- Ideas should reflect current market conditions (Fear & Greed: """ + str(market.get("fng_label","unknown")) + """)
+- Draw from what's working in the source data above"""
+
+        result = claude(prompt, max_tokens=2000, system=VOICE_GUIDE)
+
+        # Parse into individual ideas and send with action buttons
+        send_plain(chat_id, "*CRYPTONARY IDEA ENGINE*\n\n" + result)
+
+        keyboard = [
+            [{"text": "Generate more ideas", "callback_data": "ie_generate_all"}],
+            [{"text": "Social ideas only", "callback_data": "ie_generate_social"},
+             {"text": "Ad ideas only", "callback_data": "ie_generate_ads"}],
+            [{"text": "Develop an idea → Content Studio", "callback_data": "ie_develop"}],
+            [{"text": "Develop an idea → Ad Copy", "callback_data": "ie_develop_ad"}],
+            [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+        ]
+        send(chat_id, "8 ideas generated. Tap Develop to take any idea straight into the Content Studio.", keyboard)
+
+        # Save ideas to state for development
+        user_state[chat_id]["last_ideas"] = result
+        user_state[chat_id]["stage"] = "idea_engine_idle"
+
+    except Exception as e:
+        print("Idea generation error:", e, flush=True)
+        send(chat_id, "Error generating ideas: " + str(e))
+
+# ── IMAGE PROMPT GENERATOR ────────────────────────────────────────
+
+def generate_image_prompts(chat_id, brief):
+    """Generate Midjourney, DALL-E, and universal image prompts from a brief."""
+    send(chat_id, "Generating image prompts...")
+    try:
+        prompt = """Generate 3 image prompt variants for this brief: """ + brief + """
+
+You are creating prompts for Cryptonary — a premium crypto research brand. Dark, professional, aspirational aesthetic. The brand uses dark backgrounds, gold/amber accents, clean typography.
+
+OUTPUT FORMAT:
+
+MIDJOURNEY PROMPT:
+[Full prompt optimised for Midjourney v6. Include: subject, lighting, mood, style reference, color palette, composition. End with: --ar 4:5 --v 6 --style raw --q 2]
+
+DALL-E PROMPT:
+[Plain English scene description optimised for DALL-E 3. Be explicit about style, what to include, what to avoid. No special syntax needed.]
+
+RUNWAY / VIDEO THUMBNAIL:
+[Opening frame description for video content. Include: subject position, background, lighting mood, any motion direction, emotional tone.]
+
+DESIGN NOTES:
+[2-3 specific notes for the designer: suggested text overlay placement, color hex codes that fit Cryptonary brand, any stock photo search terms as alternatives]
+
+Keep each prompt specific and visual. Avoid abstract descriptions — describe exactly what should be in the frame."""
+
+        result = claude(prompt, max_tokens=800)
+        send_plain(chat_id, result)
+
+        keyboard = [
+            [{"text": "Generate another variation", "callback_data": "ie_imageprompt_again"}],
+            [{"text": "Back to main menu", "callback_data": "start_over"}]
+        ]
+        user_state[chat_id]["last_image_brief"] = brief
+        send(chat_id, "Prompts ready. Copy and paste into Midjourney, DALL-E, or Runway.", keyboard)
+
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+
+import urllib.parse as _urlparse
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
