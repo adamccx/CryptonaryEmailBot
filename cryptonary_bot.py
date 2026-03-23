@@ -1555,7 +1555,7 @@ def handle_message(msg):
         send(chat_id, "Got it. Now upload your landing page screenshots or CSV.", keyboard)
         return
 
-    if stage == "ds_awaiting_followup":
+    if stage in ("ds_awaiting_followup", "ds_analysis_done") and state.get("last_ds_analysis"):
         last_analysis = state.get("last_ds_analysis", "")
         state["stage"] = "ds_analysis_done"
         send(chat_id, "Working on it...")
@@ -1574,7 +1574,9 @@ def handle_message(msg):
             ]
             send(chat_id, "Done.", keyboard)
         except Exception as e:
-            send(chat_id, "Error: " + str(e))
+            print("Followup error:", e, flush=True)
+            print(traceback.format_exc(), flush=True)
+            send(chat_id, "Error in follow-up: " + str(e))
         return
 
     if stage == "awaiting_lp_context_text":
@@ -1964,6 +1966,16 @@ def handle_callback(cb):
 
     elif data == "approve_emails":
         state["stage"] = "emails_approved"
+        # Silently save content metadata for data linking
+        save_content_metadata(chat_id, "email", {
+            "angle": state.get("angle", state.get("selected_angle", "")),
+            "hook_subject": state.get("selected_hook", {}).get("subject", ""),
+            "hook_preview": state.get("selected_hook", {}).get("preview", ""),
+            "free_cta": state.get("free_cta", ""),
+            "pro_cta": state.get("pro_cta", ""),
+            "tone": state.get("selected_tone", "standard"),
+            "free_email_preview": state.get("current_emails", {}).get("free", "")[:300]
+        })
         keyboard = [
             [{"text": "Yes — create social content", "callback_data": "social_yes"}],
             [{"text": "No — mark complete", "callback_data": "mark_complete"}]
@@ -2233,6 +2245,10 @@ def handle_callback(cb):
     elif data == "ds_analyse_landing_split":
         analyse_landing(chat_id, split_var=state.get("ds_split_var"))
 
+    elif data.startswith("ds_add_more_"):
+        # Keep current stage, just prompt for more
+        send(chat_id, "Send your next screenshot:")
+
     elif data == "ds_followup":
         state["stage"] = "ds_awaiting_followup"
         send(chat_id, "Ask your follow-up question:")
@@ -2466,6 +2482,13 @@ def generate_all_ads(chat_id):
                 send(chat_id, "Error generating " + avatar_name + " / " + stage_key + ": " + str(e))
 
     state["stage"] = "ads_ready"
+    # Silently save content metadata for data linking
+    save_content_metadata(chat_id, "ad", {
+        "avatars": state.get("selected_avatars", []),
+        "stages": state.get("selected_stages", []),
+        "ad_type": state.get("ad_type", "static"),
+        "theme": state.get("ad_theme", "")[:200]
+    })
     send(chat_id, "All " + str(total) + " ad set(s) generated.", ad_action_keyboard())
 
 
@@ -2914,6 +2937,7 @@ def save_all_data():
             json.dump(data, f)
     except Exception as e:
         print("Analytics save error:", e)
+    save_content_stores()
 
 def load_all_data():
     global email_log, ad_log, performance_data
@@ -3169,6 +3193,8 @@ def analyse_ads(chat_id):
         send(chat_id, "No data uploaded. Please send screenshots or a CSV file first.")
         return
     send(chat_id, "Analysing your ad data...")
+    # Get content context and history
+    ctx = get_content_context(chat_id)
     try:
         if images:
             content_blocks = []
@@ -3177,6 +3203,8 @@ def analyse_ads(chat_id):
             content_blocks.append({"type": "text", "text": """Extract and analyse all ad performance data from these screenshots.
 
 META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle
+
+IMPORTANT: First count how many ads are in the data. If fewer than 5, flag this as a small sample.
 
 STEP 1 — DATA EXTRACTION:
 List every ad found with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
@@ -3197,7 +3225,8 @@ What patterns emerge across avatar, stage, angle, ad type? Be specific.
 STEP 6 — IDEAS:
 Generate 5 specific new ad ideas based on what the patterns suggest. Not generic — specific angles, avatars, hooks derived from the data.
 
-Format clearly with headers for each step."""})
+Format clearly with headers for each step.
+""" + ctx})
             payload = json.dumps({
                 "model": "claude-sonnet-4-20250514",
                 "max_tokens": 3000,
@@ -3218,6 +3247,8 @@ Format clearly with headers for each step."""})
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
+        # Extract and save patterns for future sessions
+        extract_and_save_insights(chat_id, result, "ads")
         keyboard = [
             [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
             [{"text": "Upload more data", "callback_data": "ds_adverts"}],
@@ -3307,6 +3338,7 @@ Format clearly with headers."""
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
+        extract_and_save_insights(chat_id, result, "social")
         keyboard = [
             [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
             [{"text": "Upload more data", "callback_data": "ds_social"}],
@@ -3341,6 +3373,7 @@ def analyse_emails(chat_id, split_var=None):
     if not images and not csv_text:
         send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
         return
+    ctx = get_content_context(chat_id)
     send(chat_id, "Analysing your email data...")
     split_instruction = ""
     if split_var:
@@ -3415,6 +3448,7 @@ Generate 5 specific subject line and angle ideas based on what the patterns sugg
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
+        extract_and_save_insights(chat_id, result, "emails")
         keyboard = [
             [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
             [{"text": "Upload more data", "callback_data": "ds_emails"}],
@@ -3449,6 +3483,7 @@ def analyse_landing(chat_id, split_var=None):
     if not images and not csv_text:
         send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
         return
+    ctx = get_content_context(chat_id)
     send(chat_id, "Analysing your landing page data...")
     split_instruction = ""
     if split_var:
@@ -3489,7 +3524,7 @@ STEP 4 — TRAFFIC SOURCE BREAKDOWN: Does CVR vary by source?
 STEP 5 — PATTERN RECOGNITION: What page variants, sections, or CTAs correlate with higher CVR?
 
 STEP 6 — IDEAS: 5 specific test hypotheses based on the patterns.
-""" + split_instruction
+""" + split_instruction + ctx
 
         if images:
             content_blocks = []
@@ -3509,6 +3544,7 @@ STEP 6 — IDEAS: 5 specific test hypotheses based on the patterns.
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
+        extract_and_save_insights(chat_id, result, "landing")
         keyboard = [
             [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
             [{"text": "Upload more data", "callback_data": "ds_landing"}],
@@ -3549,7 +3585,61 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             if "ds_images" not in state: state["ds_images"] = []
             state["ds_images"].append({"type": mime, "data": encoded})
             count = len(state["ds_images"])
-            send(chat_id, str(count) + " image(s) received. Send more or tap Done to analyse.")
+
+            # Quick validation - ask Claude what it can see in this image
+            stage = state.get("stage", "")
+            context_hint = "Meta Ads Manager data" if "ad" in stage else "Instagram analytics data" if "social" in stage else "email performance data" if "email" in stage else "landing page analytics data"
+            try:
+                check_payload = json.dumps({
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 150,
+                    "messages": [{"role": "user", "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
+                        {"type": "text", "text": "This should contain " + context_hint + ". In one short sentence: what data can you see? If there are rows/ads/posts, how many? If the data is cut off or unclear, say so. Be specific and brief."}
+                    ]}]
+                }).encode()
+                check_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=check_payload,
+                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                with urllib.request.urlopen(check_req, timeout=30) as r:
+                    preview = json.loads(r.read())["content"][0]["text"].strip()
+            except:
+                preview = "Image received."
+
+            # Determine button label based on count
+            ds_stage_map = {
+                "ds_awaiting_ad_data": "ds_analyse_ads",
+                "ds_awaiting_social_data": "ds_analyse_social",
+                "ds_awaiting_email_data": "ds_analyse_emails",
+                "ds_awaiting_landing_data": "ds_analyse_landing"
+            }
+            analyse_cb = ds_stage_map.get(stage, "ds_analyse_ads")
+
+            keyboard = [
+                [{"text": "Analyse this", "callback_data": analyse_cb}],
+                [{"text": "Add another screenshot", "callback_data": "ds_add_more_" + stage}]
+            ]
+            # Extract item count from preview for pre-analysis checklist
+            import re as _re2
+            count_match = _re2.search(r'([0-9]+)\s*(ads?|emails?|posts?|rows?|campaigns?|records?)', preview.lower())
+            item_count = int(count_match.group(1)) if count_match else 0
+
+            data_type_map = {
+                "ds_awaiting_ad_data": "ads",
+                "ds_awaiting_social_data": "social",
+                "ds_awaiting_email_data": "emails",
+                "ds_awaiting_landing_data": "landing"
+            }
+            data_type = data_type_map.get(stage, "ads")
+            checklist_status, checklist_msg = get_preanalysis_checklist(data_type, item_count) if item_count > 0 else ("OK", "")
+
+            msg = "Got it. " + preview
+            if checklist_status == "TOO_SMALL":
+                msg += "\n\n⚠️ " + checklist_msg
+            elif checklist_status == "SMALL":
+                msg += "\n\n" + checklist_msg
+            if count > 1:
+                msg += "\n\n" + str(count) + " images queued."
+            send(chat_id, msg, keyboard)
         else:
             # CSV or document — decode as text
             try:
@@ -3562,6 +3652,138 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
     except Exception as e:
         send(chat_id, "Error reading file: " + str(e))
         return False
+
+# ══════════════════════════════════════════════════════════════════
+# CONTENT METADATA + PATTERN MEMORY ENGINE
+# ══════════════════════════════════════════════════════════════════
+
+import datetime as _dt
+
+CONTENT_STORE_FILE = "content_metadata.json"
+INSIGHTS_FILE = "pattern_insights.json"
+
+# In-memory stores
+content_metadata = {}   # {chat_id: [{type, date, metadata...}]}
+pattern_insights = {}   # {chat_id: [{date, insight, source}]}
+
+def load_content_stores():
+    global content_metadata, pattern_insights
+    try:
+        with open(CONTENT_STORE_FILE, "r") as f:
+            raw = json.load(f)
+        content_metadata = {int(k): v for k, v in raw.items()}
+    except:
+        pass
+    try:
+        with open(INSIGHTS_FILE, "r") as f:
+            raw = json.load(f)
+        pattern_insights = {int(k): v for k, v in raw.items()}
+    except:
+        pass
+
+def save_content_stores():
+    try:
+        with open(CONTENT_STORE_FILE, "w") as f:
+            json.dump({str(k): v for k, v in content_metadata.items()}, f)
+    except Exception as e:
+        print("Content store save error:", e, flush=True)
+    try:
+        with open(INSIGHTS_FILE, "w") as f:
+            json.dump({str(k): v for k, v in pattern_insights.items()}, f)
+    except Exception as e:
+        print("Insights save error:", e, flush=True)
+
+def save_content_metadata(chat_id, content_type, metadata):
+    """Called silently when content is approved. Stores what was created."""
+    if chat_id not in content_metadata:
+        content_metadata[chat_id] = []
+    record = {
+        "type": content_type,
+        "date": _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        **metadata
+    }
+    content_metadata[chat_id].append(record)
+    # Keep last 200 records per user
+    if len(content_metadata[chat_id]) > 200:
+        content_metadata[chat_id] = content_metadata[chat_id][-200:]
+    save_content_stores()
+
+def save_pattern_insight(chat_id, insight, source="analysis"):
+    """Save a pattern discovered during analysis for future reference."""
+    if chat_id not in pattern_insights:
+        pattern_insights[chat_id] = []
+    pattern_insights[chat_id].append({
+        "date": _dt.datetime.now().strftime("%Y-%m-%d"),
+        "insight": insight,
+        "source": source
+    })
+    if len(pattern_insights[chat_id]) > 100:
+        pattern_insights[chat_id] = pattern_insights[chat_id][-100:]
+    save_content_stores()
+
+def get_content_context(chat_id):
+    """Build context string from stored metadata for use in analysis prompts."""
+    records = content_metadata.get(chat_id, [])
+    insights = pattern_insights.get(chat_id, [])
+    if not records and not insights:
+        return ""
+
+    ctx = "\n\n=== CONTENT HISTORY & KNOWN PATTERNS ===\n"
+
+    if records:
+        ctx += "\nRECENT CONTENT CREATED (last 20):\n"
+        for r in records[-20:]:
+            line = "- [" + r.get("date","") + "] " + r.get("type","").upper()
+            if r.get("angle"): line += " | Angle: " + r["angle"][:60]
+            if r.get("hook_subject"): line += " | Subject: " + r["hook_subject"][:50]
+            if r.get("free_cta"): line += " | CTA: " + r["free_cta"]
+            if r.get("tone") and r["tone"] != "standard": line += " | Tone: " + r["tone"]
+            if r.get("avatars"): line += " | Avatars: " + ", ".join(r["avatars"])
+            if r.get("ad_type"): line += " | Type: " + r["ad_type"]
+            ctx += line + "\n"
+
+    if insights:
+        ctx += "\nPREVIOUSLY DISCOVERED PATTERNS:\n"
+        for ins in insights[-15:]:
+            ctx += "- [" + ins.get("date","") + "] " + ins.get("insight","") + "\n"
+
+    return ctx
+
+def extract_and_save_insights(chat_id, analysis_text, source_type):
+    """After analysis, extract key patterns and save them for future sessions."""
+    try:
+        raw = claude(
+            "From this marketing analysis, extract 3-5 specific, memorable patterns or insights that should be remembered for future campaigns. Focus on what consistently works or fails.\n\nAnalysis:\n" + analysis_text[:3000] +
+            "\n\nFormat each insight as one clear sentence starting with the content type and specific finding. Example: 'PASSIVE_INCOME ads consistently outperform at CDR stage with 50% lower CPP than average.' Return as a numbered list only.",
+            max_tokens=400,
+            system=DATA_STUDIO_SYSTEM
+        )
+        lines = [l.strip() for l in raw.split('\n') if l.strip() and l.strip()[0].isdigit()]
+        for line in lines:
+            import re as _re
+            m = _re.match(r'^\d+\.\s*(.+)', line)
+            if m:
+                save_pattern_insight(chat_id, m.group(1), source_type)
+    except Exception as e:
+        print("Insight extraction error:", e, flush=True)
+
+def get_preanalysis_checklist(data_type, item_count):
+    """Returns warning if sample size is too small."""
+    thresholds = {
+        "ads": {"min": 5, "warn": 10},
+        "emails": {"min": 3, "warn": 8},
+        "social": {"min": 5, "warn": 10},
+        "landing": {"min": 3, "warn": 6}
+    }
+    t = thresholds.get(data_type, {"min": 3, "warn": 5})
+    if item_count < t["min"]:
+        return ("TOO_SMALL", "Only " + str(item_count) + " items found. Minimum " + str(t["min"]) + " needed for meaningful analysis. Results may be misleading — consider gathering more data first.")
+    elif item_count < t["warn"]:
+        return ("SMALL", "Small sample (" + str(item_count) + " items). Analysis will run but treat conclusions as directional, not definitive.")
+    return ("OK", "")
+
+# Load on startup
+load_content_stores()
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
