@@ -1539,6 +1539,44 @@ def handle_message(msg):
         show_avatar_menu(chat_id)
         return
 
+    if stage == "ds_awaiting_email_splitvar":
+        state["ds_split_var"] = text
+        state["stage"] = "ds_awaiting_email_data"
+        state["ds_images"] = []
+        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_emails_split"}]]
+        send(chat_id, "Got it. Now upload your email performance screenshots or CSV.", keyboard)
+        return
+
+    if stage == "ds_awaiting_landing_splitvar":
+        state["ds_split_var"] = text
+        state["stage"] = "ds_awaiting_landing_data"
+        state["ds_images"] = []
+        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_landing_split"}]]
+        send(chat_id, "Got it. Now upload your landing page screenshots or CSV.", keyboard)
+        return
+
+    if stage == "ds_awaiting_followup":
+        last_analysis = state.get("last_ds_analysis", "")
+        state["stage"] = "ds_analysis_done"
+        send(chat_id, "Working on it...")
+        try:
+            result = claude(
+                "Previous analysis:\n" + last_analysis[:3000] +
+                "\n\nFollow-up question: " + text +
+                "\n\nAnswer specifically based on the data already analysed. Be direct and actionable.",
+                max_tokens=1500,
+                system=DATA_STUDIO_SYSTEM
+            )
+            send_plain(chat_id, result)
+            keyboard = [
+                [{"text": "Ask another follow-up", "callback_data": "ds_followup"}],
+                [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+            ]
+            send(chat_id, "Done.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
+        return
+
     if stage == "awaiting_lp_context_text":
         state["lp_context"] = text
         generate_landing_page(chat_id)
@@ -1660,6 +1698,18 @@ def handle_callback(cb):
 
     if data == "start_over":
         show_main_menu(chat_id)
+
+    elif data == "open_content_studio":
+        keyboard = [
+            [{"text": "Emails", "callback_data": "mode_email"}],
+            [{"text": "Ad Copy", "callback_data": "mode_ads"}],
+            [{"text": "Social Content", "callback_data": "mode_social"}],
+            [{"text": "Landing Page", "callback_data": "mode_landing"}]
+        ]
+        send(chat_id, "*Cryptonary Content Studio*\n\nWhat do you want to create?", keyboard)
+
+    elif data == "open_data_studio":
+        show_data_studio_menu(chat_id)
 
     elif data == "mode_email":
         user_state[chat_id] = {"stage": "awaiting_email_report"}
@@ -2139,6 +2189,54 @@ def handle_callback(cb):
         state["log_stage"] = "adlog_date"
         send(chat_id, "Date the ad ran? (e.g. 2026-03-22)")
 
+    elif data == "ds_adverts":
+        state["ds_images"] = []
+        state.pop("ds_csv_text", None)
+        start_ds_adverts(chat_id)
+
+    elif data == "ds_social":
+        state["ds_images"] = []
+        state.pop("ds_csv_text", None)
+        start_ds_social(chat_id)
+
+    elif data == "ds_emails":
+        state["ds_images"] = []
+        state.pop("ds_csv_text", None)
+        start_ds_emails(chat_id)
+
+    elif data == "ds_landing":
+        state["ds_images"] = []
+        state.pop("ds_csv_text", None)
+        start_ds_landing(chat_id)
+
+    elif data == "ds_analyse_ads":
+        analyse_ads(chat_id)
+
+    elif data == "ds_analyse_social":
+        analyse_social(chat_id)
+
+    elif data == "ds_analyse_emails":
+        analyse_emails(chat_id)
+
+    elif data == "ds_analyse_landing":
+        analyse_landing(chat_id)
+
+    elif data == "ds_email_splittest":
+        start_ds_email_splittest(chat_id)
+
+    elif data == "ds_landing_splittest":
+        start_ds_landing_splittest(chat_id)
+
+    elif data == "ds_analyse_emails_split":
+        analyse_emails(chat_id, split_var=state.get("ds_split_var"))
+
+    elif data == "ds_analyse_landing_split":
+        analyse_landing(chat_id, split_var=state.get("ds_split_var"))
+
+    elif data == "ds_followup":
+        state["stage"] = "ds_awaiting_followup"
+        send(chat_id, "Ask your follow-up question:")
+
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
 
@@ -2171,7 +2269,23 @@ def poll():
                     processed_updates.clear()
                 try:
                     if "message" in update:
-                        handle_message(update["message"])
+                        msg = update["message"]
+                        chat_id = msg["chat"]["id"]
+                        # Handle photo uploads
+                        if "photo" in msg:
+                            user_state.setdefault(chat_id, {"stage": "idle"})
+                            # Get highest resolution photo
+                            photo = msg["photo"][-1]
+                            handle_ds_file(chat_id, photo, "image")
+                        # Handle document uploads (CSV, PDF etc)
+                        elif "document" in msg:
+                            user_state.setdefault(chat_id, {"stage": "idle"})
+                            doc = msg["document"]
+                            mime = doc.get("mime_type", "")
+                            ftype = "image" if mime.startswith("image/") else "csv"
+                            handle_ds_file(chat_id, doc, ftype)
+                        else:
+                            handle_message(msg)
                     elif "callback_query" in update:
                         handle_callback(update["callback_query"])
                 except Exception as e:
@@ -2189,12 +2303,10 @@ def poll():
 def show_main_menu(chat_id):
     user_state[chat_id] = {"stage": "idle"}
     keyboard = [
-        [{"text": "Emails", "callback_data": "mode_email"}],
-        [{"text": "Ad Copy", "callback_data": "mode_ads"}],
-        [{"text": "Social Content", "callback_data": "mode_social"}],
-        [{"text": "Landing Page", "callback_data": "mode_landing"}]
+        [{"text": "Cryptonary Content Studio", "callback_data": "open_content_studio"}],
+        [{"text": "Cryptonary Data Studio", "callback_data": "open_data_studio"}]
     ]
-    send(chat_id, "*Cryptonary Content Studio*\n\nWhat do you want to create?", keyboard)
+    send(chat_id, "*Cryptonary HQ*\n\nWhat would you like to do?", keyboard)
 
 
 # ── AD CREATION FLOW ──────────────────────────────────────────────
@@ -2983,6 +3095,473 @@ def generate_landing_page(chat_id):
          {"text": "Mark Complete", "callback_data": "mark_complete"}]
     ]
     send(chat_id, "Landing page complete.", keyboard)
+
+# ══════════════════════════════════════════════════════════════════
+# CRYPTONARY DATA STUDIO
+# ══════════════════════════════════════════════════════════════════
+
+DATA_STUDIO_SYSTEM = """
+You are a performance analyst for Cryptonary, a crypto research and education platform.
+Your job is to analyse marketing performance data extracted from screenshots or CSV files.
+
+ANALYSIS PHILOSOPHY:
+- Never just report numbers. Explain WHY something performed well or poorly.
+- Look for patterns across the data — topic, format, hook style, avatar, funnel stage.
+- Generate specific, actionable ideas based on what the patterns suggest.
+- Use the A/B/C/D grading system (A=top 25%, B=above average, C=below average, D=bottom 25%).
+- For metrics where lower is better (CPC, CPP), invert the grading.
+- Always pool raw numbers for split tests — never average percentages.
+- Compare like-for-like: ads vs ads of same avatar/stage, posts vs posts of same format.
+
+GRADING SYSTEM:
+A = Top 25% of cohort — Scale / Keep running
+B = 26-50% — Above average, monitor
+C = 51-75% — Below average, test changes
+D = Bottom 25% — Kill or overhaul
+
+OVERALL AD RATINGS:
+Mostly A/B = SCALE
+Mix A/B/C = KEEP AND MONITOR  
+Mix B/C/D = TEST ONE CHANGE
+Mostly C/D = KILL
+
+VIDEO AIDA DIAGNOSIS:
+- D on 3s view rate = Hook failing. Change opening 3 seconds.
+- A on 3s, D on watch time = Hook works, body fails. Fix middle section.
+- A/B on watch time, D on CTR = Watching but not clicking. Weak CTA or offer.
+- A on CTR, D on CPP = Clicks but no purchase. Landing page problem not the ad.
+
+META AD NAMING CONVENTION:
+Format: IMG (static) or VID (video)
+Stage: AWA (awareness), CDR (consideration), CNV (conversion)
+Avatars: UNIVERSAL, TRADER, INVESTOR, PASSIVE_INCOME, PORTFOLIO, SKEPTIC, BURNED, STUDENT, 9_5, BOOMER, SIDE_HUSTLE, BEGINNER, CHASER
+Angle: after Msg_
+
+INSTAGRAM ENGAGEMENT RATE:
+Engagement Rate = (Likes + Comments + Saves + Shares) / Reach × 100
+Grade engagement rate within format cohort (Reels vs Reels etc).
+"""
+
+def show_data_studio_menu(chat_id):
+    user_state[chat_id] = {"stage": "data_studio_idle"}
+    keyboard = [
+        [{"text": "Adverts", "callback_data": "ds_adverts"}],
+        [{"text": "Social (Instagram)", "callback_data": "ds_social"}],
+        [{"text": "Emails", "callback_data": "ds_emails"}],
+        [{"text": "Landing Pages", "callback_data": "ds_landing"}]
+    ]
+    send(chat_id, "*Cryptonary Data Studio*\n\nWhich data would you like to analyse?", keyboard)
+
+# ── AD ANALYSIS ───────────────────────────────────────────────────
+
+def start_ds_adverts(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_ad_data"
+    state["ds_images"] = []
+    keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
+    send(chat_id, "*Ad Performance Analysis*\n\nUpload your Meta Ads Manager screenshots or CSV.\n\nYou can send multiple images — upload all of them then tap Done.", keyboard)
+
+def analyse_ads(chat_id):
+    state = user_state[chat_id]
+    images = state.get("ds_images", [])
+    csv_text = state.get("ds_csv_text", "")
+    if not images and not csv_text:
+        send(chat_id, "No data uploaded. Please send screenshots or a CSV file first.")
+        return
+    send(chat_id, "Analysing your ad data...")
+    try:
+        if images:
+            content_blocks = []
+            for img_data in images:
+                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+            content_blocks.append({"type": "text", "text": """Extract and analyse all ad performance data from these screenshots.
+
+META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle
+
+STEP 1 — DATA EXTRACTION:
+List every ad found with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
+
+STEP 2 — GRADING (A/B/C/D quartiles within cohort):
+Grade each ad on every metric. For CPP/CPC lower=better so invert grading.
+Give each ad an overall rating: SCALE / KEEP / TEST / KILL
+
+STEP 3 — COHORT ANALYSIS:
+Grade each ad against its own cohort (same avatar + stage) AND overall.
+
+STEP 4 — VIDEO AIDA DIAGNOSIS (video ads only):
+Map where each video's funnel breaks: Attention → Interest → Desire → Action.
+
+STEP 5 — PATTERN RECOGNITION:
+What patterns emerge across avatar, stage, angle, ad type? Be specific.
+
+STEP 6 — IDEAS:
+Generate 5 specific new ad ideas based on what the patterns suggest. Not generic — specific angles, avatars, hooks derived from the data.
+
+Format clearly with headers for each step."""})
+            payload = json.dumps({
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 3000,
+                "system": DATA_STUDIO_SYSTEM,
+                "messages": [{"role": "user", "content": content_blocks}]
+            }).encode()
+        else:
+            payload = json.dumps({
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 3000,
+                "system": DATA_STUDIO_SYSTEM,
+                "messages": [{"role": "user", "content": "Analyse this Meta Ads Manager CSV data:\n\n" + csv_text + "\n\nApply full grading, cohort analysis, AIDA diagnosis for videos, pattern recognition, and generate 5 specific new ad ideas."}]
+            }).encode()
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result = json.loads(r.read())["content"][0]["text"]
+        state["last_ds_analysis"] = result
+        state["stage"] = "ds_analysis_done"
+        send_plain(chat_id, result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Upload more data", "callback_data": "ds_adverts"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+        ]
+        send(chat_id, "Analysis complete.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e), flush=True)
+        state["stage"] = "ds_awaiting_ad_data"
+
+# ── SOCIAL ANALYSIS ───────────────────────────────────────────────
+
+def start_ds_social(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_social_data"
+    state["ds_images"] = []
+    keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_social"}]]
+    send(chat_id, "*Instagram Performance Analysis*\n\nUpload your Minter.io screenshots or CSV.\n\nCovers Reels, Statics, and Carousels. Send all screenshots then tap Done.", keyboard)
+
+def analyse_social(chat_id):
+    state = user_state[chat_id]
+    images = state.get("ds_images", [])
+    csv_text = state.get("ds_csv_text", "")
+    if not images and not csv_text:
+        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        return
+    send(chat_id, "Analysing your Instagram data...")
+    try:
+        analysis_prompt = """Extract and analyse all Instagram performance data from this data.
+
+FORMAT DETECTION: Identify whether each post is a Reel, Static (feed image), or Carousel from the post name/type column.
+
+METRICS TO EXTRACT:
+- Post name/caption snippet
+- Format (Reel/Static/Carousel)
+- Date (if available)
+- Reach
+- Likes, Comments, Saves, Shares
+- Views/View-through rate (Reels only)
+- Calculate: Engagement Rate = (Likes + Comments + Saves + Shares) / Reach × 100
+
+STEP 1 — DATA EXTRACTION:
+List every post with all available metrics.
+
+STEP 2 — GRADING (A/B/C/D quartiles):
+Grade WITHIN format cohort first (Reels vs Reels, Statics vs Statics, Carousels vs Carousels).
+Then cross-format comparison on shared metrics.
+Engagement Rate is the primary grade metric.
+For Reels, view-through rate is graded separately as the Attention metric.
+
+STEP 3 — CONTENT PATTERN ANALYSIS:
+Look for patterns in post names/captions:
+- What topics get the most saves?
+- What topics get the most comments?
+- What content drives the most reach?
+- Do declarative hooks outperform question hooks?
+- Does BTC/ETH/altcoin/airdrop content perform differently?
+
+STEP 4 — FORMAT ANALYSIS:
+- Which format drives most reach? Most saves? Most engagement?
+- Are Carousels driving more saves than Statics?
+- Do Reels drive reach but fewer saves?
+
+STEP 5 — PATTERN RECOGNITION:
+Identify the 3 strongest patterns across the data with evidence.
+
+STEP 6 — IDEAS:
+Generate 5 specific new content ideas based on the patterns. Include: format, topic, hook style, why it should work based on the data.
+
+Format clearly with headers."""
+
+        if images:
+            content_blocks = []
+            for img_data in images:
+                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+            content_blocks.append({"type": "text", "text": analysis_prompt})
+            messages = [{"role": "user", "content": content_blocks}]
+        else:
+            messages = [{"role": "user", "content": "Analyse this Instagram CSV data:\n\n" + csv_text + "\n\n" + analysis_prompt}]
+
+        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result = json.loads(r.read())["content"][0]["text"]
+        state["last_ds_analysis"] = result
+        state["stage"] = "ds_analysis_done"
+        send_plain(chat_id, result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Upload more data", "callback_data": "ds_social"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+        ]
+        send(chat_id, "Analysis complete.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "ds_awaiting_social_data"
+
+# ── EMAIL ANALYSIS ────────────────────────────────────────────────
+
+def start_ds_emails(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_email_data"
+    state["ds_images"] = []
+    keyboard = [
+        [{"text": "Standard analysis", "callback_data": "ds_analyse_emails"}],
+        [{"text": "Split test analysis", "callback_data": "ds_email_splittest"}]
+    ]
+    send(chat_id, "*Email Performance Analysis*\n\nUpload your Klaviyo/ESP screenshots or CSV.\n\nChoose standard analysis or split test aggregation.", keyboard)
+
+def start_ds_email_splittest(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_email_splitvar"
+    send(chat_id, "*Split Test Analysis*\n\nWhat variable are you testing? (e.g. 'name in subject line', 'curiosity gap vs data hook', 'short vs long preview')")
+
+def analyse_emails(chat_id, split_var=None):
+    state = user_state[chat_id]
+    images = state.get("ds_images", [])
+    csv_text = state.get("ds_csv_text", "")
+    if not images and not csv_text:
+        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        return
+    send(chat_id, "Analysing your email data...")
+    split_instruction = ""
+    if split_var:
+        split_instruction = f"""
+SPLIT TEST ANALYSIS FOR: {split_var}
+
+CRITICAL — POOL RAW NUMBERS, NEVER AVERAGE PERCENTAGES:
+For each variant of the test, calculate:
+- Total recipients (sum all sends for that variant)
+- Total opens = sum of (recipients × open_rate) for each send
+- Total clicks = sum of (recipients × ctr) for each send
+- Pooled open rate = total opens / total recipients × 100
+- Pooled CTR = total clicks / total recipients × 100
+
+Statistical confidence:
+- Under 1,000 combined recipients = INCONCLUSIVE (keep running)
+- 1,000–5,000 = DIRECTIONAL (lean toward winner)
+- 5,000+ = SIGNIFICANT (act on this)
+
+Declare a winner with the pooled numbers and confidence level.
+"""
+    try:
+        analysis_prompt = """Extract and analyse all email performance data.
+
+METRICS TO EXTRACT per email:
+- Subject line
+- Send date
+- Recipients
+- Open rate (%) — convert to raw opens = recipients × open_rate / 100
+- CTR (%) — convert to raw clicks = recipients × ctr / 100
+- Email type if identifiable (Free/Pro)
+
+STEP 1 — DATA EXTRACTION:
+List every email with all metrics including calculated raw opens and clicks.
+
+STEP 2 — GRADING (A/B/C/D quartiles):
+Grade each email on open rate and CTR.
+A = top 25%, B = 26-50%, C = 51-75%, D = bottom 25%.
+
+STEP 3 — TOP AND BOTTOM PERFORMERS:
+Top 3 emails — what made them work? (subject style, topic, length, hook type)
+Bottom 3 — what likely caused underperformance?
+
+STEP 4 — PATTERN RECOGNITION:
+Look for patterns in subject lines:
+- Curiosity gap vs data-led vs fear-based vs contrarian
+- With name vs without name
+- Short vs long subjects
+- Question vs statement
+- Specific numbers vs general claims
+Which patterns correlate with higher open rates and CTR?
+
+STEP 5 — IDEAS:
+Generate 5 specific subject line and angle ideas based on what the patterns suggest.
+""" + split_instruction
+
+        if images:
+            content_blocks = []
+            for img_data in images:
+                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+            content_blocks.append({"type": "text", "text": analysis_prompt})
+            messages = [{"role": "user", "content": content_blocks}]
+        else:
+            messages = [{"role": "user", "content": "Analyse this email performance CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]
+
+        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result = json.loads(r.read())["content"][0]["text"]
+        state["last_ds_analysis"] = result
+        state["stage"] = "ds_analysis_done"
+        send_plain(chat_id, result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Upload more data", "callback_data": "ds_emails"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+        ]
+        send(chat_id, "Analysis complete.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "ds_awaiting_email_data"
+
+# ── LANDING PAGE ANALYSIS ─────────────────────────────────────────
+
+def start_ds_landing(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_landing_data"
+    state["ds_images"] = []
+    keyboard = [
+        [{"text": "Standard analysis", "callback_data": "ds_analyse_landing"}],
+        [{"text": "Split test analysis", "callback_data": "ds_landing_splittest"}]
+    ]
+    send(chat_id, "*Landing Page Analysis*\n\nUpload your GA4/analytics screenshots or CSV.\n\nChoose standard analysis or split test aggregation.", keyboard)
+
+def start_ds_landing_splittest(chat_id):
+    state = user_state[chat_id]
+    state["stage"] = "ds_awaiting_landing_splitvar"
+    send(chat_id, "*Landing Page Split Test*\n\nWhat variable are you testing? (e.g. 'hero headline A vs B', 'Pro vs Inner Circle CTA', 'with guarantee vs without')")
+
+def analyse_landing(chat_id, split_var=None):
+    state = user_state[chat_id]
+    images = state.get("ds_images", [])
+    csv_text = state.get("ds_csv_text", "")
+    if not images and not csv_text:
+        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        return
+    send(chat_id, "Analysing your landing page data...")
+    split_instruction = ""
+    if split_var:
+        split_instruction = f"""
+SPLIT TEST ANALYSIS FOR: {split_var}
+
+POOL RAW NUMBERS:
+For each variant: total sessions, total conversions = sessions × CVR / 100
+Pooled CVR = total conversions / total sessions × 100
+
+Statistical confidence:
+- Under 500 combined sessions = INCONCLUSIVE
+- 500–2,000 = DIRECTIONAL
+- 2,000+ = SIGNIFICANT
+
+Declare winner with pooled numbers and confidence.
+"""
+    try:
+        analysis_prompt = """Extract and analyse all landing page performance data.
+
+METRICS TO EXTRACT:
+- Page variant/name
+- Traffic source (Meta/organic/email if available)
+- Sessions
+- CVR (%)
+- Conversions (raw) = sessions × CVR / 100 if not provided
+- Bounce rate if available
+- Revenue/CPL if available
+
+STEP 1 — DATA EXTRACTION with calculated conversions.
+
+STEP 2 — GRADING on CVR (primary) and bounce rate.
+
+STEP 3 — TOP AND BOTTOM PERFORMERS with diagnosis.
+
+STEP 4 — TRAFFIC SOURCE BREAKDOWN: Does CVR vary by source?
+
+STEP 5 — PATTERN RECOGNITION: What page variants, sections, or CTAs correlate with higher CVR?
+
+STEP 6 — IDEAS: 5 specific test hypotheses based on the patterns.
+""" + split_instruction
+
+        if images:
+            content_blocks = []
+            for img_data in images:
+                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+            content_blocks.append({"type": "text", "text": analysis_prompt})
+            messages = [{"role": "user", "content": content_blocks}]
+        else:
+            messages = [{"role": "user", "content": "Analyse this landing page CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]
+
+        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result = json.loads(r.read())["content"][0]["text"]
+        state["last_ds_analysis"] = result
+        state["stage"] = "ds_analysis_done"
+        send_plain(chat_id, result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Upload more data", "callback_data": "ds_landing"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+        ]
+        send(chat_id, "Analysis complete.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+        state["stage"] = "ds_awaiting_landing_data"
+
+# ── IMAGE/CSV HANDLER ─────────────────────────────────────────────
+
+def handle_ds_file(chat_id, file_info, file_type="image"):
+    """Download and store uploaded file for analysis."""
+    state = user_state.get(chat_id, {})
+    stage = state.get("stage", "")
+    if not stage.startswith("ds_awaiting"):
+        return False
+    try:
+        file_id = file_info.get("file_id")
+        # Get file path from Telegram
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            return False
+        url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            file_bytes = r.read()
+        import base64
+        if file_type == "image":
+            # Detect image type
+            mime = "image/jpeg"
+            if file_path.endswith(".png"): mime = "image/png"
+            elif file_path.endswith(".gif"): mime = "image/gif"
+            elif file_path.endswith(".webp"): mime = "image/webp"
+            encoded = base64.b64encode(file_bytes).decode()
+            if "ds_images" not in state: state["ds_images"] = []
+            state["ds_images"].append({"type": mime, "data": encoded})
+            count = len(state["ds_images"])
+            send(chat_id, str(count) + " image(s) received. Send more or tap Done to analyse.")
+        else:
+            # CSV or document — decode as text
+            try:
+                text = file_bytes.decode("utf-8")
+            except:
+                text = file_bytes.decode("latin-1")
+            state["ds_csv_text"] = text[:15000]  # limit to 15k chars
+            send(chat_id, "File received (" + str(len(text)) + " characters). Tap Done to analyse.")
+        return True
+    except Exception as e:
+        send(chat_id, "Error reading file: " + str(e))
+        return False
 
 if __name__ == "__main__":
     if ANTHROPIC_KEY == "YOUR_ANTHROPIC_KEY_HERE":
