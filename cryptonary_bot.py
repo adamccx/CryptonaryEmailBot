@@ -2494,6 +2494,37 @@ def handle_message(msg):
         show_image_type_menu(chat_id)
         return
 
+    if stage == "vb_awaiting_edit":
+        # User is editing the visual brief text, not an image
+        brief = _global_brief_store.get(chat_id, "")
+        vb_type = user_state[chat_id].get("last_visual_type", "static")
+        user_state[chat_id]["stage"] = "idle"
+        if not brief:
+            send(chat_id, "No brief to edit. Generate a visual brief first.")
+            return
+        send(chat_id, "Updating brief...")
+        try:
+            updated = claude(
+                "CURRENT BRIEF:\n" + brief[:1500] +
+                "\n\nUSER FEEDBACK: " + text +
+                "\n\nUpdate the brief applying this feedback. Keep the same format and structure. Only change what was specified.",
+                max_tokens=900
+            )
+            _global_brief_store[chat_id] = updated
+            user_state[chat_id]["last_visual_brief"] = updated
+            user_state[chat_id]["last_visual_type"] = vb_type
+            send_plain(chat_id, "*UPDATED BRIEF*\n\n" + updated)
+            img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
+            keyboard = []
+            if img_row:
+                keyboard.append(img_row)
+            keyboard.append([{"text": "✏️ Adjust more", "callback_data": "vb_edit"}])
+            keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
+            send(chat_id, "Brief updated.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error updating brief: " + str(e))
+        return
+
     if stage == "img_awaiting_direction":
         user_state[chat_id]["stage"] = "idle"
         handle_image_direction(chat_id, text)
@@ -3816,7 +3847,7 @@ def handle_callback(cb):
         generate_visual_brief(chat_id, vb_type)
 
     elif data == "vb_edit":
-        state["stage"] = "img_awaiting_direction"
+        state["stage"] = "vb_awaiting_edit"
         send(chat_id, "What to change in the brief?")
 
     elif data == "img_from_brief":
@@ -3825,24 +3856,10 @@ def handle_callback(cb):
         if not brief:
             send(chat_id, "No brief found. Generate a visual brief first using the 🎨 Visual brief button.")
             return
-        type_map = {
-            "reel": "breaking_news", "carousel": "educational",
-            "static": "breaking_news", "story": "engagement",
-            "email": "breaking_news", "ad_static": "breaking_news", "ad_video": "breaking_news"
-        }
-        post_type = type_map.get(vb_type, "static")
-        prompt = build_image_prompt(brief[:400], state.get("selected_angle", ""), post_type)
-        state["last_img_prompt"] = prompt
-        state["last_img_type"] = post_type
-        success = generate_and_send_image(chat_id, prompt, post_type)
-        if success:
-            keyboard = [
-                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
-                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, "Image ready.", keyboard)
+        # Store brief as pending concept and show engine picker
+        state["pending_img_concept"] = brief[:600]
+        state["pending_img_angle"] = state.get("selected_angle", "")
+        show_image_type_menu(chat_id)
 
     elif data == "approve_ad":
         ad_output = state.get("current_ad", "")
@@ -6326,6 +6343,197 @@ def send_image_bytes(chat_id, image_bytes, mime_type="image/png", caption=""):
         send(chat_id, "Image generated but failed to send. Error: " + str(e))
 
 
+
+# ══════════════════════════════════════════════════════════════════
+# CLAUDE VISUAL GENERATION — SVG + HTML
+# Claude generates brand-accurate visuals as SVG (sent as image)
+# and HTML (sent as downloadable file for editing)
+# ══════════════════════════════════════════════════════════════════
+
+def generate_claude_svg(brief, post_type, angle=""):
+    """Ask Claude to generate an SVG graphic from a visual brief."""
+    type_instructions = {
+        "storyboard": "Create a STORYBOARD SVG showing scene frames in a grid layout. Each frame is a labelled rectangle with scene description inside. Clean, minimal, black background, white text, blue accent borders.",
+        "static":     "Create a STATIC POST SVG (1080x1080). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
+        "carousel":   "Create a CAROUSEL SLIDE SVG (1080x1080) showing the cover slide design. Bold headline, dark background, clear typography hierarchy.",
+        "story":      "Create a STORY FRAME SVG (1080x1920). Full screen vertical. Bold text, dark bg, designed for mobile.",
+        "thumbnail":  "Create an EMAIL THUMBNAIL SVG (600x300). Bold headline, relevant visual element, dark background. Optimised for email preview.",
+        "data":       "Create a DATA VISUALISATION SVG. Charts, numbers, clean layout. Dark background, green/red for up/down, white text.",
+    }
+    instruction = type_instructions.get(post_type, type_instructions["static"])
+
+    prompt = ("""Generate a complete, valid SVG graphic for Cryptonary.
+
+BRIEF:
+""" + brief[:800] + """
+
+VISUAL TYPE: """ + instruction + """
+
+BRAND:
+- Background: #000000 (black)
+- Primary text: #FFFFFF (white)  
+- Accent: #005EFF (blue)
+- Bullish: #0DA500 (green)
+- Bearish: #FF0000 (red)
+- Bitcoin: #F7931A (orange)
+- Font family: Arial, sans-serif (use font-weight bold for headlines)
+- Add "@Cryptonary" in small white text bottom-right
+
+RULES:
+- Return ONLY the complete SVG code, nothing else
+- No markdown, no explanation, just the raw SVG starting with <svg
+- Must be valid, renderable SVG
+- Keep text concise — max 8 words per headline
+- Use viewBox for proper scaling
+- Make it look professional and on-brand""")
+
+    try:
+        result = claude(prompt, max_tokens=2000)
+        # Extract SVG - handle markdown wrapping, code blocks, preamble text
+        import re as _re
+        # Strip markdown code blocks
+        cleaned = _re.sub(r'```(?:svg|xml)?\s*', '', result)
+        cleaned = _re.sub(r'```', '', cleaned).strip()
+        svg_match = _re.search(r'(<svg[\s\S]*?</svg>)', cleaned, _re.IGNORECASE)
+        if svg_match:
+            return svg_match.group(1), None
+        elif cleaned.lower().startswith('<svg'):
+            return cleaned, None
+        else:
+            # Try to find any SVG-like content
+            if '<svg' in result.lower():
+                start = result.lower().find('<svg')
+                end = result.lower().rfind('</svg>') + 6
+                if end > start:
+                    return result[start:end], None
+            return None, "Claude did not return valid SVG — try again"
+    except Exception as e:
+        return None, str(e)
+
+
+def generate_claude_html(brief, post_type, angle=""):
+    """Ask Claude to generate a styled HTML visual from a visual brief."""
+    type_instructions = {
+        "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame has a number, title, and description. Dark theme, professional.",
+        "static":     "An Instagram post mockup (1080x1080px equivalent). Bold headline, dark background, brand colours. Looks like a real post.",
+        "carousel":   "A carousel slide design showing the cover slide. Swipe indicators at bottom.",
+        "story":      "A vertical story frame (9:16 ratio). Full-screen design, bold text, mobile-optimised.",
+        "thumbnail":  "An email header thumbnail (600x200px). Bold headline, clean layout.",
+        "data":       "A data visualisation with styled numbers, charts using CSS, clean layout.",
+    }
+    instruction = type_instructions.get(post_type, type_instructions["static"])
+
+    prompt = ("""Generate a complete, self-contained HTML file for a Cryptonary visual.
+
+BRIEF:
+""" + brief[:800] + """
+
+TYPE: """ + instruction + """
+
+BRAND COLOURS: #000000 bg, #FFFFFF text, #005EFF blue accent, #0DA500 green, #FF0000 red, #F7931A bitcoin orange
+FONTS: system-ui, Arial, sans-serif — bold for headlines
+Add "@Cryptonary" small bottom-right.
+
+RULES:
+- Return ONLY the complete HTML starting with <!DOCTYPE html>
+- Fully self-contained — all CSS inline in <style> tags
+- No external resources or CDN links
+- Professional, on-brand, clean design
+- Include a print/screenshot note: <!-- Open in browser and screenshot for best results -->""")
+
+    try:
+        result = claude(prompt, max_tokens=3000)
+        import re as _re
+        html_match = _re.search(r'(<!DOCTYPE[\s\S]*?</html>)', result, _re.IGNORECASE)
+        if html_match:
+            return html_match.group(1), None
+        elif result.strip().lower().startswith('<!doctype') or result.strip().startswith('<html'):
+            return result.strip(), None
+        else:
+            return None, "Claude did not return valid HTML"
+    except Exception as e:
+        return None, str(e)
+
+
+def send_svg_as_image(chat_id, svg_content):
+    """Convert SVG to PNG using cairosvg if available, else send as file."""
+    try:
+        import cairosvg, tempfile, os
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            png_path = tmp.name
+        cairosvg.svg2png(bytestring=svg_content.encode(), write_to=png_path, scale=2.0)
+        with open(png_path, "rb") as f:
+            png_bytes = f.read()
+        os.unlink(png_path)
+        send_image_bytes(chat_id, png_bytes, "image/png")
+        return True
+    except ImportError:
+        # cairosvg not on Render — send as SVG file (opens in browser)
+        send_file_bytes(chat_id, svg_content.encode(), "cryptonary_visual.svg", "image/svg+xml")
+        send(chat_id, "📎 Open the SVG file in your browser to view the full-quality image.")
+        return True
+    except Exception as e:
+        print("SVG conversion error:", e, flush=True)
+        # Last resort — send as file anyway
+        try:
+            send_file_bytes(chat_id, svg_content.encode(), "cryptonary_visual.svg", "image/svg+xml")
+            send(chat_id, "📎 SVG sent as file — open in browser.")
+            return True
+        except:
+            return False
+
+
+def send_file_bytes(chat_id, file_bytes, filename, mime_type="application/octet-stream"):
+    """Send a file to Telegram."""
+    try:
+        boundary = "----TgFileBoundary"
+        body = (
+            ("--" + boundary + "\r\n").encode() +
+            ("Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n" + str(chat_id) + "\r\n").encode() +
+            ("--" + boundary + "\r\n").encode() +
+            ("Content-Disposition: form-data; name=\"document\"; filename=\"" + filename + "\"\r\n").encode() +
+            ("Content-Type: " + mime_type + "\r\n\r\n").encode() +
+            file_bytes + b"\r\n" +
+            ("--" + boundary + "--\r\n").encode()
+        )
+        req = urllib.request.Request(
+            "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendDocument",
+            data=body,
+            headers={"Content-Type": "multipart/form-data; boundary=" + boundary}
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        print("send_file_bytes error:", e, flush=True)
+        send(chat_id, "File generated but failed to send: " + str(e))
+
+
+def generate_claude_visual(chat_id, brief, post_type, send_html=True):
+    """Generate SVG + HTML visual using Claude and send both."""
+    vtype_label = post_type.replace("_", " ").title()
+
+    # Step 1: Generate SVG (send as image)
+    send(chat_id, "🤖 Claude generating " + vtype_label + " visual...")
+    svg, svg_err = generate_claude_svg(brief, post_type)
+
+    if svg:
+        ok = send_svg_as_image(chat_id, svg)
+        if not ok:
+            send(chat_id, "SVG generated but couldn\'t convert to image.")
+    else:
+        send(chat_id, "SVG generation failed: " + (svg_err or "unknown"))
+
+    # Step 2: Generate HTML (send as downloadable file)
+    if send_html:
+        send(chat_id, "📄 Generating HTML version (editable)...")
+        html, html_err = generate_claude_html(brief, post_type)
+        if html:
+            filename = "cryptonary_" + post_type + ".html"
+            send_file_bytes(chat_id, html.encode(), filename, "text/html")
+            send(chat_id, "Open the HTML file in your browser for an editable, full-quality version.")
+        else:
+            send(chat_id, "HTML generation failed: " + (html_err or "unknown"))
+
 def generate_and_send_image(chat_id, prompt, post_type="static"):
     """Route to best model for post type, generate and send image."""
     # Gemini: better for graphics with text, thumbnails, statics, branded assets
@@ -6361,8 +6569,11 @@ def generate_and_send_image(chat_id, prompt, post_type="static"):
             send(chat_id, "Image generation failed: " + info)
             return False
 
-    send(chat_id, "⚠️ No image API available. OPENAI_KEY and GEMINI_KEY are both missing from Render.")
-    return False
+    # Final fallback — Claude SVG requires no external API
+    send(chat_id, "⚠️ No image API keys configured. Using Claude SVG instead...")
+    brief = _global_brief_store.get(chat_id, prompt[:300])
+    generate_claude_visual(chat_id, brief, post_type, send_html=True)
+    return True
 
 
 def send_image_url(chat_id, image_url, caption=""):
@@ -6377,17 +6588,42 @@ def send_image_url(chat_id, image_url, caption=""):
 
 
 def show_image_type_menu(chat_id):
-    """Ask what type of image to generate."""
+    """Ask which AI to use for image generation."""
     keyboard = [
-        [{"text": "📰 Breaking news style",    "callback_data": "img_type_breaking_news"}],
-        [{"text": "📊 Price / data post",       "callback_data": "img_type_price_data"}],
-        [{"text": "🗳️ Engagement post",         "callback_data": "img_type_engagement"}],
-        [{"text": "📚 Educational",              "callback_data": "img_type_educational"}],
-        [{"text": "🎭 Meme / cultural",          "callback_data": "img_type_meme_cultural"}],
-        [{"text": "🌍 Macro / geopolitical",    "callback_data": "img_type_macro_geo"}],
-        [{"text": "🖼️ Background image only",   "callback_data": "img_type_background"}],
+        [{"text": "🤖 Claude — Storyboard / Layout / Data", "callback_data": "img_engine_claude"}],
+        [{"text": "🎨 Gemini — Thumbnail / Graphic / Static", "callback_data": "img_engine_gemini"}],
+        [{"text": "🖼️ DALL-E — Cinematic / Photo / Macro",   "callback_data": "img_engine_dalle"}],
     ]
-    send(chat_id, "*What type of image?*", keyboard)
+    send(chat_id, "*Which AI for image generation?*\n\n🤖 *Claude* — storyboards, layouts, data visuals, carousels\n🎨 *Gemini* — thumbnails, static posts, branded graphics\n🖼️ *DALL-E* — cinematic backgrounds, editorial photos", keyboard)
+
+
+def show_image_style_menu(chat_id, engine):
+    """After engine selected, ask what style/type."""
+    state = user_state.get(chat_id, {})
+    state["img_engine"] = engine
+    user_state[chat_id] = state
+
+    if engine == "claude":
+        keyboard = [
+            [{"text": "📋 Storyboard",       "callback_data": "img_style_storyboard"}],
+            [{"text": "🖼️ Static post",      "callback_data": "img_style_static"}],
+            [{"text": "📖 Carousel slide",   "callback_data": "img_style_carousel"}],
+            [{"text": "📱 Story frame",      "callback_data": "img_style_story"}],
+            [{"text": "📊 Data visual",      "callback_data": "img_style_data"}],
+            [{"text": "📧 Email thumbnail",  "callback_data": "img_style_thumbnail"}],
+        ]
+        send(chat_id, "*What type of Claude visual?*", keyboard)
+    else:
+        keyboard = [
+            [{"text": "📰 Breaking news",    "callback_data": "img_style_breaking_news"}],
+            [{"text": "📊 Price / data",     "callback_data": "img_style_price_data"}],
+            [{"text": "🗳️ Engagement post",  "callback_data": "img_style_engagement"}],
+            [{"text": "📚 Educational",       "callback_data": "img_style_educational"}],
+            [{"text": "🎭 Meme / cultural",  "callback_data": "img_style_meme_cultural"}],
+            [{"text": "🌍 Macro / geo",      "callback_data": "img_style_macro_geo"}],
+            [{"text": "🖼️ Background only",  "callback_data": "img_style_background"}],
+        ]
+        send(chat_id, "*What style?*", keyboard)
 
 
 def handle_image_generation(chat_id, post_type=None):
@@ -6635,7 +6871,86 @@ def show_visual_brief_menu(chat_id, auto_type=None):
 
 def handle_image_callbacks(chat_id, data, state):
     """Handle all image-related callbacks."""
-    if data.startswith("img_type_"):
+    if data.startswith("img_engine_"):
+        engine = data.replace("img_engine_", "")
+        show_image_style_menu(chat_id, engine)
+
+    elif data.startswith("img_style_"):
+        style = data.replace("img_style_", "")
+        engine = state.get("img_engine", "gemini")
+        brief = _global_brief_store.get(chat_id, "") or state.get("pending_img_concept", state.get("report", ""))[:600]
+        angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
+        state["last_img_type"] = style
+
+        img_action_kb = [
+            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
+            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+        ]
+
+        if engine == "claude":
+            generate_claude_visual(chat_id, brief, style, send_html=True)
+            send(chat_id, "Claude visual ready.", img_action_kb)
+        else:
+            post_type = style
+            prompt = build_image_prompt(brief, angle, post_type)
+            state["last_img_prompt"] = prompt
+            prefer_gemini = (engine == "gemini")
+            # Override routing — force the chosen engine
+            if engine == "gemini" and GEMINI_KEY:
+                send(chat_id, "🎨 Generating with Gemini...")
+                img_bytes, mime, err = generate_gemini_image(prompt)
+                if img_bytes:
+                    send_image_bytes(chat_id, img_bytes, mime)
+                    send(chat_id, "Image ready.", img_action_kb)
+                else:
+                    send(chat_id, "Gemini failed: " + (err or "unknown") + "\nTrying DALL-E...")
+                    safe_prompt = build_image_prompt(brief[:150], "", post_type)
+                    url, info = generate_dalle_image(safe_prompt) if OPENAI_KEY else (None, "No DALL-E key")
+                    if url:
+                        send_image_url(chat_id, url)
+                        send(chat_id, "Image ready (DALL-E fallback).", img_action_kb)
+                    else:
+                        send(chat_id, "🤖 Falling back to Claude SVG...")
+                        generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
+                        send(chat_id, "Claude SVG used as final fallback.", img_action_kb)
+            elif OPENAI_KEY:
+                send(chat_id, "🖼️ Generating with DALL-E...")
+                url, info = generate_dalle_image(prompt)
+                if url:
+                    send_image_url(chat_id, url)
+                    send(chat_id, "Image ready.", img_action_kb)
+                else:
+                    # DALL-E failed — try stripped prompt (content policy fix)
+                    send(chat_id, "Retrying with simplified prompt...")
+                    safe_prompt = build_image_prompt(brief[:150], "", post_type)
+                    url2, info2 = generate_dalle_image(safe_prompt)
+                    if url2:
+                        send_image_url(chat_id, url2)
+                        send(chat_id, "Image ready (simplified prompt).", img_action_kb)
+                    elif GEMINI_KEY:
+                        send(chat_id, "Trying Gemini instead...")
+                        img_bytes, mime, err = generate_gemini_image(safe_prompt)
+                        if img_bytes:
+                            send_image_bytes(chat_id, img_bytes, mime)
+                            send(chat_id, "Image ready (Gemini fallback).", img_action_kb)
+                        else:
+                            send(chat_id, "🤖 Falling back to Claude SVG...")
+                            generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
+                            send(chat_id, "Claude SVG used as final fallback.", img_action_kb)
+                    else:
+                        send(chat_id, "🤖 Falling back to Claude SVG...")
+                        generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
+                        send(chat_id, "Claude SVG used as final fallback.", img_action_kb)
+            else:
+                # No paid APIs — use Claude SVG
+                send(chat_id, "🤖 Using Claude SVG (no paid image API configured)...")
+                generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
+                send(chat_id, "Claude SVG generated.", img_action_kb)
+
+    elif data.startswith("img_type_"):
+        # Legacy fallback
         post_type = data.replace("img_type_", "")
         concept = state.get("pending_img_concept", state.get("report", ""))[:300]
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
@@ -6643,15 +6958,13 @@ def handle_image_callbacks(chat_id, data, state):
         state["last_img_prompt"] = prompt
         state["last_img_type"] = post_type
         success = generate_and_send_image(chat_id, prompt, post_type)
-        if success:
-            keyboard = [
-                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
-                [{"text": "📋 Show prompt",      "callback_data": "img_show_prompt"}],
-                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, "Image ready.", keyboard)
+        keyboard = [
+            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Image ready." if success else "Generation failed.", keyboard)
 
     elif data == "img_regen":
         prompt = state.get("last_img_prompt", "")
@@ -6660,22 +6973,20 @@ def handle_image_callbacks(chat_id, data, state):
             return
         post_type = state.get("last_img_type", "static")
         success = generate_and_send_image(chat_id, prompt, post_type)
-        if success:
-            keyboard = [
-                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
-                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, "New version ready.", keyboard)
+        keyboard = [
+            [{"text": "🔄 Try again",           "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",       "callback_data": "img_direction"}],
+            [{"text": "🎨 Different style",      "callback_data": "img_restyle"}],
+            [{"text": "✅ Done",                 "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "New version ready." if success else "Generation failed — try again.", keyboard)
 
     elif data == "img_direction":
         state["stage"] = "img_awaiting_direction"
         send(chat_id, "Describe what to change or add:")
 
     elif data == "img_restyle":
-        state["pending_img_concept"] = state.get("last_img_prompt", "")[:300]
-        state["pending_img_angle"] = ""
+        # Show engine picker so user can switch between Claude/Gemini/DALL-E
         show_image_type_menu(chat_id)
 
     elif data == "img_show_prompt":
