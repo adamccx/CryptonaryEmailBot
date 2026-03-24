@@ -571,6 +571,7 @@ ADAM'S VOICE RULES:
 performance_data = {}
 user_state = {}
 _global_brief_store = {}  # persists visual briefs across state resets
+_last_callback_time = {}  # per-user callback cooldown (prevents double-fire)
 
 # ── HELPERS ───────────────────────────────────────────────────────
 
@@ -1386,8 +1387,12 @@ def gen_social_selected(chat_id):
     origin = state.get("social_origin", "email")
     if origin == "idea_engine":
         status_msg = "Generating " + str(len(selected)) + " format(s)..."
-    else:
+    elif origin == "voice":
+        status_msg = "Generating " + str(len(selected)) + " format(s)..."
+    elif origin == "email" and state.get("report"):
         status_msg = "Generating " + str(len(selected)) + " format(s) based on " + source_label + " email..."
+    else:
+        status_msg = "Generating " + str(len(selected)) + " format(s)..."
     send(chat_id, status_msg)
     for fmt_cb in selected:
         if fmt_cb in fmt_map:
@@ -2045,8 +2050,8 @@ def handle_message(msg):
         gen_angles(chat_id)
         return
 
-    if stage == "awaiting_quick_edit":
-        user_state[chat_id]["stage"] = user_state[chat_id].get("pre_edit_stage", "emails_ready")
+    if stage in ("awaiting_quick_edit", "social_quick_edit"):
+        user_state[chat_id]["stage"] = user_state[chat_id].get("pre_edit_stage", "social_ready" if stage == "social_quick_edit" else "emails_ready")
         apply_quick_edit(chat_id, text)
         return
 
@@ -2590,6 +2595,17 @@ def handle_callback(cb):
     data = cb["data"]
     tg("answerCallbackQuery", {"callback_query_id": cb["id"]})
     state = user_state.get(chat_id, {})
+
+    # Cooldown: ignore duplicate callbacks fired within 1.5s (queued updates / double-tap)
+    cb_key = str(chat_id) + ":" + data
+    now = time.time()
+    last = _last_callback_time.get(cb_key, 0)
+    if now - last < 1.5 and data not in ("mark_complete", "start_over", "vb_auto"):
+        return
+    _last_callback_time[cb_key] = now
+    # Clean old entries periodically
+    if len(_last_callback_time) > 1000:
+        _last_callback_time.clear()
 
     if data == "start_over":
         show_main_menu(chat_id)
@@ -3859,6 +3875,8 @@ def handle_callback(cb):
         # Store brief as pending concept and show engine picker
         state["pending_img_concept"] = brief[:600]
         state["pending_img_angle"] = state.get("selected_angle", "")
+        state["last_visual_brief"] = brief  # ensure it persists
+        _global_brief_store[chat_id] = brief
         show_image_type_menu(chat_id)
 
     elif data == "approve_ad":
@@ -5996,16 +6014,16 @@ def handle_voice_message(chat_id, voice):
     input_stages = {
         # Email flow
         "awaiting_email_report", "awaiting_report", "buffering_report",
-        "awaiting_context_choice",
+        "awaiting_context_choice", "awaiting_context_text",
         # Social flow
         "awaiting_social_report",
-        # Quick edits
+        # ALL quick edit stages
+        "awaiting_quick_edit", "social_quick_edit",
         "awaiting_lp_quick_edit", "awaiting_ad_quick_edit", "awaiting_social_quick_edit",
-        "awaiting_lp_quick_edit", "social_quick_edit",
         # Angle/hook custom inputs
         "awaiting_custom_free_angle", "awaiting_custom_pro_angle",
         "awaiting_custom_free_hook", "awaiting_custom_pro_hook",
-        "awaiting_custom_social_angle",
+        "awaiting_custom_social_angle", "awaiting_custom_angle", "awaiting_custom_hook",
         # Data studio follow-up
         "ds_awaiting_followup", "ds_awaiting_email_split_numbers",
         # Idea engine
@@ -6014,9 +6032,17 @@ def handle_voice_message(chat_id, voice):
         # Image generation
         "img_awaiting_brief", "img_awaiting_direction",
         # Landing page context
-        "awaiting_lp_context_text",
+        "awaiting_lp_context_text", "lp_outline_review",
+        # Brief editing
+        "vb_awaiting_edit",
         # Voice edit
         "voice_awaiting_edit",
+        # Segment edit
+        "awaiting_seg_edit",
+        # Logging
+        "logging_email", "logging_ad",
+        # Subject line
+        "awaiting_custom_pro_hook",
     }
 
     if current_stage in input_stages:
@@ -6878,7 +6904,10 @@ def handle_image_callbacks(chat_id, data, state):
     elif data.startswith("img_style_"):
         style = data.replace("img_style_", "")
         engine = state.get("img_engine", "gemini")
-        brief = _global_brief_store.get(chat_id, "") or state.get("pending_img_concept", state.get("report", ""))[:600]
+        brief = (_global_brief_store.get(chat_id, "") or 
+                 state.get("pending_img_concept", "") or
+                 state.get("last_visual_brief", "") or
+                 state.get("report", ""))[:600]
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
         state["last_img_type"] = style
 
