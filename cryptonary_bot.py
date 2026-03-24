@@ -1293,10 +1293,11 @@ def show_social_format_menu(chat_id):
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     formats = [
-        ("Reel Script (45-60s)", "fmt_reel"),
+        ("Reel Script (45-60s)",  "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
-        ("Story — Single slide", "fmt_story_single"),
-        ("Story — Multi slide", "fmt_story_multi"),
+        ("Static Post + Caption", "fmt_static"),
+        ("Story — Single slide",  "fmt_story_single"),
+        ("Story — Multi slide",   "fmt_story_multi"),
     ]
     keyboard = []
     for label, cb in formats:
@@ -1318,10 +1319,11 @@ def toggle_social_format(chat_id, fmt_cb, message_id):
     state.pop("social_hooks", None)
     state.pop("selected_social_hooks", None)
     formats = [
-        ("Reel Script (45-60s)", "fmt_reel"),
+        ("Reel Script (45-60s)",  "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
-        ("Story — Single slide", "fmt_story_single"),
-        ("Story — Multi slide", "fmt_story_multi"),
+        ("Static Post + Caption", "fmt_static"),
+        ("Story — Single slide",  "fmt_story_single"),
+        ("Story — Multi slide",   "fmt_story_multi"),
     ]
     keyboard = []
     for label, cb in formats:
@@ -2600,7 +2602,15 @@ def handle_callback(cb):
     cb_key = str(chat_id) + ":" + data
     now = time.time()
     last = _last_callback_time.get(cb_key, 0)
-    if now - last < 1.5 and data not in ("mark_complete", "start_over", "vb_auto"):
+    # Never cooldown these — they need to fire immediately every time
+    no_cooldown = {
+        "mark_complete", "start_over", "vb_auto", "img_from_brief",
+        "img_regen", "img_direction", "img_restyle",
+        "approve_social", "approve_emails", "approve_ad",
+        "gen_social_selected", "gen_social_confirmed",
+        "voice_confirm", "voice_discard",
+    }
+    if now - last < 1.5 and data not in no_cooldown and not data.startswith("img_engine_") and not data.startswith("img_style_") and not data.startswith("sfmt_approve_"):
         return
     _last_callback_time[cb_key] = now
     # Clean old entries periodically
@@ -3480,7 +3490,12 @@ def handle_callback(cb):
         send(chat_id, "What variable are you testing across pages?\n\n_Then upload screenshots from all variants_")
 
     elif data == "open_idea_engine":
-        # Preserve any useful context (report, angle) but reset idea engine stage
+        # Don't interrupt active content generation flows
+        active_stages = {"pick_social_formats", "ie_generating", "social_ready",
+                         "pick_angle", "pick_free_hook", "pick_pro_hook",
+                         "pick_free_cta", "pick_pro_cta"}
+        if state.get("stage") in active_stages:
+            return  # ignore queued open_idea_engine during active flow
         preserved = {k: v for k, v in state.items() if k in ("report", "context", "selected_angle", "social_angle")}
         user_state[chat_id] = {"stage": "idea_engine_idle"}
         user_state[chat_id].update(preserved)
@@ -3574,6 +3589,7 @@ def handle_callback(cb):
         generate_ie_concept(chat_id)
 
     elif data.startswith("ie_develop_concept_"):
+        state["stage"] = "idle"  # clear ie_generating to prevent open_idea_engine guard issues
         num = int(data.replace("ie_develop_concept_", "")) - 1
         concepts_raw = state.get("ie_concepts", "")
         # Extract the nth numbered idea block (matches "1." or "2." etc)
