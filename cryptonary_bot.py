@@ -19,7 +19,10 @@ Clean flow with consistent Quick Edit / Enhance / Approve at every stage.
 import os, json, ssl, urllib.request, time, re, traceback
 
 TELEGRAM_TOKEN = "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y"
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "YOUR_ANTHROPIC_KEY_HERE")
+ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_KEY",  "YOUR_ANTHROPIC_KEY_HERE")
+OPENAI_KEY     = os.environ.get("OPENAI_KEY",     "")
+X_BEARER_TOKEN = os.environ.get("X_BEARER_TOKEN", "")
+GEMINI_KEY     = os.environ.get("GEMINI_KEY",     "")
 ssl._create_default_https_context = ssl._create_unverified_context
 
 BOOK_KNOWLEDGE = """
@@ -476,6 +479,52 @@ CONTENT ANGLES:
 - Crypto as freedom/sovereignty → identity
 - Forced choice/debate → tribal comments
 
+"""
+
+
+# ══════════════════════════════════════════════════════════════════
+# CRYPTONARY BRAND GUIDELINES — used in every image generation prompt
+# ══════════════════════════════════════════════════════════════════
+
+BRAND_GUIDELINES = """
+=== CRYPTONARY BRAND SYSTEM ===
+
+COLOURS:
+- Black #000000 — primary background (default for all dark posts)
+- White #FFFFFF — primary text on dark backgrounds
+- Cryptonary Blue #005EFF — brand accent, highlights, CTAs, data callouts
+- Red #FF0000 — urgency, warnings, bearish signals, breaking news
+- Green #0DA500 — bullish signals, gains, positive news
+- Bitcoin Orange #F7931A — Bitcoin-specific content, BTC price posts
+- No gradients unless explicitly requested. Dark background is always default.
+
+LOGO:
+- Primary logomark: geometric C shape inside an octagonal frame, inner square cutout, diagonal depth shadow bottom-left. Architectural and structural.
+- Alt logomark: flat C cutout, simpler form
+- Wordmark: "cryptonary" lowercase in Inter paired with logomark
+- White logo on dark backgrounds. Black logo on light. Blue as accent only.
+- Never distort, rotate or recolour the logo outside brand palette.
+- Placement: bottom-right corner at ~8% of image width. Never on busy areas.
+
+TYPOGRAPHY:
+- Inter: primary font, all body text and standard headers. Clean, geometric. Lowercase preferred for brand name.
+- Tungsten Regular: condensed impactful headlines in tight spaces. Use for WARNING, BREAKING, ATH, single-word punches. All caps.
+- Termina: wide technical header. Use for data posts, price tables, market updates. Feels authoritative.
+- Hierarchy: Headline (Tungsten/Termina, large, white or accent) → Subhead (Inter bold) → Body (Inter regular, #FFFFFF or #CCCCCC)
+- All caps: breaking news, price callouts. Sentence case: educational and narrative posts.
+
+POST STYLE PATTERNS:
+- BREAKING NEWS: Black bg, red NEWS/BREAKING badge top-left, bold Tungsten headline, relevant image/flag
+- PRICE/DATA: Black bg, coin logo, large Termina price figure, % change in green/red
+- ENGAGEMENT BAIT: Clean black/white bg, bold Inter question, coin grid or choice visual
+- EDUCATIONAL: Dark bg, structured layout, data table or numbered list, logo bottom-right
+- MEME/CULTURAL: Cinematic dark image, bold white text overlay, minimal C mark bottom
+- MACRO/GEOPOLITICAL: News photo with dark overlay, white headline, news badge
+
+DIMENSIONS:
+- Instagram square: 1080x1080px
+- Instagram story/reel cover: 1080x1920px
+- Instagram carousel slide: 1080x1080px
 """
 
 
@@ -2338,6 +2387,17 @@ def handle_message(msg):
             send(chat_id, "Error: " + str(e), ad_action_keyboard())
         return
 
+    if stage == "img_awaiting_brief":
+        user_state[chat_id]["pending_img_concept"] = text
+        user_state[chat_id]["pending_img_angle"] = ""
+        show_image_type_menu(chat_id)
+        return
+
+    if stage == "img_awaiting_direction":
+        user_state[chat_id]["stage"] = "idle"
+        handle_image_direction(chat_id, text)
+        return
+
     if stage == "awaiting_social_report":
         user_state[chat_id]["report"] = text
         user_state[chat_id]["context"] = ""
@@ -2782,10 +2842,13 @@ def handle_callback(cb):
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         state["stage"] = "social_approved"
+        img_btn = [{"text": "🎨 Generate image", "callback_data": "img_open_studio"}] if OPENAI_KEY else []
         keyboard = [
             [{"text": "Generate another format", "callback_data": "social_yes"}],
-            [{"text": "Mark Complete", "callback_data": "mark_complete"}]
         ]
+        if img_btn:
+            keyboard.append(img_btn)
+        keyboard.append([{"text": "Mark Complete", "callback_data": "mark_complete"}])
         send(chat_id, social_type + " approved.", keyboard)
 
     elif data.startswith("enh_"):
@@ -3631,6 +3694,9 @@ def handle_callback(cb):
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
 
+    elif data.startswith("img_"):
+        handle_image_callbacks(chat_id, data, state)
+
     elif data == "log_perf_start":
         start_log_performance(chat_id)
 
@@ -3663,7 +3729,12 @@ def poll():
                         msg = update["message"]
                         chat_id = msg["chat"]["id"]
                         # Handle photo uploads
-                        if "photo" in msg:
+                        if "voice" in msg or "audio" in msg:
+                            # Voice note — transcribe via Whisper
+                            user_state.setdefault(chat_id, {"stage": "idle"})
+                            voice_obj = msg.get("voice") or msg.get("audio")
+                            handle_voice_message(chat_id, voice_obj)
+                        elif "photo" in msg:
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             stage = user_state[chat_id].get("stage", "idle")
                             content_stages = ["awaiting_report","buffering_report",
@@ -3724,9 +3795,11 @@ def show_main_menu(chat_id):
     user_state[chat_id] = {"stage": "idle"}
     keyboard = [
         [{"text": "Cryptonary Content Studio", "callback_data": "open_content_studio"}],
-        [{"text": "Cryptonary Data Studio", "callback_data": "open_data_studio"}],
-        [{"text": "Cryptonary Idea Engine", "callback_data": "open_idea_engine"}]
+        [{"text": "Cryptonary Data Studio",    "callback_data": "open_data_studio"}],
+        [{"text": "Cryptonary Idea Engine",    "callback_data": "open_idea_engine"}],
     ]
+    if OPENAI_KEY:
+        keyboard.append([{"text": "🎨 Image Studio", "callback_data": "img_open_studio"}])
     send(chat_id, "*Cryptonary OS*\n\nWhat would you like to do?", keyboard)
 
 
@@ -5628,6 +5701,407 @@ def save_briefing_subscribers(ids):
     except Exception as e:
         print("Briefing subscriber save error:", e, flush=True)
 
+# ══════════════════════════════════════════════════════════════════
+# WHISPER — VOICE TO TEXT
+# ══════════════════════════════════════════════════════════════════
+
+def transcribe_voice(file_id):
+    """Download a Telegram voice message and transcribe it via OpenAI Whisper."""
+    if not OPENAI_KEY:
+        return None, "OpenAI key not configured. Add OPENAI_KEY to Render environment variables."
+    try:
+        # Step 1: Get file path from Telegram
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            return None, "Could not get voice file from Telegram."
+
+        # Step 2: Download the audio file
+        download_url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+        req = urllib.request.Request(download_url)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            audio_data = r.read()
+
+        # Step 3: Send to Whisper API as multipart form
+        import io
+        boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+        body = (
+            ("--" + boundary + "\r\n").encode() +
+            b"Content-Disposition: form-data; name=\"file\"; filename=\"voice.ogg\"\r\n" +
+            b"Content-Type: audio/ogg\r\n\r\n" +
+            audio_data + b"\r\n" +
+            ("--" + boundary + "\r\n").encode() +
+            b"Content-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n" +
+            ("--" + boundary + "--\r\n").encode()
+        )
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/audio/transcriptions",
+            data=body,
+            headers={
+                "Authorization": "Bearer " + OPENAI_KEY,
+                "Content-Type": "multipart/form-data; boundary=" + boundary
+            }
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            result = json.loads(r.read())
+            transcript = result.get("text", "").strip()
+            return transcript, None
+    except Exception as e:
+        print("Whisper error:", e, flush=True)
+        return None, "Transcription failed: " + str(e)
+
+
+def handle_voice_message(chat_id, voice):
+    """Handle an incoming Telegram voice message — transcribe and route."""
+    if not OPENAI_KEY:
+        send(chat_id, "Voice input requires an OpenAI key. Add OPENAI_KEY to Render.")
+        return
+    send(chat_id, "🎙️ Transcribing...")
+    file_id = voice.get("file_id", "")
+    transcript, error = transcribe_voice(file_id)
+    if error or not transcript:
+        send(chat_id, "Could not transcribe that. Try again or type it instead.\n\n_Error: " + (error or "empty transcript") + "_")
+        return
+
+    # Show transcript so user knows what was heard
+    send(chat_id, "Heard: _\"" + transcript + "\"_\n\nRouting...")
+
+    # Route transcript exactly as if it were typed text
+    # Build a fake message dict to reuse handle_message
+    fake_msg = {
+        "chat": {"id": chat_id},
+        "text": transcript,
+        "from": {"id": chat_id}
+    }
+    handle_message(fake_msg)
+
+
+# ══════════════════════════════════════════════════════════════════
+# X (TWITTER) API — LIVE TWEET FETCHING
+# ══════════════════════════════════════════════════════════════════
+
+# Accounts to pull from — these are the high-signal crypto accounts
+X_ACCOUNTS = [
+    "WatcherGuru",
+    "lookonchain",
+    "DocumentingBTC",
+    "caprioleio",
+    "trendingbitcoin",
+    "BitcoinMagazine",
+    "CoinDesk",
+    "Blockworks_",
+    "glassnode",
+    "woonomic",
+]
+
+# Simple cache so we don't hit the API on every "generate from scratch"
+_x_cache = {"tweets": [], "fetched_at": 0}
+X_CACHE_TTL = 1800  # 30 minutes
+
+
+def fetch_x_tweets(max_per_account=3, max_total=20):
+    """Fetch recent tweets from key crypto accounts via X API v2 pay-per-use."""
+    if not X_BEARER_TOKEN:
+        return []
+
+    # Return cached results if fresh
+    if time.time() - _x_cache["fetched_at"] < X_CACHE_TTL and _x_cache["tweets"]:
+        return _x_cache["tweets"]
+
+    all_tweets = []
+    headers = {
+        "Authorization": "Bearer " + X_BEARER_TOKEN,
+        "User-Agent": "CryptonaryBot/1.0"
+    }
+
+    for handle in X_ACCOUNTS:
+        if len(all_tweets) >= max_total:
+            break
+        try:
+            # Get user ID first
+            user_url = "https://api.twitter.com/2/users/by/username/" + handle
+            req = urllib.request.Request(user_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                user_data = json.loads(r.read())
+            user_id = user_data.get("data", {}).get("id")
+            if not user_id:
+                continue
+
+            # Get recent tweets
+            tweets_url = (
+                "https://api.twitter.com/2/users/" + user_id +
+                "/tweets?max_results=" + str(max_per_account) +
+                "&tweet.fields=text,created_at,public_metrics" +
+                "&exclude=retweets,replies"
+            )
+            req = urllib.request.Request(tweets_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                tweets_data = json.loads(r.read())
+
+            for tweet in tweets_data.get("data", []):
+                text = tweet.get("text", "").strip()
+                metrics = tweet.get("public_metrics", {})
+                if text and len(text) > 20:
+                    all_tweets.append({
+                        "source": "@" + handle,
+                        "text": text[:280],
+                        "likes": metrics.get("like_count", 0),
+                        "retweets": metrics.get("retweet_count", 0),
+                    })
+        except Exception as e:
+            print("X fetch error @" + handle + ":", e, flush=True)
+            continue
+
+    # Cache results
+    _x_cache["tweets"] = all_tweets[:max_total]
+    _x_cache["fetched_at"] = time.time()
+    return _x_cache["tweets"]
+
+
+def format_x_context(tweets):
+    """Format tweets into a clean context string for prompts."""
+    if not tweets:
+        return ""
+    lines = ["\n=== LIVE CRYPTO TWITTER (pulled now) ==="]
+    for t in tweets:
+        engagement = ""
+        if t.get("likes", 0) > 100:
+            engagement = " [" + str(t["likes"]) + " likes]"
+        lines.append("• " + t["source"] + engagement + ": " + t["text"][:200])
+    lines.append("===")
+    return "\n".join(lines)
+
+
+# ══════════════════════════════════════════════════════════════════
+# IMAGE GENERATION — DALL-E 3 via OpenAI API
+# ══════════════════════════════════════════════════════════════════
+
+# Post type → style instruction mapping
+IMAGE_STYLE_MAP = {
+    "breaking_news":  "Breaking news style. Black background. Bold red 'NEWS' or 'BREAKING' badge top-left. Dramatic relevant photo or flag. Bold white Tungsten-style headline overlay. @Cryptonary wordmark bottom-right.",
+    "price_data":     "Clean data post. Black background. Large bold price figure in centre. Coin logo prominent. Percentage change in green (gains) or red (losses). Minimalist, numbers-first layout. @Cryptonary mark bottom-right.",
+    "engagement":     "Bold engagement post. Pure black or white background. Single punchy question or statement in large Inter-style font. Simple coin grid or choice visual if relevant. Clean and high contrast.",
+    "educational":    "Educational carousel style. Dark background. Structured numbered layout or data table. Clear typographic hierarchy. Blue accent (#005EFF) for section headers. @Cryptonary mark bottom-right.",
+    "meme_cultural":  "Cinematic dark tone. Dramatic background image with dark overlay. Bold white text overlay. Minimal Cryptonary C mark bottom corner. Feels shareable and culturally relevant.",
+    "macro_geo":      "Geopolitical news style. Real-world photo with dark gradient overlay. White bold headline. Small NEWS badge. Serious, editorial tone. @Cryptonary bottom-right.",
+    "background":     "Clean background image for compositing. No text overlays. Dark cinematic mood. Relevant to crypto, finance, technology or the specific topic provided. High quality, editorial.",
+}
+
+def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
+    """Build a detailed DALL-E prompt from concept + brand guidelines."""
+    style = IMAGE_STYLE_MAP.get(post_type, IMAGE_STYLE_MAP["background"])
+    prompt = (
+        "Create a professional Instagram post image for Cryptonary, a crypto research platform.\n\n"
+        "BRAND COLOURS: Black #000000 background (default), White #FFFFFF text, "
+        "Cryptonary Blue #005EFF accents, Red #FF0000 for urgency, Green #0DA500 for gains, "
+        "Bitcoin Orange #F7931A for BTC content.\n\n"
+        "CONTENT CONCEPT: " + concept + "\n"
+        "ANGLE/TONE: " + angle + "\n\n"
+        "VISUAL STYLE: " + style + "\n\n"
+        "RULES: Square 1:1 format. Dark background preferred. "
+        "Photorealistic or bold graphic design style. "
+        "No watermarks other than @Cryptonary. "
+        "No copyrighted logos or brand marks from other companies. "
+        "High contrast, scroll-stopping visual."
+    )
+    if extra_direction:
+        prompt += "\n\nADDITIONAL DIRECTION: " + extra_direction
+    return prompt
+
+
+def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
+    """Call DALL-E 3 API and return the image URL."""
+    if not OPENAI_KEY:
+        return None, "OpenAI key not configured. Add OPENAI_KEY to Render."
+    try:
+        body = json.dumps({
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": size,
+            "quality": quality,
+            "response_format": "url"
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/images/generations",
+            data=body,
+            headers={
+                "Authorization": "Bearer " + OPENAI_KEY,
+                "Content-Type": "application/json"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            result = json.loads(r.read())
+        url = result["data"][0]["url"]
+        revised = result["data"][0].get("revised_prompt", "")
+        return url, revised
+    except Exception as e:
+        print("DALL-E error:", e, flush=True)
+        return None, "Image generation failed: " + str(e)
+
+
+def send_image_url(chat_id, image_url, caption=""):
+    """Send a generated image to Telegram by URL."""
+    try:
+        data = {"chat_id": chat_id, "photo": image_url}
+        if caption:
+            data["caption"] = caption
+        tg("sendPhoto", data)
+    except Exception as e:
+        send(chat_id, "Image generated but couldn't send it directly. URL: " + image_url)
+
+
+def show_image_type_menu(chat_id):
+    """Ask what type of image to generate."""
+    keyboard = [
+        [{"text": "📰 Breaking news style",    "callback_data": "img_type_breaking_news"}],
+        [{"text": "📊 Price / data post",       "callback_data": "img_type_price_data"}],
+        [{"text": "🗳️ Engagement post",         "callback_data": "img_type_engagement"}],
+        [{"text": "📚 Educational",              "callback_data": "img_type_educational"}],
+        [{"text": "🎭 Meme / cultural",          "callback_data": "img_type_meme_cultural"}],
+        [{"text": "🌍 Macro / geopolitical",    "callback_data": "img_type_macro_geo"}],
+        [{"text": "🖼️ Background image only",   "callback_data": "img_type_background"}],
+    ]
+    send(chat_id, "*What type of image?*", keyboard)
+
+
+def handle_image_generation(chat_id, post_type=None):
+    """Generate an image based on current state context."""
+    state = user_state.get(chat_id, {})
+
+    # Pull concept and angle from whatever was last generated
+    concept = (
+        state.get("current_social", "") or
+        state.get("report", "") or
+        state.get("ie_selected_concept", "") or
+        state.get("ad_theme", "")
+    )[:300]
+
+    angle = (
+        state.get("social_angle", "") or
+        state.get("selected_angle", "") or
+        state.get("ie_selected_angle", "")
+    )[:150]
+
+    if not concept:
+        state["stage"] = "img_awaiting_brief"
+        send(chat_id, "Describe what you want the image to show:")
+        return
+
+    if not post_type:
+        state["pending_img_concept"] = concept
+        state["pending_img_angle"] = angle
+        show_image_type_menu(chat_id)
+        return
+
+    send(chat_id, "🎨 Generating image...")
+    prompt = build_image_prompt(concept, angle, post_type)
+    state["last_img_prompt"] = prompt
+    state["last_img_type"] = post_type
+
+    image_url, info = generate_dalle_image(prompt)
+
+    if not image_url:
+        send(chat_id, "Image generation failed: " + info)
+        return
+
+    send_image_url(chat_id, image_url, "Generated for @Cryptonary")
+
+    keyboard = [
+        [{"text": "🔄 Regenerate",           "callback_data": "img_regen"}],
+        [{"text": "✏️ Give direction",        "callback_data": "img_direction"}],
+        [{"text": "🎨 Different style",       "callback_data": "img_restyle"}],
+        [{"text": "📋 Show prompt used",      "callback_data": "img_show_prompt"}],
+        [{"text": "✅ Done",                  "callback_data": "mark_complete"}],
+    ]
+    send(chat_id, "Image ready.", keyboard)
+
+
+def handle_image_callbacks(chat_id, data, state):
+    """Handle all image-related callbacks."""
+    if data.startswith("img_type_"):
+        post_type = data.replace("img_type_", "")
+        concept = state.get("pending_img_concept", state.get("report", ""))[:300]
+        angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
+        send(chat_id, "🎨 Generating image...")
+        prompt = build_image_prompt(concept, angle, post_type)
+        state["last_img_prompt"] = prompt
+        state["last_img_type"] = post_type
+        image_url, info = generate_dalle_image(prompt)
+        if not image_url:
+            send(chat_id, "Failed: " + info)
+            return
+        send_image_url(chat_id, image_url)
+        keyboard = [
+            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+            [{"text": "📋 Show prompt",      "callback_data": "img_show_prompt"}],
+            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Image ready.", keyboard)
+
+    elif data == "img_regen":
+        prompt = state.get("last_img_prompt", "")
+        if not prompt:
+            send(chat_id, "No previous prompt found.")
+            return
+        send(chat_id, "🎨 Regenerating...")
+        image_url, _ = generate_dalle_image(prompt)
+        if image_url:
+            send_image_url(chat_id, image_url)
+            keyboard = [
+                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "New version ready.", keyboard)
+        else:
+            send(chat_id, "Generation failed. Try again.")
+
+    elif data == "img_direction":
+        state["stage"] = "img_awaiting_direction"
+        send(chat_id, "Describe what to change or add:")
+
+    elif data == "img_restyle":
+        state["pending_img_concept"] = state.get("last_img_prompt", "")[:300]
+        state["pending_img_angle"] = ""
+        show_image_type_menu(chat_id)
+
+    elif data == "img_show_prompt":
+        prompt = state.get("last_img_prompt", "No prompt saved.")
+        send_plain(chat_id, "PROMPT USED:\n\n" + prompt[:1000])
+
+    elif data == "img_open_studio":
+        handle_image_generation(chat_id)
+
+
+def handle_image_direction(chat_id, text):
+    """Apply user direction to regenerate image."""
+    state = user_state[chat_id]
+    base_prompt = state.get("last_img_prompt", "")
+    post_type = state.get("last_img_type", "background")
+    if not base_prompt:
+        send(chat_id, "No previous image to refine. Start a new one.")
+        return
+    refined_prompt = base_prompt + "\n\nREFINEMENT: " + text
+    state["last_img_prompt"] = refined_prompt
+    send(chat_id, "🎨 Applying direction...")
+    image_url, _ = generate_dalle_image(refined_prompt)
+    if image_url:
+        send_image_url(chat_id, image_url)
+        keyboard = [
+            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Updated.", keyboard)
+    else:
+        send(chat_id, "Generation failed. Try again.")
+
+
 def fetch_market_data():
     """Fetch BTC price, Fear & Greed index, and top crypto news."""
     results = {}
@@ -6000,14 +6474,18 @@ def generate_ie_concept(chat_id):
         market_line = "BTC: ${:,.0f} | Fear & Greed: {} ({})".format(
             market["btc_price"], market.get("fng_value","?"), market.get("fng_label","?"))
 
-    # If no manual source content, pull live RSS headlines
+    # If no manual source content, pull live RSS + X tweets
     if not source_content:
         send(chat_id, "Pulling live trends...")
         headlines = fetch_rss_headlines(max_per_feed=2, max_total=16)
         rss_context = format_rss_context(headlines)
-        source_content = rss_context
+        # Layer X tweets on top if key is configured
+        x_tweets = fetch_x_tweets(max_per_account=2, max_total=10) if X_BEARER_TOKEN else []
+        x_context = format_x_context(x_tweets) if x_tweets else ""
+        source_content = rss_context + x_context
+        label = "Live news + Twitter" if x_tweets else "Live news feeds"
         if not user_state[chat_id].get("ie_source_label"):
-            user_state[chat_id]["ie_source_label"] = "Live news feeds"
+            user_state[chat_id]["ie_source_label"] = label
 
     send(chat_id, "Generating concepts...")
 
@@ -6176,7 +6654,11 @@ def generate_ie_final_content(chat_id, hook_text):
 def show_ie_manage_sources(chat_id):
     sources = load_idea_sources()
     # Show RSS feed count
-    msg = "*News Sources*\n\n"
+    x_status = "✅ Connected (" + str(len(X_ACCOUNTS)) + " accounts)" if X_BEARER_TOKEN else "❌ Not configured — add X_BEARER_TOKEN to Render"
+    whisper_status = "✅ Connected" if OPENAI_KEY else "❌ Not configured — add OPENAI_KEY to Render"
+    msg = "*News Sources & Integrations*\n\n"
+    msg += "🐦 X/Twitter: " + x_status + "\n"
+    msg += "🎙️ Voice input: " + whisper_status + "\n\n"
     msg += str(len(RSS_FEEDS)) + " RSS feeds active:\n"
     tier_labels = {1: "Tier 1 (Mainstream)", 2: "Tier 2 (Analysis)", 3: "Tier 3 (Market)", 4: "Tier 4 (Community)"}
     for tier in [1, 2, 3, 4]:
