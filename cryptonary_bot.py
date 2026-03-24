@@ -2617,6 +2617,18 @@ def handle_message(msg):
         show_image_type_menu(chat_id)
         return
 
+    if stage == "social_hook_custom_input":
+        fmt_idx = user_state[chat_id].get("current_hook_fmt_idx", 0)
+        formats = user_state[chat_id].get("selected_social_formats", [])
+        if fmt_idx < len(formats):
+            fmt = formats[fmt_idx]
+            if "selected_social_hooks" not in user_state[chat_id]:
+                user_state[chat_id]["selected_social_hooks"] = {}
+            user_state[chat_id]["selected_social_hooks"][fmt] = text
+        user_state[chat_id]["stage"] = "idle"
+        show_social_hook_picker(chat_id, fmt_idx + 1)
+        return
+
     if stage == "vb_awaiting_edit":
         # User is editing the visual brief text, not an image
         brief = _global_brief_store.get(chat_id, "")
@@ -3228,6 +3240,25 @@ def handle_callback(cb):
 
     elif data == "gen_social_confirmed":
         gen_social_selected(chat_id)
+
+    elif data.startswith("social_hook_custom_"):
+        fmt_idx = int(data.replace("social_hook_custom_", ""))
+        state["stage"] = "social_hook_custom_input"
+        state["current_hook_fmt_idx"] = fmt_idx
+        formats = state.get("selected_social_formats", [])
+        fmt = formats[fmt_idx] if fmt_idx < len(formats) else ""
+        send(chat_id, "Type your hook for " + fmt.replace("fmt_", "").replace("_", " ") + ":")
+
+    elif data.startswith("social_hook_regen_"):
+        fmt_idx = int(data.replace("social_hook_regen_", ""))
+        formats = state.get("selected_social_formats", [])
+        if fmt_idx < len(formats):
+            fmt = formats[fmt_idx]
+            hooks = state.get("social_hooks", {})
+            hooks.pop(fmt, None)
+            state["social_hooks"] = hooks
+        send(chat_id, "Generating new hooks...")
+        gen_social_hooks(chat_id)
 
     elif data.startswith("social_hook_"):
         # Format: social_hook_{fmt_idx}_{hook_idx}
@@ -3973,8 +4004,11 @@ def handle_callback(cb):
         else:
             send(chat_id, "No previous version to revert to.")
 
+    elif data == "apply_all_critiques":
+        blocks = state.get("critique_blocks", [])
+        apply_critique_fixes(chat_id, list(range(1, len(blocks) + 1)))
+
     elif data == "ignore_critique":
-        # Just dismiss and show content keyboard
         ctype = state.get("critique_content_type", "email")
         kb_map = {"email": email_action_keyboard, "ad": ad_action_keyboard,
                   "social": social_action_keyboard}
@@ -4612,6 +4646,8 @@ def show_social_hook_picker(chat_id, fmt_idx):
     for i, h in enumerate(hooks):
         text += str(i+1) + ". " + h + "\n\n"
         keyboard.append([{"text": str(i+1) + ". " + h[:50], "callback_data": "social_hook_" + str(fmt_idx) + "_" + str(i)}])
+    keyboard.append([{"text": "✏️ Write my own hook", "callback_data": "social_hook_custom_" + str(fmt_idx)}])
+    keyboard.append([{"text": "🔄 Generate more options", "callback_data": "social_hook_regen_" + str(fmt_idx)}])
     send(chat_id, text, keyboard)
 
 def show_standalone_social_menu_confirm(chat_id):
@@ -6513,23 +6549,22 @@ IMAGE_STYLE_MAP = {
 }
 
 def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
-    """Build a clean image prompt. Keep under 800 chars, avoid policy-triggering terms."""
+    """Build image prompt. For Gemini pass full brief. For DALL-E keep under 900 chars."""
     style = IMAGE_STYLE_MAP.get(post_type, IMAGE_STYLE_MAP["background"])
-    # Truncate concept/angle tightly — long prompts cause 400 errors
-    concept_short = concept[:150].strip()
-    angle_short = angle[:80].strip()
+    angle_short = angle[:80].strip() if angle else ""
+    # Use full concept for Gemini (handles long context well)
+    # DALL-E gets truncated version to avoid content policy issues
     prompt = (
-        "Professional digital graphic design. " +
+        "Professional digital graphic design for Cryptonary crypto research brand. " +
         style + " " +
-        "Topic: " + concept_short + ". " +
+        "VISUAL BRIEF: " + concept + " " +
         ("Tone: " + angle_short + ". " if angle_short else "") +
-        "Colour palette: black background, white text, blue and red accents. " +
-        "Square format 1:1. High contrast. Editorial quality. No logos."
+        "Colour palette: black background, white text, blue #005EFF and red #FF0000 accents. " +
+        "Square 1:1 format. High contrast. No external logos."
     )
     if extra_direction:
-        prompt += " " + extra_direction[:100]
-    # Hard cap at 900 chars to stay well under DALL-E 4000 char limit
-    return prompt[:900]
+        prompt += " Additional: " + extra_direction[:150]
+    return prompt
 
 
 def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
@@ -6645,7 +6680,7 @@ def generate_claude_svg(brief, post_type, angle=""):
     prompt = ("""Generate a complete, valid SVG graphic for Cryptonary.
 
 BRIEF:
-""" + brief[:800] + """
+""" + brief[:2000] + """
 
 VISUAL TYPE: """ + instruction + """
 
@@ -6696,7 +6731,7 @@ def generate_claude_html(brief, post_type, angle=""):
     type_instructions = {
         "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame has a number, title, and description. Dark theme, professional.",
         "static":     "An Instagram post mockup (1080x1080px equivalent). Bold headline, dark background, brand colours. Looks like a real post.",
-        "carousel":   "A FULL Instagram carousel — ALL slides from the brief, displayed as scrollable vertical pages. Each slide is 1080x1080px, dark background, with its own headline and visual direction. Include navigation dots or slide numbers. Show every slide from the brief, not just the cover.",
+        "carousel":   "A FULL Instagram carousel — ALL slides from the brief as separate scrollable sections. Each slide is 1080x1080px. USE THE EXACT HEADLINE TEXT AND SUPPORTING TEXT from each slide in the brief — do not paraphrase or invent new copy. Apply the colour specified per slide. Include slide numbers. Make every slide from the brief.",
         "story":      "A vertical story frame (9:16 ratio). Full-screen design, bold text, mobile-optimised.",
         "thumbnail":  "An email header thumbnail (600x200px). Bold headline, clean layout.",
         "data":       "A data visualisation with styled numbers, charts using CSS, clean layout.",
@@ -6798,29 +6833,15 @@ def generate_claude_visual(chat_id, brief, post_type, send_html=True):
     user_state[chat_id]["last_claude_brief"] = brief[:600]
     user_state[chat_id]["last_claude_type"] = post_type
 
-    # Step 1: Generate SVG (send as image)
-    send(chat_id, "🤖 Claude generating " + vtype_label + " visual...")
-    svg, svg_err = generate_claude_svg(brief, post_type)
-
-    if svg:
-        print(f"SVG generated: {len(svg)} chars", flush=True)
-        ok = send_svg_as_image(chat_id, svg)
-        if not ok:
-            send(chat_id, "SVG generated but couldn't send it.")
+    # Claude generates HTML only — clean, full quality, opens in browser
+    send(chat_id, "🤖 Claude generating " + vtype_label + "...")
+    html, html_err = generate_claude_html(brief, post_type)
+    if html:
+        filename = "cryptonary_" + post_type + ".html"
+        send_file_bytes(chat_id, html.encode(), filename, "text/html")
+        send(chat_id, "📄 Open in browser for full quality. Screenshot to share.")
     else:
-        print(f"SVG generation failed: {svg_err}", flush=True)
-        send(chat_id, "SVG generation failed: " + (svg_err or "unknown"))
-
-    # Step 2: Generate HTML (send as downloadable file)
-    if send_html:
-        send(chat_id, "📄 Generating HTML version (editable)...")
-        html, html_err = generate_claude_html(brief, post_type)
-        if html:
-            filename = "cryptonary_" + post_type + ".html"
-            send_file_bytes(chat_id, html.encode(), filename, "text/html")
-            send(chat_id, "Open the HTML file in your browser for an editable, full-quality version.")
-        else:
-            send(chat_id, "HTML generation failed: " + (html_err or "unknown"))
+        send(chat_id, "Generation failed: " + (html_err or "unknown"))
 
 
 def apply_logo_watermark(image_bytes, mime_type="image/png"):
@@ -6946,15 +6967,15 @@ def show_image_style_menu(chat_id, engine):
         send(chat_id, "*What type of Claude visual?*", keyboard)
     else:
         keyboard = [
-            [{"text": "📰 Breaking news",    "callback_data": "img_style_breaking_news"}],
-            [{"text": "📊 Price / data",     "callback_data": "img_style_price_data"}],
-            [{"text": "🗳️ Engagement post",  "callback_data": "img_style_engagement"}],
-            [{"text": "📚 Educational",       "callback_data": "img_style_educational"}],
-            [{"text": "🎭 Meme / cultural",  "callback_data": "img_style_meme_cultural"}],
-            [{"text": "🌍 Macro / geo",      "callback_data": "img_style_macro_geo"}],
-            [{"text": "🖼️ Background only",  "callback_data": "img_style_background"}],
+            [{"text": "📰 Breaking news / WARNING",  "callback_data": "img_style_breaking_news"}],
+            [{"text": "📊 Price / data post",        "callback_data": "img_style_price_data"}],
+            [{"text": "🗳️ Engagement / debate",      "callback_data": "img_style_engagement"}],
+            [{"text": "🌍 Macro / geopolitical",     "callback_data": "img_style_macro_geo"}],
+            [{"text": "🎭 Meme / cultural",          "callback_data": "img_style_meme_cultural"}],
+            [{"text": "📈 Chart / technical",        "callback_data": "img_style_educational"}],
+            [{"text": "🖼️ Background only",          "callback_data": "img_style_background"}],
         ]
-        send(chat_id, "*What style?*", keyboard)
+        send(chat_id, "What style?", keyboard)
 
 
 def handle_image_generation(chat_id, post_type=None):
@@ -6993,7 +7014,7 @@ def handle_image_generation(chat_id, post_type=None):
     if success:
         keyboard = [
             [{"text": "🔄 Regenerate",        "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",     "callback_data": "img_direction"}],
+            [{"text": "✏️ Give feedback",     "callback_data": "img_direction"}],
             [{"text": "🎨 Different style",    "callback_data": "img_restyle"}],
             [{"text": "📋 Show prompt used",   "callback_data": "img_show_prompt"}],
             [{"text": "✅ Done",               "callback_data": "mark_complete"}],
@@ -7214,16 +7235,17 @@ def handle_image_callbacks(chat_id, data, state):
         brief = (_global_brief_store.get(chat_id, "") or 
                  state.get("pending_img_concept", "") or
                  state.get("last_visual_brief", "") or
-                 state.get("report", ""))[:600]
+                 state.get("report", ""))  # no truncation — pass full brief
         print(f"img_style_ fired. style={style}, engine={engine}, brief_len={len(brief)}", flush=True)
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
         state["last_img_type"] = style
 
         img_action_kb = [
-            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-            [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
-            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+            [{"text": "🔄 Regenerate",           "callback_data": "img_regen"}],
+            [{"text": "✏️ Give feedback",         "callback_data": "img_direction"}],
+            [{"text": "🎨 Different engine",      "callback_data": "img_restyle"}],
+            [{"text": "📐 Different format",      "callback_data": "img_diff_format"}],
+            [{"text": "✅ Done",                  "callback_data": "mark_complete"}],
         ]
 
         if engine == "claude":
@@ -7305,7 +7327,7 @@ def handle_image_callbacks(chat_id, data, state):
         success = generate_and_send_image(chat_id, prompt, post_type)
         keyboard = [
             [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "✏️ Give feedback",   "callback_data": "img_direction"}],
             [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
             [{"text": "✅ Done",             "callback_data": "mark_complete"}],
         ]
@@ -7319,7 +7341,7 @@ def handle_image_callbacks(chat_id, data, state):
         post_type = state.get("last_img_type", "static")
         img_kb = [
             [{"text": "🔄 Try again",           "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",       "callback_data": "img_direction"}],
+            [{"text": "✏️ Give feedback",       "callback_data": "img_direction"}],
             [{"text": "🎨 Different engine",     "callback_data": "img_restyle"}],
             [{"text": "✅ Done",                 "callback_data": "mark_complete"}],
         ]
@@ -7337,8 +7359,12 @@ def handle_image_callbacks(chat_id, data, state):
         send(chat_id, "Describe what to change or add:")
 
     elif data == "img_restyle":
-        # Show engine picker so user can switch between Claude/Gemini/DALL-E
         show_image_type_menu(chat_id)
+
+    elif data == "img_diff_format":
+        # Show format picker for Claude visuals
+        state["img_engine"] = state.get("img_engine", "claude")
+        show_image_style_menu(chat_id, state.get("img_engine", "claude"))
 
     elif data == "img_show_prompt":
         prompt = state.get("last_img_prompt", "No prompt saved.")
@@ -7367,7 +7393,7 @@ def handle_image_direction(chat_id, text):
         generate_claude_visual(chat_id, refined, actual_type, send_html=False)
         keyboard = [
             [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "✏️ Give feedback",   "callback_data": "img_direction"}],
             [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
             [{"text": "✅ Done",             "callback_data": "mark_complete"}],
         ]
@@ -7377,7 +7403,7 @@ def handle_image_direction(chat_id, text):
     if success:
         keyboard = [
             [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "✏️ Give feedback",   "callback_data": "img_direction"}],
             [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
             [{"text": "✅ Done",             "callback_data": "mark_complete"}],
         ]
@@ -8222,23 +8248,36 @@ def run_critique(chat_id, content_type):
         state["critique_original"] = content_to_critique
         state["stage"] = "awaiting_critique_apply"
 
-        send_plain(chat_id, "CRITIQUE\n\n" + result)
-
-        # Build apply buttons for each numbered fix (up to 6)
+        # Split on emoji severity markers and number each block
         import re as _re
-        nums = _re.findall(r'^\d+\.', result, _re.MULTILINE)
+        # Split on severity emojis — each starts a new numbered block
+        blocks = _re.split(r'(?=(?:🔴|🟡|🟢|STRONG))', result.strip())
+        blocks = [b.strip() for b in blocks if b.strip()]
+        if not blocks or len(blocks) == 1:
+            # Fallback: split on double newlines  
+            blocks = [b.strip() for b in result.strip().split('\n\n') if b.strip() and len(b.strip()) > 20]
+        state["critique_blocks"] = blocks
+
+        # Display with numbers
+        numbered = "CRITIQUE\n\n"
+        for i, block in enumerate(blocks):
+            numbered += str(i+1) + ". " + block + "\n\n"
+        send_plain(chat_id, numbered.strip())
+
+        # Build fix buttons
         keyboard = []
         row = []
-        for i, _ in enumerate(nums[:6]):
-            row.append({"text": "Apply " + str(i+1), "callback_data": "apply_critique_" + str(i+1)})
+        for i in range(min(len(blocks), 6)):
+            row.append({"text": "Fix " + str(i+1), "callback_data": "apply_critique_" + str(i+1)})
             if len(row) == 3:
                 keyboard.append(row)
                 row = []
         if row:
             keyboard.append(row)
+        if len(blocks) > 1:
+            keyboard.append([{"text": "Apply all", "callback_data": "apply_all_critiques"}])
         keyboard.append([{"text": "Ignore all", "callback_data": "ignore_critique"}])
-
-        send(chat_id, "Type a number to apply a fix, or tap a button:", keyboard)
+        send(chat_id, "Tap a number to apply that fix:", keyboard)
 
     except Exception as e:
         send(chat_id, "Critique error: " + str(e))
