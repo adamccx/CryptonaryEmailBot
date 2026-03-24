@@ -1372,6 +1372,13 @@ def gen_social_selected(chat_id):
     if not selected:
         send(chat_id, "No formats selected. Tap the format names to select them first.")
         return
+    # If coming from email flow, use the email angle directly — skip angle/hook pickers
+    origin = state.get("social_origin", "")
+    if origin == "email" and not state.get("social_angle"):
+        # Pull angle from the email flow
+        email_angle = state.get("selected_angle", state.get("angle", ""))
+        if email_angle:
+            state["social_angle"] = email_angle
     # If no angle yet, generate avatar-aware angles first
     if not state.get("social_angle"):
         gen_social_angles(chat_id)
@@ -1599,8 +1606,14 @@ def show_length_menu(chat_id, mode="email"):
             keyboard.append([{"text": "Remove 2 slides (" + str(max(3, current-2)) + " total)", "callback_data": "carousel_shorten"}])
         elif is_story:
             current = user_state[chat_id].get("story_slides", 3)
-            keyboard.append([{"text": "Add a slide (" + str(current+1) + " total)", "callback_data": "story_extend"}])
-            keyboard.append([{"text": "Remove a slide (" + str(max(1, current-1)) + " total)", "callback_data": "story_shorten"}])
+            social_type = user_state[chat_id].get("current_social_type", "")
+            if "single" in social_type.lower() or current == 1:
+                # Single slide — adjust text length not slide count
+                keyboard.append([{"text": "Longer (add more detail)", "callback_data": "length_extend"}])
+                keyboard.append([{"text": "Shorter (tighten text)", "callback_data": "length_shorten"}])
+            else:
+                keyboard.append([{"text": "Add a slide (" + str(current+1) + " total)", "callback_data": "story_extend"}])
+                keyboard.append([{"text": "Remove a slide (" + str(max(1, current-1)) + " total)", "callback_data": "story_shorten"}])
         else:
             keyboard.append([{"text": "Extend", "callback_data": "length_extend"}])
             keyboard.append([{"text": "Shorten", "callback_data": "length_shorten"}])
@@ -2084,8 +2097,17 @@ def handle_message(msg):
         gen_angles(chat_id)
         return
 
-    if stage in ("awaiting_quick_edit", "social_quick_edit"):
-        user_state[chat_id]["stage"] = user_state[chat_id].get("pre_edit_stage", "social_ready" if stage == "social_quick_edit" else "emails_ready")
+    if stage in ("awaiting_quick_edit", "social_quick_edit",
+                  "social_ready", "social_approved",
+                  "emails_ready", "emails_approved"):
+        # Voice/text edit arriving at active content stage — treat as quick edit
+        if stage in ("social_ready", "social_approved"):
+            user_state[chat_id]["pre_edit_stage"] = stage
+            user_state[chat_id]["quick_edit_mode"] = "social"
+        elif stage in ("emails_ready", "emails_approved"):
+            user_state[chat_id]["pre_edit_stage"] = stage
+            user_state[chat_id]["quick_edit_mode"] = "email"
+        user_state[chat_id]["stage"] = user_state[chat_id].get("pre_edit_stage", stage)
         apply_quick_edit(chat_id, text)
         return
 
@@ -3935,7 +3957,12 @@ def handle_callback(cb):
             "text": "Which AI for image generation?",
             "reply_markup": {"inline_keyboard": keyboard}
         })
-        print(f"Engine picker result: {result}", flush=True)
+        print(f"Engine picker tg result ok={result.get('ok') if result else 'None'}", flush=True)
+        if not result or not result.get("ok"):
+            print(f"Engine picker FAILED: {result}", flush=True)
+            # Try plain text fallback
+            tg("sendMessage", {"chat_id": chat_id, "text": "Tap to choose: Claude / Gemini / DALL-E",
+                "reply_markup": {"inline_keyboard": keyboard}})
 
     elif data == "approve_ad":
         ad_output = state.get("current_ad", "")
@@ -4059,6 +4086,7 @@ def poll():
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             stage = user_state[chat_id].get("stage", "idle")
                             content_stages = ["awaiting_report","buffering_report",
+                                "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
@@ -6179,6 +6207,11 @@ def handle_voice_message(chat_id, voice):
         "logging_email", "logging_ad",
         # Subject line
         "awaiting_custom_pro_hook",
+        # DS followup
+        "ds_followup",
+        # Active content stages — voice = quick edit instruction
+        "social_ready", "social_approved",
+        "emails_ready", "emails_approved",
     }
 
     if current_stage in input_stages:
@@ -7991,7 +8024,8 @@ def run_critique(chat_id, content_type):
     if content_type == "email":
         free_email = state.get("current_emails", {}).get("free", "")
         pro_email = state.get("current_emails", {}).get("pro", "")
-        content_to_critique = "FREE EMAIL:\n" + free_email[:800] + "\n\nPRO EMAIL:\n" + pro_email[:800]
+        # Use 1500 chars per email to ensure P.S. and sign-off are included
+        content_to_critique = "FREE EMAIL:\n" + free_email[:1500] + "\n\nPRO EMAIL:\n" + pro_email[:1500]
         label = "emails"
     elif content_type == "ad":
         content_to_critique = state.get("current_ad_output", "")[:1500]
@@ -8015,7 +8049,8 @@ def run_critique(chat_id, content_type):
 
     try:
         result = claude(
-            "Critique this " + label + ":\n\n" + content_to_critique,
+            "Critique this " + label + ". IMPORTANT: Only flag issues that actually exist in the content below. "
+            "Read the ENTIRE content carefully before critiquing — do not flag missing P.S., sign-off, or CTA if they are present.\n\n" + content_to_critique,
             max_tokens=1200,
             system=CRITIQUE_SYSTEM
         )
