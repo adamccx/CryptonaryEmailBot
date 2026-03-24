@@ -858,11 +858,13 @@ def email_action_keyboard():
 
 def ad_action_keyboard():
     return [
-        [{"text": "Quick Edit", "callback_data": "ad_quick_edit"},
-         {"text": "Enhance", "callback_data": "ad_enhance"},
-         {"text": "Critique", "callback_data": "critique_ad"}],
-        [{"text": "Generate another set", "callback_data": "ads_again"},
-         {"text": "Mark Complete", "callback_data": "mark_complete"}]
+        [{"text": "Quick Edit",           "callback_data": "ad_quick_edit"},
+         {"text": "Enhance",              "callback_data": "ad_enhance"},
+         {"text": "Approve",              "callback_data": "approve_ad"}],
+        [{"text": "Critique",             "callback_data": "critique_ad"},
+         {"text": "Generate another set", "callback_data": "ads_again"}],
+        [{"text": "🎨 Visual brief",      "callback_data": "vb_type_ad_static"},
+         {"text": "Mark Complete",        "callback_data": "mark_complete"}]
     ]
 
 def format_action_keyboard(fmt_key, fmt_label):
@@ -946,28 +948,30 @@ def gen_angles(chat_id):
         send(chat_id, "Error: " + str(e))
 
 def gen_hooks(chat_id):
-    """Generate Free email hooks — called after Pro angle selected."""
+    """Generate hooks — one set used for both Free and Pro emails."""
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     perf = get_perf_context(chat_id)
-    free_angle = state.get("selected_free_angle", state.get("selected_angle", ""))
+    angle = state.get("selected_angle", state.get("selected_free_angle", ""))
 
     base = "REPORT:\n" + report
     if context: base += "\n\nEXTRA CONTEXT:\n" + context
     base += perf
 
-    send(chat_id, "Writing hooks for the Free email...")
+    send(chat_id, "Writing hooks...")
     try:
-        raw = claude(base + "\n\nFREE EMAIL ANGLE: " + free_angle +
-            "\n\nWrite 4 subject line + preview text combos for the FREE email.\n" +
-            "FREE hooks: Intense curiosity gap. Tease without revealing. Make non-subscribers desperate to upgrade.\n\n" +
+        raw = claude(base + "\n\nANGLE: " + angle +
+            "\n\nWrite 4 subject line + preview text combos for this crypto email.\n" +
+            "Each hook should create a strong curiosity gap or bold data-led statement.\n\n" +
             "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
         hooks = parse_hooks(raw)
+        # Store under all keys for compatibility
         state["free_hooks"] = hooks
-        state["hooks"] = hooks  # backward compat
+        state["pro_hooks"] = hooks
+        state["hooks"] = hooks
         state["stage"] = "pick_free_hook"
-        text = "*FREE EMAIL — Pick a hook:*\n_(Curiosity-gap, tease only)_\n\n"
+        text = "*Pick a hook:*\n_(Used for both Free and Pro emails)_\n\n"
         keyboard = []
         for i, h in enumerate(hooks):
             text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
@@ -1369,6 +1373,7 @@ def gen_social_selected(chat_id):
     fmt_map = {
         "fmt_reel": ("Reel Script", gen_reel),
         "fmt_carousel": ("Carousel", gen_carousel),
+        "fmt_static": ("Static Post", gen_static),
         "fmt_story_single": ("Story (single)", lambda c: gen_story(c, multi=False)),
         "fmt_story_multi": ("Story (multi)", lambda c: gen_story(c, multi=True)),
     }
@@ -1448,6 +1453,58 @@ def gen_carousel(chat_id):
         send(chat_id, "Carousel ready.", format_action_keyboard("fmt_carousel", "Carousel"))
     except Exception as e:
         send(chat_id, "Error generating carousel: " + str(e))
+
+
+def gen_static(chat_id):
+    """Generate a static Instagram post — limited on-screen text + full caption."""
+    state = user_state[chat_id]
+    report = sanitise(state.get("report", ""))
+    context = sanitise(state.get("context", ""))
+    angle = state.get("selected_angle", "") or state.get("social_angle", "")
+    hook = state.get("selected_social_hooks", {}).get("fmt_static", "")
+    source_email = get_social_source_text(chat_id)[:500]
+    voice_examples = get_voice_corpus_context(chat_id)
+    try:
+        result = claude(
+            (voice_examples + "\n\n" if voice_examples else "") +
+            "Create an Instagram static post for Cryptonary.\n\n" +
+            ("HOOK (use as the main on-screen text): " + hook + "\n\n" if hook else "") +
+            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+            "\nAngle: " + angle + "\nEmail reference: " + source_email +
+            """
+
+RULES:
+ON-SCREEN TEXT (max 10 words total — this is what appears on the image):
+- Headline: [bold, punchy, max 6 words — think newspaper front page]
+- Subtext: [supporting line, max 4 words] (optional)
+- Keep it minimal — most of the content lives in the caption
+
+CAPTION (this is the full post text under the image):
+- Open with a hook that expands on the headline
+- 3-5 short punchy paragraphs
+- Data, insight or story in the body
+- End with a question or CTA to drive comments
+- Adam's voice: direct, data-led, no fluff
+- 150-250 words
+
+Format EXACTLY:
+ON-SCREEN TEXT:
+Headline: [max 6 words]
+Subtext: [max 4 words or leave blank]
+
+CAPTION:
+[full caption here]
+
+Return as plain string.""",
+            max_tokens=700
+        )
+        state["current_social"] = result
+        state["current_social_type"] = "Static Post"
+        state["stage"] = "social_ready"
+        send_plain(chat_id, "*STATIC POST*\n\n" + result)
+        send(chat_id, "Static post ready.", social_action_keyboard())
+    except Exception as e:
+        send(chat_id, "Error generating static post: " + str(e))
 
 def gen_story(chat_id, multi=False):
     state = user_state[chat_id]
@@ -2387,6 +2444,45 @@ def handle_message(msg):
             send(chat_id, "Error: " + str(e), ad_action_keyboard())
         return
 
+    if stage == "voice_awaiting_edit":
+        # User is adding detail to their voice brief — re-interpret with the extra context
+        original = user_state[chat_id].get("voice_transcript", "")
+        combined = original + ". Additional detail: " + text
+        user_state[chat_id]["voice_transcript"] = combined
+        user_state[chat_id]["stage"] = "idle"
+        # Re-run interpretation with the enriched brief
+        try:
+            interpretation = claude(
+                "A user sent this voice brief to a crypto content bot:\n\n" +
+                "BRIEF: \"" + combined[:400] + "\"\n\n" +
+                "Extract their intent. Reply EXACTLY:\n\n" +
+                "CONTENT_TYPE: [email/instagram_post/reel/carousel/story/ad/idea/general]\n" +
+                "TOPIC: [topic, 1 sentence]\n" +
+                "ANGLE: [angle, 1 sentence]\n" +
+                "FORMAT_HINT: [format clues]\n" +
+                "READY_TO_GENERATE: [yes/no]",
+                max_tokens=300
+            )
+            lines = {l.split(":")[0].strip(): ":".join(l.split(":")[1:]).strip()
+                     for l in interpretation.strip().splitlines() if ":" in l}
+            user_state[chat_id]["voice_content_type"] = lines.get("CONTENT_TYPE", "general")
+            user_state[chat_id]["voice_topic"] = lines.get("TOPIC", combined[:100])
+            user_state[chat_id]["voice_angle"] = lines.get("ANGLE", "")
+            summary = "*Updated brief:*\n\n"
+            summary += "📌 *Content:* " + user_state[chat_id]["voice_content_type"].replace("_", " ").title() + "\n"
+            summary += "📰 *Topic:* " + user_state[chat_id]["voice_topic"] + "\n"
+            if user_state[chat_id]["voice_angle"]:
+                summary += "🎯 *Angle:* " + user_state[chat_id]["voice_angle"] + "\n"
+            keyboard = [
+                [{"text": "✅ Generate this", "callback_data": "voice_confirm"}],
+                [{"text": "✏️ Change more",   "callback_data": "voice_edit"}],
+                [{"text": "❌ Discard",        "callback_data": "voice_discard"}],
+            ]
+            send(chat_id, summary, keyboard)
+        except Exception as e:
+            send(chat_id, "Error re-interpreting: " + str(e))
+        return
+
     if stage == "img_awaiting_brief":
         user_state[chat_id]["pending_img_concept"] = text
         user_state[chat_id]["pending_img_angle"] = ""
@@ -2728,9 +2824,12 @@ def handle_callback(cb):
         idx = int(data.replace("free_hook_", ""))
         hooks = state.get("free_hooks", state.get("hooks", []))
         if idx < len(hooks):
+            # One hook serves both Free and Pro
             state["selected_free_hook"] = hooks[idx]
+            state["selected_pro_hook"] = hooks[idx]
             state["selected_hook"] = hooks[idx]
-        gen_pro_hooks(chat_id)
+        # Skip Pro hook picker — go straight to CTA
+        show_cta_menu(chat_id, "free")
 
     elif data.startswith("pro_hook_") and data != "pro_hook_same":
         idx = int(data.replace("pro_hook_", ""))
@@ -2842,13 +2941,11 @@ def handle_callback(cb):
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         state["stage"] = "social_approved"
-        img_btn = [{"text": "🎨 Generate image", "callback_data": "img_open_studio"}] if OPENAI_KEY else []
         keyboard = [
             [{"text": "Generate another format", "callback_data": "social_yes"}],
+            [{"text": "🎨 Visual brief + image",  "callback_data": "vb_auto"}],
+            [{"text": "Mark Complete",             "callback_data": "mark_complete"}],
         ]
-        if img_btn:
-            keyboard.append(img_btn)
-        keyboard.append([{"text": "Mark Complete", "callback_data": "mark_complete"}])
         send(chat_id, social_type + " approved.", keyboard)
 
     elif data.startswith("enh_"):
@@ -2908,10 +3005,11 @@ def handle_callback(cb):
         if pro_body:
             save_voice_example(chat_id, pro_body[:600], "approved_pro_email")
         keyboard = [
-            [{"text": "Yes — create social content", "callback_data": "social_yes"}],
-            [{"text": "No — mark complete", "callback_data": "mark_complete"}]
+            [{"text": "📱 Create social content",     "callback_data": "social_yes"}],
+            [{"text": "🎨 Email thumbnail brief",     "callback_data": "vb_type_email"}],
+            [{"text": "✅ Mark complete",             "callback_data": "mark_complete"}],
         ]
-        send(chat_id, "Emails approved. Want to create social content?", keyboard)
+        send(chat_id, "Emails approved.", keyboard)
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
@@ -2999,16 +3097,16 @@ def handle_callback(cb):
 
     elif data == "approve_social":
         state["stage"] = "social_approved"
-        # Save to voice corpus for self-learning
         social_body = state.get("current_social", "")
         social_type = state.get("current_social_type", "social")
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         keyboard = [
-            [{"text": "Generate another format", "callback_data": "social_yes"}],
-            [{"text": "Mark Complete", "callback_data": "mark_complete"}]
+            [{"text": "Generate another format",   "callback_data": "social_yes"}],
+            [{"text": "🎨 Visual brief + image",   "callback_data": "vb_auto"}],
+            [{"text": "Mark Complete",             "callback_data": "mark_complete"}],
         ]
-        send(chat_id, "Social content approved. Generate another format or mark complete?", keyboard)
+        send(chat_id, social_type + " approved.", keyboard)
 
     elif data == "subject_ab":
         gen_subject_ab(chat_id)
@@ -3697,6 +3795,86 @@ def handle_callback(cb):
     elif data.startswith("img_"):
         handle_image_callbacks(chat_id, data, state)
 
+    elif data == "vb_auto":
+        show_visual_brief_menu(chat_id)
+
+    elif data.startswith("vb_type_"):
+        vb_type = data.replace("vb_type_", "")
+        generate_visual_brief(chat_id, vb_type)
+
+    elif data == "vb_edit":
+        state["stage"] = "img_awaiting_direction"
+        send(chat_id, "What to change in the brief?")
+
+    elif data == "img_from_brief":
+        brief = state.get("last_visual_brief", "")
+        vb_type = state.get("last_visual_type", "static")
+        if brief:
+            state["pending_img_concept"] = brief[:400]
+            state["pending_img_angle"] = state.get("selected_angle", "")
+            # Map visual type to post type for DALL-E
+            type_map = {
+                "reel": "breaking_news", "carousel": "educational",
+                "static": "breaking_news", "story": "engagement",
+                "email": "breaking_news", "ad_static": "breaking_news", "ad_video": "breaking_news"
+            }
+            post_type = type_map.get(vb_type, "background")
+            prompt = build_image_prompt(brief[:400], state.get("selected_angle", ""), post_type)
+            state["last_img_prompt"] = prompt
+            state["last_img_type"] = post_type
+            success = generate_and_send_image(chat_id, prompt, post_type)
+            if success:
+                keyboard = [
+                    [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+                    [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+                    [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+                    [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+                ]
+                send(chat_id, "Image ready.", keyboard)
+        else:
+            handle_image_generation(chat_id)
+
+    elif data == "approve_ad":
+        ad_output = state.get("current_ad", "")
+        if ad_output:
+            save_voice_example(chat_id, ad_output[:600], "approved_ad")
+        keyboard = [
+            [{"text": "🎨 Visual brief + image", "callback_data": "vb_type_ad_static"}],
+            [{"text": "Generate another set",    "callback_data": "ads_again"}],
+            [{"text": "Mark Complete",           "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Ad approved.", keyboard)
+
+    elif data == "voice_confirm":
+        route_voice_to_flow(chat_id)
+
+    elif data == "voice_edit":
+        state["stage"] = "voice_awaiting_edit"
+        send(chat_id, "Tell me what to change or add:")
+
+    elif data == "voice_discard":
+        state.pop("voice_transcript", None)
+        state.pop("voice_content_type", None)
+        state.pop("voice_topic", None)
+        state.pop("voice_angle", None)
+        send(chat_id, "Discarded. Send a new voice note or type your brief.")
+
+    elif data == "voice_as_email":
+        state["voice_content_type"] = "email"
+        route_voice_to_flow(chat_id)
+
+    elif data == "voice_as_social":
+        state["voice_content_type"] = "reel"
+        route_voice_to_flow(chat_id)
+
+    elif data == "voice_as_ideas":
+        state["voice_content_type"] = "idea"
+        route_voice_to_flow(chat_id)
+
+    elif data == "voice_as_ad":
+        state["voice_content_type"] = "ad"
+        route_voice_to_flow(chat_id)
+
     elif data == "log_perf_start":
         start_log_performance(chat_id)
 
@@ -4092,6 +4270,7 @@ def gen_social_hooks(chat_id):
     format_hook_instructions = {
         "fmt_reel": "REEL HOOK: Write 4 alternative opening spoken lines (first 3 seconds of a video). Must stop the scroll immediately. Punchy, direct, creates instant curiosity or tension. Max 15 words each.",
         "fmt_carousel": "CAROUSEL COVER: Write 4 alternative cover slide headlines. Bold statement that makes someone swipe. Max 8 words each. Think: headline of a magazine, not a sentence.",
+        "fmt_static": "STATIC HEADLINE: Write 4 alternative on-screen headlines for a static Instagram post. Max 6 words each. Bold, punchy, newspaper front page energy. This is the ONLY text on the image.",
         "fmt_story_single": "STORY HOOK: Write 4 alternative single-slide story text options. Immediate, bold, designed for someone who's already engaged. Max 12 words each.",
         "fmt_story_multi": "STORY OPENING: Write 4 alternative opening slide lines for a multi-slide story. Creates a cliffhanger that pulls to the next slide. Max 12 words each."
     }
@@ -4099,6 +4278,7 @@ def gen_social_hooks(chat_id):
     format_labels = {
         "fmt_reel": "Reel",
         "fmt_carousel": "Carousel",
+        "fmt_static": "Static Post",
         "fmt_story_single": "Story (single)",
         "fmt_story_multi": "Story (multi)"
     }
@@ -4184,6 +4364,7 @@ def show_standalone_social_menu(chat_id):
     formats = [
         ("Reel Script (45-60s)", "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
+        ("Static Post + Caption", "fmt_static"),
         ("Story — Single slide", "fmt_story_single"),
         ("Story — Multi slide", "fmt_story_multi"),
     ]
@@ -5752,28 +5933,149 @@ def transcribe_voice(file_id):
 
 
 def handle_voice_message(chat_id, voice):
-    """Handle an incoming Telegram voice message — transcribe and route."""
+    """Handle a voice note — transcribe and route contextually based on current stage."""
     if not OPENAI_KEY:
-        send(chat_id, "Voice input requires an OpenAI key. Add OPENAI_KEY to Render.")
+        send(chat_id, "⚠️ Voice input needs an OpenAI key. Add OPENAI_KEY to Render.")
         return
+
     send(chat_id, "🎙️ Transcribing...")
     file_id = voice.get("file_id", "")
     transcript, error = transcribe_voice(file_id)
+
     if error or not transcript:
-        send(chat_id, "Could not transcribe that. Try again or type it instead.\n\n_Error: " + (error or "empty transcript") + "_")
+        send(chat_id, "❌ Could not transcribe. Try again or just type it.\n\n_Error: " + (error or "empty") + "_")
         return
 
-    # Show transcript so user knows what was heard
-    send(chat_id, "Heard: _\"" + transcript + "\"_\n\nRouting...")
+    current_stage = user_state.get(chat_id, {}).get("stage", "idle")
 
-    # Route transcript exactly as if it were typed text
-    # Build a fake message dict to reuse handle_message
-    fake_msg = {
-        "chat": {"id": chat_id},
-        "text": transcript,
-        "from": {"id": chat_id}
+    # INPUT STAGES — bot is waiting for text, voice is transparent replacement
+    # Just transcribe and route exactly as if the user typed it
+    input_stages = {
+        # Email flow
+        "awaiting_email_report", "awaiting_report", "buffering_report",
+        "awaiting_context_choice",
+        # Social flow
+        "awaiting_social_report",
+        # Quick edits
+        "awaiting_lp_quick_edit", "awaiting_ad_quick_edit", "awaiting_social_quick_edit",
+        "awaiting_lp_quick_edit", "social_quick_edit",
+        # Angle/hook custom inputs
+        "awaiting_custom_free_angle", "awaiting_custom_pro_angle",
+        "awaiting_custom_free_hook", "awaiting_custom_pro_hook",
+        "awaiting_custom_social_angle",
+        # Data studio follow-up
+        "ds_awaiting_followup", "ds_awaiting_email_split_numbers",
+        # Idea engine
+        "ie_awaiting_inspiration", "ie_awaiting_pasted_text",
+        "ie_awaiting_custom_concept", "ie_awaiting_develop",
+        # Image generation
+        "img_awaiting_brief", "img_awaiting_direction",
+        # Landing page context
+        "awaiting_lp_context_text",
+        # Voice edit
+        "voice_awaiting_edit",
     }
-    handle_message(fake_msg)
+
+    if current_stage in input_stages:
+        # Show what was heard, then route as typed text
+        send(chat_id, "🎙️ _\"" + transcript[:200] + "\"_")
+        fake_msg = {"chat": {"id": chat_id}, "text": transcript, "from": {"id": chat_id}}
+        handle_message(fake_msg)
+        return
+
+    # IDLE — bot is not waiting for anything specific
+    # Use interpretation flow so we know what to do with the voice brief
+    send(chat_id, "Heard: _\"" + transcript[:300] + "\"_\n\nInterpreting...")
+    try:
+        interpretation = claude(
+            "A user sent this voice brief to a crypto content creation bot:\n\n" +
+            "TRANSCRIPT: \"" + transcript + "\"\n\n" +
+            "Extract their intent. Reply in this EXACT format and nothing else:\n\n" +
+            "CONTENT_TYPE: [one of: email / instagram_post / reel / carousel / story / ad / idea / general]\n" +
+            "TOPIC: [the specific crypto topic or event they want to cover, 1 sentence]\n" +
+            "ANGLE: [the emotional or argumentative approach, 1 sentence]\n" +
+            "READY_TO_GENERATE: [yes if intent is clear enough / no if more info needed]",
+            max_tokens=250
+        )
+        lines = {l.split(":")[0].strip(): ":".join(l.split(":")[1:]).strip()
+                 for l in interpretation.strip().splitlines() if ":" in l}
+
+        content_type = lines.get("CONTENT_TYPE", "general").lower()
+        topic = lines.get("TOPIC", transcript[:100])
+        angle = lines.get("ANGLE", "")
+        ready = lines.get("READY_TO_GENERATE", "no").lower() == "yes"
+
+        user_state.setdefault(chat_id, {})
+        user_state[chat_id]["voice_transcript"] = transcript
+        user_state[chat_id]["voice_content_type"] = content_type
+        user_state[chat_id]["voice_topic"] = topic
+        user_state[chat_id]["voice_angle"] = angle
+
+        summary = "*Here\'s what I heard:*\n\n"
+        summary += "📌 *Content:* " + content_type.replace("_", " ").title() + "\n"
+        summary += "📰 *Topic:* " + topic + "\n"
+        if angle:
+            summary += "🎯 *Angle:* " + angle + "\n"
+
+        keyboard = [
+            [{"text": "✅ Generate this",    "callback_data": "voice_confirm"}],
+            [{"text": "✏️ Change something", "callback_data": "voice_edit"}],
+            [{"text": "❌ Start over",        "callback_data": "voice_discard"}],
+        ]
+        if not ready:
+            summary += "\n_Brief is a bit vague — generate anyway or add detail?_"
+        send(chat_id, summary, keyboard)
+
+    except Exception as e:
+        # Interpretation failed — just route as text
+        send(chat_id, "🎙️ _\"" + transcript[:200] + "\"_")
+        fake_msg = {"chat": {"id": chat_id}, "text": transcript, "from": {"id": chat_id}}
+        handle_message(fake_msg)
+
+
+def route_voice_to_flow(chat_id):
+    """Route a confirmed voice brief into the right content flow."""
+    state = user_state.get(chat_id, {})
+    content_type = state.get("voice_content_type", "general")
+    topic = state.get("voice_topic", "")
+    angle = state.get("voice_angle", "")
+
+    combined = topic + (". Angle: " + angle if angle else "")
+
+    if content_type in ("reel", "instagram_post", "carousel", "story"):
+        # Route to social flow
+        user_state[chat_id]["report"] = combined
+        user_state[chat_id]["social_angle"] = angle or topic
+        user_state[chat_id]["social_origin"] = "voice"
+        user_state[chat_id]["stage"] = "pick_social_formats"
+        show_standalone_social_menu(chat_id)
+
+    elif content_type == "email":
+        user_state[chat_id]["report"] = combined
+        user_state[chat_id]["mode"] = "email"
+        user_state[chat_id]["stage"] = "awaiting_context_choice"
+        ask_context(chat_id)
+
+    elif content_type == "ad":
+        user_state[chat_id]["ad_theme"] = combined
+        user_state[chat_id]["stage"] = "pick_ad_avatars"
+        show_avatar_menu(chat_id)
+
+    elif content_type == "idea":
+        user_state[chat_id]["ie_source_content"] = "VOICE BRIEF: " + combined
+        user_state[chat_id]["ie_source_label"] = "Voice brief"
+        user_state[chat_id]["ie_idea_type"] = "instagram"
+        generate_ie_concept(chat_id)
+
+    else:
+        # General — show them what we got and let them pick
+        keyboard = [
+            [{"text": "📧 Make it an email",     "callback_data": "voice_as_email"}],
+            [{"text": "📱 Make it social content","callback_data": "voice_as_social"}],
+            [{"text": "💡 Generate ideas",        "callback_data": "voice_as_ideas"}],
+            [{"text": "📢 Make it an ad",         "callback_data": "voice_as_ad"}],
+        ]
+        send(chat_id, "What do you want to make with this?", keyboard)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -5940,6 +6242,102 @@ def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
         return None, "Image generation failed: " + str(e)
 
 
+def generate_gemini_image(prompt):
+    """Call Gemini image generation (gemini-3.1-flash-image-preview).
+    Returns (image_bytes, mime_type, error)."""
+    if not GEMINI_KEY:
+        return None, None, "Gemini key not configured. Add GEMINI_KEY to Render."
+    try:
+        import base64
+        body = json.dumps({
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseModalities": ["IMAGE", "TEXT"]}
+        }).encode()
+        req = urllib.request.Request(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=" + GEMINI_KEY,
+            data=body,
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result = json.loads(r.read())
+        parts = result.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        for part in parts:
+            if "inlineData" in part:
+                mime = part["inlineData"].get("mimeType", "image/png")
+                data = part["inlineData"].get("data", "")
+                return base64.b64decode(data), mime, None
+        return None, None, "No image returned by Gemini"
+    except Exception as e:
+        print("Gemini image error:", e, flush=True)
+        return None, None, "Gemini image failed: " + str(e)
+
+
+def send_image_bytes(chat_id, image_bytes, mime_type="image/png", caption=""):
+    """Upload image bytes directly to Telegram via multipart POST."""
+    try:
+        boundary = "----TgBoundary7MA4YWxk"
+        ext = "jpg" if "jpeg" in mime_type else "png"
+        parts = []
+        parts.append(("--" + boundary + "\r\n").encode())
+        parts.append(("Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n" + str(chat_id) + "\r\n").encode())
+        if caption:
+            parts.append(("--" + boundary + "\r\n").encode())
+            parts.append(("Content-Disposition: form-data; name=\"caption\"\r\n\r\n" + caption[:1024] + "\r\n").encode())
+        parts.append(("--" + boundary + "\r\n").encode())
+        parts.append(("Content-Disposition: form-data; name=\"photo\"; filename=\"image." + ext + "\"\r\n").encode())
+        parts.append(("Content-Type: " + mime_type + "\r\n\r\n").encode())
+        parts.append(image_bytes)
+        parts.append(b"\r\n")
+        parts.append(("--" + boundary + "--\r\n").encode())
+        body = b"".join(parts)
+        req = urllib.request.Request(
+            "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendPhoto",
+            data=body,
+            headers={"Content-Type": "multipart/form-data; boundary=" + boundary}
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        print("send_image_bytes error:", e, flush=True)
+        send(chat_id, "Image generated but failed to send. Error: " + str(e))
+
+
+def generate_and_send_image(chat_id, prompt, post_type="static"):
+    """Route to best model for post type, generate and send image."""
+    # Gemini: better for graphics with text, thumbnails, statics, branded assets
+    # DALL-E: better for photorealistic backgrounds, cinematic/macro scenes
+    gemini_types = {"static", "email", "story", "carousel", "ad_static",
+                    "ad_video", "engagement", "price_data", "educational"}
+    use_gemini = post_type in gemini_types and GEMINI_KEY
+
+    if use_gemini:
+        send(chat_id, "🎨 Generating with Gemini...")
+        img_bytes, mime, error = generate_gemini_image(prompt)
+        if img_bytes:
+            send_image_bytes(chat_id, img_bytes, mime)
+            return True
+        else:
+            print("Gemini failed:", error, flush=True)
+            if OPENAI_KEY:
+                send(chat_id, "Gemini unavailable, trying DALL-E...")
+            else:
+                send(chat_id, "Image generation failed: " + (error or "unknown"))
+                return False
+
+    if OPENAI_KEY:
+        send(chat_id, "🎨 Generating with DALL-E...")
+        url, info = generate_dalle_image(prompt)
+        if url:
+            send_image_url(chat_id, url)
+            return True
+        else:
+            send(chat_id, "Image generation failed: " + info)
+            return False
+
+    send(chat_id, "⚠️ No image API available. OPENAI_KEY and GEMINI_KEY are both missing from Render.")
+    return False
+
+
 def send_image_url(chat_id, image_url, caption=""):
     """Send a generated image to Telegram by URL."""
     try:
@@ -5994,27 +6392,215 @@ def handle_image_generation(chat_id, post_type=None):
         show_image_type_menu(chat_id)
         return
 
-    send(chat_id, "🎨 Generating image...")
     prompt = build_image_prompt(concept, angle, post_type)
     state["last_img_prompt"] = prompt
     state["last_img_type"] = post_type
+    success = generate_and_send_image(chat_id, prompt, post_type)
+    if success:
+        keyboard = [
+            [{"text": "🔄 Regenerate",        "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",     "callback_data": "img_direction"}],
+            [{"text": "🎨 Different style",    "callback_data": "img_restyle"}],
+            [{"text": "📋 Show prompt used",   "callback_data": "img_show_prompt"}],
+            [{"text": "✅ Done",               "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Image ready.", keyboard)
 
-    image_url, info = generate_dalle_image(prompt)
 
-    if not image_url:
-        send(chat_id, "Image generation failed: " + info)
+
+# ══════════════════════════════════════════════════════════════════
+# VISUAL BRIEF GENERATOR
+# Context-aware visual output per content type
+# ══════════════════════════════════════════════════════════════════
+
+def generate_visual_brief(chat_id, content_type):
+    """Generate a visual brief appropriate to the content type."""
+    state = user_state.get(chat_id, {})
+    current_content = state.get("current_social", "") or state.get("current_emails", {}) or state.get("current_ad", "")
+    angle = state.get("selected_angle", "") or state.get("social_angle", "")
+    report = sanitise(state.get("report", ""))[:500]
+
+    # Build type-specific brief prompt
+    brief_prompts = {
+        "reel": """Create a STORYBOARD BRIEF for this Reel script.
+
+Format:
+SCENE 1: [0-3s] HOOK
+Visual: [what's on screen]
+Text overlay: [any text shown]
+B-roll direction: [footage type]
+
+SCENE 2: [3-10s] SETUP
+(repeat format for each scene)
+
+FINAL SCENE: CTA
+Visual direction: [closing shot]
+Text: [final text overlay]
+
+Also write:
+THUMBNAIL OPTION 1: [bold text + visual direction for cover frame]
+THUMBNAIL OPTION 2: [alternative]""",
+
+        "carousel": """Create a SLIDE-BY-SLIDE BRIEF for this carousel.
+
+For each slide:
+SLIDE [N]: [slide purpose]
+Headline text: [max 8 words — this goes ON the image]
+Supporting text: [max 15 words] (optional)
+Visual direction: [background image / graphic / data viz]
+Colour: [which brand colour dominates this slide]
+
+Cover slide must be the strongest hook.
+Final slide: CTA with link in bio direction.""",
+
+        "static": """Create a STATIC IMAGE BRIEF for this post.
+
+ON-IMAGE TEXT (this is all that appears on the image):
+Headline: [max 6 words — bold, Tungsten-style]
+Subtext: [max 4 words] (optional)
+
+VISUAL DIRECTION:
+Background: [photo type / graphic style / colour]
+Colour palette: [from Cryptonary brand — black/white/red/green/blue/bitcoin orange]
+Logo placement: [bottom-right @Cryptonary mark]
+Overall feel: [e.g. breaking news / editorial / data / meme]
+
+AI IMAGE PROMPT (for DALL-E/Midjourney):
+[Full detailed prompt ready to paste]""",
+
+        "story": """Create a STORY FRAME BRIEF for each slide.
+
+For each slide:
+SLIDE [N]:
+Screen text: [max 12 words — this appears on screen]
+Background: [image direction or colour]
+Sticker/element: [poll / countdown / emoji / swipe up]
+Animation feel: [fade in / slide / pop]
+
+Keep it urgent and swipeable.""",
+
+        "email": """Create a THUMBNAIL BRIEF for this email.
+
+Email thumbnails appear in the preview pane and drive open rates.
+
+THUMBNAIL OPTION 1:
+Style: [news / data / meme / quote]
+Headline shown: [max 6 words]
+Visual: [image direction]
+Colour: [dominant colour from brand palette]
+
+THUMBNAIL OPTION 2: [alternative angle]
+
+THUMBNAIL OPTION 3: [alternative — try a different style]
+
+Note: thumbnails are 600x300px, text must be readable at small size.""",
+
+        "ad_static": """Create a STATIC AD CREATIVE BRIEF.
+
+PRIMARY HEADLINE (on image, max 6 words):
+[bold, stops the scroll]
+
+SUPPORTING TEXT (on image, max 10 words):
+[reinforces the hook]
+
+PRIMARY TEXT (ad copy — shown below image):
+[already written in the ad copy above]
+
+VISUAL DIRECTION:
+Background: [photo / graphic / colour]
+Style: [AIDA awareness / consideration / conversion]
+CTA button text: [Learn More / Sign Up / Get Started]
+
+CREATIVE VARIANTS:
+Variant A: [version 1 concept]
+Variant B: [version 2 concept — different visual angle]""",
+
+        "ad_video": """Create a VIDEO AD STORYBOARD BRIEF.
+
+HOOK FRAME [0-3s]:
+Visual: [what's on screen]
+Text overlay: [opening hook text]
+Audio direction: [music / silence / SFX]
+
+BODY [3-15s]:
+Scene breakdown: [2-3 key scenes with visual + text]
+
+CTA [final 3s]:
+Visual: [closing shot]
+Text: [CTA overlay]
+Button: [Sign Up / Learn More]
+
+THUMBNAIL: [best frame to use as cover — describe it]"""
+    }
+
+    prompt_template = brief_prompts.get(content_type, brief_prompts["static"])
+
+    send(chat_id, "Creating visual brief...")
+    try:
+        raw_content = ""
+        if isinstance(current_content, dict):
+            raw_content = current_content.get("free", "") or str(current_content)[:600]
+        else:
+            raw_content = str(current_content)[:600]
+
+        result = claude(
+            "CONTENT:\n" + raw_content +
+            "\nANGLE: " + angle +
+            "\nSOURCE CONTEXT: " + report +
+            "\n\n" + prompt_template +
+            "\n\nApply Cryptonary brand guidelines: dark backgrounds preferred, "
+            "Inter/Tungsten/Termina fonts, colours: black #000000, white #FFFFFF, "
+            "blue #005EFF, red #FF0000, green #0DA500, bitcoin orange #F7931A. "
+            "Logo @Cryptonary always bottom-right.",
+            max_tokens=900
+        )
+        state["last_visual_brief"] = result
+        state["last_visual_type"] = content_type
+        send_plain(chat_id, "*VISUAL BRIEF — " + content_type.upper().replace("_", " ") + "*\n\n" + result)
+
+        keyboard = [
+            [{"text": "🎨 Generate image from this", "callback_data": "img_from_brief"}],
+            [{"text": "✏️ Adjust brief",             "callback_data": "vb_edit"}],
+            [{"text": "✅ Done",                      "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Visual brief ready.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error generating brief: " + str(e))
+
+
+def show_visual_brief_menu(chat_id, auto_type=None):
+    """Show visual brief type options or auto-detect from current content."""
+    state = user_state.get(chat_id, {})
+
+    # Auto-detect from current content type if possible
+    if auto_type:
+        generate_visual_brief(chat_id, auto_type)
         return
 
-    send_image_url(chat_id, image_url, "Generated for @Cryptonary")
-
-    keyboard = [
-        [{"text": "🔄 Regenerate",           "callback_data": "img_regen"}],
-        [{"text": "✏️ Give direction",        "callback_data": "img_direction"}],
-        [{"text": "🎨 Different style",       "callback_data": "img_restyle"}],
-        [{"text": "📋 Show prompt used",      "callback_data": "img_show_prompt"}],
-        [{"text": "✅ Done",                  "callback_data": "mark_complete"}],
-    ]
-    send(chat_id, "Image ready.", keyboard)
+    social_type = state.get("current_social_type", "")
+    if "Reel" in social_type:
+        generate_visual_brief(chat_id, "reel")
+    elif "Carousel" in social_type:
+        generate_visual_brief(chat_id, "carousel")
+    elif "Static" in social_type:
+        generate_visual_brief(chat_id, "static")
+    elif "Story" in social_type:
+        generate_visual_brief(chat_id, "story")
+    elif state.get("current_emails"):
+        generate_visual_brief(chat_id, "email")
+    elif state.get("current_ad"):
+        ad_type = state.get("ad_type", "static")
+        generate_visual_brief(chat_id, "ad_" + ad_type)
+    else:
+        keyboard = [
+            [{"text": "📧 Email thumbnail",     "callback_data": "vb_type_email"}],
+            [{"text": "🎬 Reel storyboard",     "callback_data": "vb_type_reel"}],
+            [{"text": "🖼️ Static image brief",  "callback_data": "vb_type_static"}],
+            [{"text": "📖 Carousel brief",       "callback_data": "vb_type_carousel"}],
+            [{"text": "📱 Story brief",          "callback_data": "vb_type_story"}],
+            [{"text": "📢 Ad creative brief",    "callback_data": "vb_type_ad_static"}],
+        ]
+        send(chat_id, "*What visual brief do you need?*", keyboard)
 
 
 def handle_image_callbacks(chat_id, data, state):
@@ -6023,33 +6609,28 @@ def handle_image_callbacks(chat_id, data, state):
         post_type = data.replace("img_type_", "")
         concept = state.get("pending_img_concept", state.get("report", ""))[:300]
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
-        send(chat_id, "🎨 Generating image...")
         prompt = build_image_prompt(concept, angle, post_type)
         state["last_img_prompt"] = prompt
         state["last_img_type"] = post_type
-        image_url, info = generate_dalle_image(prompt)
-        if not image_url:
-            send(chat_id, "Failed: " + info)
-            return
-        send_image_url(chat_id, image_url)
-        keyboard = [
-            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-            [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
-            [{"text": "📋 Show prompt",      "callback_data": "img_show_prompt"}],
-            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
-        ]
-        send(chat_id, "Image ready.", keyboard)
+        success = generate_and_send_image(chat_id, prompt, post_type)
+        if success:
+            keyboard = [
+                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+                [{"text": "📋 Show prompt",      "callback_data": "img_show_prompt"}],
+                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Image ready.", keyboard)
 
     elif data == "img_regen":
         prompt = state.get("last_img_prompt", "")
         if not prompt:
             send(chat_id, "No previous prompt found.")
             return
-        send(chat_id, "🎨 Regenerating...")
-        image_url, _ = generate_dalle_image(prompt)
-        if image_url:
-            send_image_url(chat_id, image_url)
+        post_type = state.get("last_img_type", "static")
+        success = generate_and_send_image(chat_id, prompt, post_type)
+        if success:
             keyboard = [
                 [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
                 [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
@@ -6057,8 +6638,6 @@ def handle_image_callbacks(chat_id, data, state):
                 [{"text": "✅ Done",             "callback_data": "mark_complete"}],
             ]
             send(chat_id, "New version ready.", keyboard)
-        else:
-            send(chat_id, "Generation failed. Try again.")
 
     elif data == "img_direction":
         state["stage"] = "img_awaiting_direction"
@@ -6087,10 +6666,8 @@ def handle_image_direction(chat_id, text):
         return
     refined_prompt = base_prompt + "\n\nREFINEMENT: " + text
     state["last_img_prompt"] = refined_prompt
-    send(chat_id, "🎨 Applying direction...")
-    image_url, _ = generate_dalle_image(refined_prompt)
-    if image_url:
-        send_image_url(chat_id, image_url)
+    success = generate_and_send_image(chat_id, refined_prompt, post_type)
+    if success:
         keyboard = [
             [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
             [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
@@ -6098,8 +6675,6 @@ def handle_image_direction(chat_id, text):
             [{"text": "✅ Done",             "callback_data": "mark_complete"}],
         ]
         send(chat_id, "Updated.", keyboard)
-    else:
-        send(chat_id, "Generation failed. Try again.")
 
 
 def fetch_market_data():
