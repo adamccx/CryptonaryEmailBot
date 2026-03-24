@@ -570,6 +570,7 @@ ADAM'S VOICE RULES:
 
 performance_data = {}
 user_state = {}
+_global_brief_store = {}  # persists visual briefs across state resets
 
 # ── HELPERS ───────────────────────────────────────────────────────
 
@@ -1312,6 +1313,9 @@ def toggle_social_format(chat_id, fmt_cb, message_id):
     else:
         selected.append(fmt_cb)
     state["selected_social_formats"] = selected
+    # Clear hooks so they regenerate fresh for the new format selection
+    state.pop("social_hooks", None)
+    state.pop("selected_social_hooks", None)
     formats = [
         ("Reel Script (45-60s)", "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
@@ -1349,8 +1353,12 @@ def gen_social_selected(chat_id):
     if not state.get("social_angle"):
         gen_social_angles(chat_id)
         return
-    # If angle selected but no hooks yet, generate hooks
-    if state.get("social_angle") and not state.get("social_hooks"):
+    # Always regenerate hooks when formats change — prevents stale hook state causing freeze
+    existing_hooks = state.get("social_hooks", {})
+    needs_hooks = any(f not in existing_hooks for f in selected)
+    if needs_hooks:
+        state["social_hooks"] = {}
+        state["selected_social_hooks"] = {}
         gen_social_hooks(chat_id)
         return
     # If reel/video selected and no framework chosen yet, ask PAS or AIDA first
@@ -2228,7 +2236,7 @@ def handle_message(msg):
         hook = {"subject": parts[0].strip(), "preview": parts[1].strip() if len(parts) > 1 else ""}
         user_state[chat_id]["selected_pro_hook"] = hook
         user_state[chat_id]["stage"] = "pick_free_cta"
-        show_cta_menu(chat_id, "free")
+        ask_free_cta(chat_id)
         return
 
     if stage == "awaiting_custom_angle":
@@ -2245,7 +2253,7 @@ def handle_message(msg):
         hook = {"subject": subject, "preview": preview, "hook_a": "", "hook_b": "", "hook_c": ""}
         user_state[chat_id]["selected_hook"] = hook
         user_state[chat_id]["stage"] = "pick_free_cta"
-        show_cta_menu(chat_id, "free")
+        ask_free_cta(chat_id)
         return
 
     if stage == "awaiting_custom_social_angle":
@@ -2826,7 +2834,7 @@ def handle_callback(cb):
             state["selected_pro_hook"] = hooks[idx]
             state["selected_hook"] = hooks[idx]
         # Skip Pro hook picker — go straight to CTA
-        show_cta_menu(chat_id, "free")
+        ask_free_cta(chat_id)
 
     elif data.startswith("pro_hook_") and data != "pro_hook_same":
         idx = int(data.replace("pro_hook_", ""))
@@ -2834,12 +2842,12 @@ def handle_callback(cb):
         if idx < len(pro_hooks):
             state["selected_pro_hook"] = pro_hooks[idx]
         state["stage"] = "pick_free_cta"
-        show_cta_menu(chat_id, "free")
+        ask_free_cta(chat_id)
 
     elif data == "pro_hook_same":
         state["selected_pro_hook"] = state.get("selected_free_hook", state.get("selected_hook", {}))
         state["stage"] = "pick_free_cta"
-        show_cta_menu(chat_id, "free")
+        ask_free_cta(chat_id)
 
     elif data == "regen_free_hooks":
         gen_hooks(chat_id)
@@ -3110,7 +3118,7 @@ def handle_callback(cb):
 
     elif data.startswith("use_subject_"):
         idx = int(data.replace("use_subject_", ""))
-        apply_subject(chat_id, idx)
+        toggle_subject_select(chat_id, idx, message_id)
 
     elif data == "keep_subject":
         state["stage"] = "emails_ready"
@@ -3425,10 +3433,17 @@ def handle_callback(cb):
         send(chat_id, "What variable are you testing across pages?\n\n_Then upload screenshots from all variants_")
 
     elif data == "open_idea_engine":
+        # Preserve any useful context (report, angle) but reset idea engine stage
+        preserved = {k: v for k, v in state.items() if k in ("report", "context", "selected_angle", "social_angle")}
+        user_state[chat_id] = {"stage": "idea_engine_idle"}
+        user_state[chat_id].update(preserved)
         show_idea_engine_menu(chat_id)
 
     elif data == "ie_from_scratch":
-        # Pull from saved library and generate immediately — no input needed
+        # Guard against double-tap
+        if state.get("stage") == "ie_generating":
+            return
+        state["stage"] = "ie_generating"
         state["ie_idea_type"] = "instagram"
         state["ie_source_label"] = "Saved library"
         sources = load_idea_sources()
@@ -3444,7 +3459,8 @@ def handle_callback(cb):
         send(chat_id, "*Generate from Inspiration*\n\nDrop anything:\n\n• A link\n• A screenshot or image\n• Paste text (article, caption, post)\n• Or just type a brief — e.g. \"market manipulation ideas\"")
 
     elif data == "ie_generate_all":
-        generate_ideas(chat_id, "both")
+        # Regenerate concepts using current source content
+        generate_ie_concept(chat_id)
 
     elif data == "ie_generate_social":
         generate_ideas(chat_id, "social")
@@ -3804,32 +3820,29 @@ def handle_callback(cb):
         send(chat_id, "What to change in the brief?")
 
     elif data == "img_from_brief":
-        brief = state.get("last_visual_brief", "")
+        brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
         vb_type = state.get("last_visual_type", "static")
-        if brief:
-            state["pending_img_concept"] = brief[:400]
-            state["pending_img_angle"] = state.get("selected_angle", "")
-            # Map visual type to post type for DALL-E
-            type_map = {
-                "reel": "breaking_news", "carousel": "educational",
-                "static": "breaking_news", "story": "engagement",
-                "email": "breaking_news", "ad_static": "breaking_news", "ad_video": "breaking_news"
-            }
-            post_type = type_map.get(vb_type, "background")
-            prompt = build_image_prompt(brief[:400], state.get("selected_angle", ""), post_type)
-            state["last_img_prompt"] = prompt
-            state["last_img_type"] = post_type
-            success = generate_and_send_image(chat_id, prompt, post_type)
-            if success:
-                keyboard = [
-                    [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
-                    [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
-                    [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
-                    [{"text": "✅ Done",             "callback_data": "mark_complete"}],
-                ]
-                send(chat_id, "Image ready.", keyboard)
-        else:
-            handle_image_generation(chat_id)
+        if not brief:
+            send(chat_id, "No brief found. Generate a visual brief first using the 🎨 Visual brief button.")
+            return
+        type_map = {
+            "reel": "breaking_news", "carousel": "educational",
+            "static": "breaking_news", "story": "engagement",
+            "email": "breaking_news", "ad_static": "breaking_news", "ad_video": "breaking_news"
+        }
+        post_type = type_map.get(vb_type, "static")
+        prompt = build_image_prompt(brief[:400], state.get("selected_angle", ""), post_type)
+        state["last_img_prompt"] = prompt
+        state["last_img_type"] = post_type
+        success = generate_and_send_image(chat_id, prompt, post_type)
+        if success:
+            keyboard = [
+                [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+                [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+                [{"text": "🎨 Different style",  "callback_data": "img_restyle"}],
+                [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Image ready.", keyboard)
 
     elif data == "approve_ad":
         ad_output = state.get("current_ad", "")
@@ -4314,15 +4327,21 @@ def show_social_hook_picker(chat_id, fmt_idx):
     fmt = formats[fmt_idx]
     state["current_hook_fmt_idx"] = fmt_idx
     format_labels = {
-        "fmt_reel": "Reel",
-        "fmt_carousel": "Carousel",
+        "fmt_reel":         "Reel",
+        "fmt_carousel":     "Carousel",
+        "fmt_static":       "Static Post",
         "fmt_story_single": "Story (single)",
-        "fmt_story_multi": "Story (multi)"
+        "fmt_story_multi":  "Story (multi)"
     }
     label = format_labels.get(fmt, fmt)
     hooks = state.get("social_hooks", {}).get(fmt, [])
-    remaining = len(formats) - fmt_idx
 
+    # If no hooks for this format, skip to next (shouldn\'t happen but prevents freeze)
+    if not hooks:
+        show_social_hook_picker(chat_id, fmt_idx + 1)
+        return
+
+    remaining = len(formats) - fmt_idx
     text = "*Pick a hook for " + label + ":*"
     if remaining > 1:
         text += " (" + str(remaining - 1) + " more after this)"
@@ -4338,10 +4357,11 @@ def show_standalone_social_menu_confirm(chat_id):
     formats = state.get("selected_social_formats", [])
     selected_hooks = state.get("selected_social_hooks", {})
     format_labels = {
-        "fmt_reel": "Reel Script",
-        "fmt_carousel": "Carousel",
+        "fmt_reel":         "Reel Script",
+        "fmt_carousel":     "Carousel",
+        "fmt_static":       "Static Post",
         "fmt_story_single": "Story (single)",
-        "fmt_story_multi": "Story (multi)"
+        "fmt_story_multi":  "Story (multi)"
     }
     summary = "*Ready to generate:*\n\n"
     for fmt in formats:
@@ -5927,8 +5947,10 @@ def transcribe_voice(file_id):
             except Exception as e:
                 err_str = str(e)
                 if "429" in err_str and attempt == 0:
-                    time.sleep(3)  # wait 3s then retry once
+                    time.sleep(5)  # wait 5s then retry once
                     continue
+                if "429" in err_str:
+                    return None, "Whisper rate limit hit. Wait a moment and try again, or upgrade your OpenAI account at platform.openai.com for higher limits."
                 return None, "Transcription failed: " + err_str
     except Exception as e:
         print("Whisper error:", e, flush=True)
@@ -6561,6 +6583,7 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
         )
         state["last_visual_brief"] = result
         state["last_visual_type"] = content_type
+        _global_brief_store[chat_id] = result  # persist across state changes
         send_plain(chat_id, "*VISUAL BRIEF — " + content_type.upper().replace("_", " ") + "*\n\n" + result)
 
         img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
