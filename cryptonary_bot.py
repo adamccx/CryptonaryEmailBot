@@ -3948,14 +3948,34 @@ def poll():
     processed_updates = set()
     print("Cryptonary Bot V9 running.", flush=True)
 
-    # Clear any webhook and resolve conflicts from previous instances
-    try:
-        tg("deleteWebhook", {"drop_pending_updates": True})
-        print("Webhook cleared.", flush=True)
-    except Exception as e:
-        print("Webhook clear error:", e, flush=True)
+    # Step 1: Delete webhook and drop pending updates
+    for attempt in range(3):
+        try:
+            tg("deleteWebhook", {"drop_pending_updates": True})
+            print("Webhook cleared.", flush=True)
+            break
+        except Exception as e:
+            print("Webhook clear attempt", attempt+1, "error:", e, flush=True)
+            time.sleep(2)
 
-    time.sleep(2)  # brief pause to let old instance die
+    # Step 2: Close any existing connections held by other instances
+    # by calling getUpdates with timeout=0 repeatedly until we get ok=True
+    print("Claiming Telegram connection...", flush=True)
+    for attempt in range(20):
+        try:
+            url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=0&offset=-1"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                result = json.loads(r.read())
+            if result.get("ok"):
+                print("Connection claimed successfully.", flush=True)
+                break
+            else:
+                print("Waiting to claim connection, attempt", attempt+1, flush=True)
+                time.sleep(3)
+        except Exception as e:
+            print("Claim attempt", attempt+1, "error:", e, flush=True)
+            time.sleep(3)
 
     while True:
         try:
@@ -3966,9 +3986,13 @@ def poll():
             if not data.get("ok"):
                 err_code = data.get("error_code", 0)
                 if err_code == 409:
-                    # Another instance is running — wait longer for it to die
-                    print("409 Conflict — waiting for old instance to stop...", flush=True)
-                    time.sleep(10)
+                    print("409 Conflict — retrying claim...", flush=True)
+                    time.sleep(5)
+                    # Try to claim again
+                    try:
+                        tg("deleteWebhook", {"drop_pending_updates": False})
+                    except:
+                        pass
                 else:
                     time.sleep(5)
                 continue
