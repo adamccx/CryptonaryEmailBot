@@ -1317,7 +1317,560 @@ Ads follow the same voice principles but with these additional patterns:
 - CTA: Transformation verb + specific outcome. "Get the Levels" / "Stop Missing Moves" / "Find the Next 100X"
 - Track record format for proof: "SOL at $10. ETH at $70. WIF at $0.004. Timestamped."
 
-""" + BOOK_KNOWLEDGE
+""" + BOOK_KNOWLEDGE + REFERENCE_GALLERY
+
+
+REFERENCE_GALLERY = """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REFERENCE GALLERY — REAL APPROVED EMAILS
+Match these exactly when generating. Study the rhythm, the tease craft,
+the level of detail in Pro vs Free, and the P.S. construction.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════════════════════
+PAIR 1: MAR 09 2026 — WEEKLY SETUP
+SAME TOPIC. DRAMATICALLY DIFFERENT TREATMENT.
+Note: Free = narrative + tease. Pro = scenarios + exact levels.
+═══════════════════════════════════════════════════════════
+
+--- FREE VERSION (Mar 09) ---
+Subject: Iran's new Supreme Leader has been chosen. He's even more dangerous than the last.
+Preview: This changes everything. Weekly Setup inside.
+
+Gm [Name],
+
+What happens when you kill a Supreme Leader and his successor is his own son?
+
+40 years younger. More energetic. More passionate about the cause. And now with more to fight for than ever.
+
+*Exactly. This is only getting worse.*
+
+Mojtaba Khamenei. Hardline. IRGC-aligned. Hand-picked by the Revolutionary Guard. And Trump hates him.
+
+This wasn't a normal transition. This was a declaration of war.
+
+All eyes are on oil. And they should be.
+
+We've been calling this for weeks. You've seen it run. Brent Crude hit $119 overnight. It's pulled back to around $107 off reports that G7 countries might release 400 million barrels from strategic reserves.
+
+*That's noise. The Strait is still closed. Production is still halted across the region. This is only getting worse.*
+
+So you've got oil surging. Inflation rising. A job market that just printed -92K. The economy is weakening while prices are going up.
+
+*This is an absolute shit show.*
+
+If you're holding crypto right now without a plan, think about what a 30-40% drawdown looks like on your portfolio.
+
+On $50K, that's $15K-$20K gone. On $100K, that's $30K-$40K. That's not a number on a screen. That's real money. Money you worked for.
+
+*The question everyone should be asking is: how on earth do I play this?*
+
+That's what today's Weekly Setup answers.
+
+*[CTA: Read the Full Weekly Setup. Pro Members Only]*
+
+I have been in crypto for nearly 10 years. I have never seen a more contentious time in markets than right now.
+
+There are more important things in the world than crypto right now. But everyone reading this cares about it. So let's get positioned properly.
+
+*The full report covers:*
+• The oil dynamics and why we think prices keep climbing
+• The inflation and job market dilemma the Fed is facing
+• What it means for rate cuts and liquidity
+• Where Bitcoin sits and the exact range we expect this week
+• The specific levels where we become aggressive buyers
+• The scenarios we're planning for across multiple timeframes
+
+If we don't deliver at least 3X the value of your membership, I'll give you your money back. That's how confident I am in what's inside.
+
+*Right now, Pro is $350 off. Every new member gets a 1-on-1 onboarding call to get started this week.*
+
+CPI drops Wednesday. FOMC is March 17. This report sets you up for both. By the time you decide to join, the move may have already happened.
+
+*[CTA: Know Exactly What to Do This Week. $350 Off]*
+
+Talk soon,
+Adam
+Co-Founder of Cryptonary
+
+*P.S. Last week we said multi-week conflict. We said oil was the weapon. We said BTC stays range-bound between $65K and $74K. All of it played out. This week's report might be even more important. It's live now.*
+
+
+--- PRO VERSION (Mar 09) ---
+Subject: Iran's new Supreme Leader has been chosen. He's even more dangerous than the last.
+Preview: Your Weekly Setup is ready. Read it before the markets start moving
+
+Gm [Name],
+
+What happens when you kill a Supreme Leader and his successor is his own son?
+
+40 years younger. More energetic. More passionate about the cause. And now with more to fight for than ever.
+
+*Exactly. This is only getting worse.*
+
+Mojtaba Khamenei is Hardline. IRGC-aligned. Hand-picked by the Revolutionary Guard. And more importantly, Trump hates him.
+
+*This wasn't a transfer of power. This was a declaration of War.*
+
+Iran showed its hand. And it's not being subtle.
+
+This conflict is escalating, not ending.
+
+All eyes on oil. As they should be.
+
+*We've been calling this for weeks. You've watched it run. Brent Crude hit $119 overnight, first time above $100 since early 2022. It's pulled back to around $107 off reports that G7 countries are considering releasing 400 million barrels from strategic reserves.*
+
+*That's noise.*
+
+It buys weeks at best. The Strait is still shut. Production across the region is still halted. Once production stops, restarting takes weeks to months. This is only getting worse.
+
+Where does that leave the market?
+
+So you've got oil surging. Inflation rising. A job market that just printed -92K when experts expected +55K. The economy is weakening while prices are going up.
+
+*This is an absolute shit show.*
+
+The question is: how do you play it?
+
+Today's Weekly Setup answers that.
+
+*Here's what the report covers:*
+• Why oil prices keep climbing despite the G7 intervention
+• The production restart problem nobody is talking about
+• The inflation and job market dilemma that has the Fed completely trapped
+• Rate cut expectations — the market is now pricing just 1 cut for all of 2026
+• Dollar and yield movements and what they signal
+• Why equities sold off and whether this week's lows are already in
+• Where Bitcoin sits, the exact range, the support that held overnight
+• Whether seller exhaustion has finally been reached
+• The positioning data that could set up a move
+• The levels where we'd de-risk
+• The levels where we become aggressive buyers
+• Key dates: PCE on Wednesday, FOMC on March 17-18
+
+This is probably one of the most important reports we've published in a while.
+
+It's not going to take you long. But it's going to set you up for the entire week.
+
+Once you read it, you'll know exactly what to do. You'll understand the war better than 99% of people.
+
+If things keep getting worse — and our base case says they will — you damn well better make sure you're positioned to handle it.
+
+This is what you're here for. This is why you're Pro.
+
+*[Read the Full Weekly Setup]*
+
+Speak soon,
+Adam
+
+*P.S. Last week we said multi-week conflict. We said oil was the weapon. We said BTC stays range-bound between $65K and $74K. All played out. The framework is working. Trust it this week too.*
+
+---
+WHAT THIS PAIR TEACHES:
+• Same opening hook — identical first 3 paragraphs almost word for word
+• Free adds loss aversion ($50K → $15-20K gone) and discount offer
+• Pro drops the selling entirely — just "this is why you're Pro"
+• Free bullet list: vague ("scenarios we're planning for")
+• Pro bullet list: specific ("rate cut expectations — market pricing just 1 cut for all of 2026")
+• Free P.S. = track record + urgency ("might be even more important")
+• Pro P.S. = track record + framework trust ("trust it this week too")
+• Free CTA: transformation ("Know Exactly What to Do This Week")
+• Pro CTA: directional ("Read the Full Weekly Setup") — no selling needed
+
+
+═══════════════════════════════════════════════════════════
+PAIR 2: FEB 13 2026 — MARKET DIRECTION
+IDENTICAL TOPIC. FREE GIVES ONE ASSET. PRO GIVES ALL FIVE.
+Note: The exact curiosity gap technique in action.
+═══════════════════════════════════════════════════════════
+
+--- FREE VERSION (Feb 13) ---
+Subject: Inflation just dropped. BTC is bouncing. I'm still not buying.
+Preview: 4 emails. 4 sets of levels. All hit. Here's what comes next.
+
+Gm [Name],
+
+On Monday I told you the relief rally was done and that I was flipping bearish.
+
+The CPRO Team shared exact downside levels.
+
+*BTC: $65,650. It hit $65,650.*
+*ETH: $1,957. It hit $1,957.*
+
+That's now four consecutive emails where the levels have played out within 5% of the move.
+
+Now, inflation data just dropped. And I'm here to get you up to speed.
+
+It came in soft.
+
+*Translation?*
+
+Good news. Inflation is trending toward the Fed's 2% target.
+
+This pulls rate cuts forward from July to June. Great for crypto.
+
+BTC already bounced from $65K to $69K. ETH is holding $1,957. Even Solana is showing signs of life.
+
+Everyone's excited. I get it. The data is positive.
+
+But I've seen this before.
+
+*The bounce is real. The reversal isn't. There's a difference.*
+
+The team believes this is another short-term relief rally, and I agree.
+
+BTC will visit the $50K-$60K zone before this is over. The strategy is the same. Patient. Waiting to deploy cash into *$50K-$63K level*.
+
+*Here's your free Bitcoin breakdown:*
+
+*Support: $65,650*
+*Resistance: $68,600*
+*Direction: Neutral-Bullish*
+*Upside Target: $72,500*
+*Downside Target: $57,300*
+
+BTC is holding support and the inflation print gives it a short-term tailwind.
+
+A push through $68,600 opens $72,500. But unless higher structural levels are reclaimed with strength, this is still relief within a corrective structure.
+
+That's your Bitcoin analysis and the inflation breakdown. For free.
+
+But Bitcoin is only one piece.
+
+If you want the full picture on where we see ETH, SOL, and some of our favourite tokens headed over the weekend, that's where *Pro comes in*.
+
+Be careful. Weekends are when geopolitical tensions tend to hit crypto hardest. Traditional markets are closed. Liquidity thins out. And when headlines drop, there's no equity market to absorb the shock. Crypto takes the full hit alone.
+
+*[Upgrade to Read the Full Report]*
+
+Adam, Co-Founder, Cryptonary
+
+*P.S. Four emails. Four sets of levels. All of them hit. At some point, the question stops being "is the analysis good?" and starts being "why don't I have all of it?"*
+
+
+--- PRO VERSION (Feb 13) ---
+Subject: Inflation just dropped. BTC is bouncing. I'm still not buying.
+Preview: 4 emails. 4 sets of levels. All hit. Here's what comes next.
+
+Gm [Name],
+
+On Monday I told you the relief rally was done and that I was flipping bearish.
+
+*BTC: $65,650. It hit $65,650. ETH: $1,957. It hit $1,957. HYPE: $28.39. It hit $28.39.*
+
+That's four consecutive emails where the levels played out within 5% of the move.
+
+[Same inflation context as Free — then diverges:]
+
+Here's your full breakdown.
+
+*Bitcoin:* Holding $65,650 support and stabilising above the reclaimed trendline. $68,600 is immediate resistance, aligned with the weekly 200 EMA. Clear that and $72,500 opens as the next relief target. Direction: Neutral-Bullish.
+
+*Ethereum:* Holding $1,957 after rolling over from $2,116 exactly as mapped. Short-term base forming. As long as $1,957 holds on daily closes, a relief push back toward $2,116 is on the table. Reclaim $2,116 with acceptance and $2,360 opens. Lose $1,957 and $1,752 comes into focus fast. Direction: Neutral-Bullish.
+
+*Solana:* Still range-bound between $78 and $89. Weaker than BTC and ETH. But a bullish divergence is forming on the daily timeframe. If it confirms, it supports a push toward $89 range highs and potentially $97.7. A breakdown below $78 reopens $67.7. Direction: Neutral.
+
+*Hyperliquid:* Still bearish. HYPE hit $28.39, bounced to $31.7, then got rejected at $30.64 and slipped back below. The pattern is clear: rallies into resistance are getting sold. Below $33 on daily closes, the structure favours downside continuation. If $28.39 fails, $25.43 is next. This is the one asset not participating in the relief. Manage accordingly. Direction: Bearish.
+
+*Aura:* Structure unchanged. Bullish divergence still intact. No deterioration but no confirmation either. Dependent on broader market and Solana strength. Direction: Bullish (unconfirmed).
+
+*Here's some extra pro context:*
+
+Stablecoin dominance is sitting inside higher-timeframe supply. It wicked to 12.5% but failed to close above. A confirmed daily close below 10.4% would signal capital rotating out of stables and into risk. Downside targets from there: 9.6%, then 8%, then 7.1%. That's progressive risk-on expansion. This hasn't confirmed yet. But this is the clearest potential directional signal across all charts right now.
+
+[Read the Full Market Direction Report]
+
+Adam
+Co-Founder, Cryptonary
+
+*P.S. Strategic rotations sound simple on paper. In practice, you need someone telling you in real-time "take profits here" and "reload here." That's what Inner Circle members get. If your portfolio is above $200K and this week showed you the value of having levels before the move, reply "IC" and I'll send you the details.*
+
+---
+WHAT THIS PAIR TEACHES:
+• Free gives BTC only — Pro gives all 5 assets
+• The sentence "But Bitcoin is only one piece" is the exact tease pivot
+• Free P.S. = "why don't I have all of it?" — genius one-liner
+• Pro P.S. = upsell to Inner Circle (not Pro upgrade — already Pro)
+• Pro adds "extra pro context" layer (stablecoin dominance) — goes beyond levels
+• Direction labels ("Direction: Bearish") used consistently in Pro, not in Free
+• Pro describes mechanics: "rallies into resistance are getting sold" — not just levels
+
+
+═══════════════════════════════════════════════════════════
+STANDALONE FREE: MAR 12 2026 — MARKET UPDATE
+STUDY THIS FOR: Hook craft, curiosity gap, tease without revealing
+═══════════════════════════════════════════════════════════
+
+Subject: Iran just started laying mines in the Strait. We think BTC is about to rip.
+Preview: Sounds insane. Let me explain.
+
+Gm [Name],
+
+Adam here.
+
+*Iran just started laying mines in the Strait of Hormuz.*
+
+Not drones. Not missiles. Mines. Targeting the shipping lanes that carry *20% of the world's oil* every single day.
+
+Trump says there's no evidence. Reuters says dozens are confirmed.
+
+Two vessels were attacked in Iraqi waters overnight. Gulf producers are shutting down facilities.
+
+*Oil is back above $107 and the supply deficit is getting worse.*
+
+The IEA announced they'd release 400 million barrels from strategic reserves.
+
+Sounds like a lot, but the flow rate is 2 million barrels per day. That's 200 days to fully release.
+
+The shortfall is happening now. The release can't keep pace.
+
+Oil stays elevated. Inflation keeps rising. Rate cuts keep getting postponed.
+
+Terrible for the market.
+
+However, here's the real trick...
+
+*We think Bitcoin is about to rip.*
+
+Not long-term. Not eventually. *Soon.*
+
+I know that sounds insane given everything I just told you. But that's what the data is showing.
+
+I'm glued to the news and the market right now. I have serious capital deployed. I have team members in the Middle East. Trust me when I say — my team and I are not missing a beat.
+
+And what we're seeing in the data tells a very different story from the headlines.
+
+How is that possible?
+
+The answer is in today's market update.
+
+We break down exactly why the setup is forming for a short-term move higher, the specific conditions that need to be met for it to trigger, the exact level it needs to break, and the zone where we'd expect the rally to top out.
+
+Spoiler, there's a level between $70K and $75K that triggers everything, and a zone above that where multiple resistances converge. The report has the numbers.
+
+*[Unlock the Full Market Update]*
+
+*[Upgrade to Pro. Know What's Coming Before It Happens.]*
+
+Adam
+Co-Founder of Cryptonary
+
+*P.S. Pro members are already positioned for what comes next. The pattern playing out right now is identical to January. If you're still on the free list when the move happens, you'll be reading about it after the fact.*
+
+---
+WHAT THIS EMAIL TEACHES:
+• Hook: The most dramatic fact first. "Not drones. Not missiles. Mines." — three words per line for impact.
+• Build the bearish case fully before the pivot — earns the credibility for the contrarian call.
+• The pivot: "However, here's the real trick..." — this is a bucket brigade that earns attention.
+• Tease with specificity: "a level between $70K and $75K" — close enough to feel real, not close enough to not need Pro.
+• "Trust me when I say" — personal stake signals conviction.
+• P.S.: "identical to January" — references a pattern they already know, creates urgency without manufactured scarcity.
+
+
+═══════════════════════════════════════════════════════════
+STANDALONE FREE: FEB 10 2026 — MARKET DIRECTION
+STUDY THIS FOR: Track record pivot, calling your own flip, building trust through honesty
+═══════════════════════════════════════════════════════════
+
+Subject: I called $72K. Now I'm bearish.
+Preview: Yesterday I told you why. Today the charts are proving it.
+
+Gm [Name],
+
+Last week I told you Bitcoin was due for a relief rally toward $72K.
+
+It hit $72,300. Almost to the dollar.
+
+Ethereum? I said $2,116. It hit it and stalled.
+
+Every single level played out. *That's the third consecutive Market Direction where the levels have hit within 5% of the move.*
+
+I hope you capitalised. I hope you took profits where necessary.
+
+Because now I need to be straight with you.
+
+I think this relief rally is done.
+
+What comes next is going to be painful for anyone who's not prepared.
+
+I'll be honest, I expected Bitcoin to push a bit harder before rolling over. It didn't. It stalled right at resistance and started fading. The buyers aren't there. Not yet.
+
+Yesterday I showed you why this reminds me of June 2022. The parallels. The sentiment. The mechanics.
+
+Today the charts are confirming it. The macro and the technicals are now saying the same thing.
+
+Bitcoin is sitting just below $72K with zero follow-through. No momentum. No conviction. Just exhaustion at the exact level I told you to watch.
+
+Ethereum couldn't close above $2,116 even once. Only wicks above it. That's not strength. That's rejection.
+
+I've shifted my bias to *neutral-bearish* on both.
+
+Here's what that means for you.
+
+*If you bought the bounce thinking the worst was over, it's time to protect your capital. I've been through three of these cycles. The initial crash isn't what wipes people out. It's the slow bleed that follows when people mistake a relief bounce for a reversal. That's where the real damage happens.*
+
+The line in the sand for Bitcoin is $67,200. If that fails, the path toward $57,300 opens up. That's not a scare number. That's a level where price hasn't been tested yet, and the market tends to find those levels eventually.
+
+*Here's your free Bitcoin breakdown:*
+
+Support: $67,200 and $65,650
+Resistance: $73,800
+Direction: Neutral-Bearish
+Upside Target: $79,140
+Downside Target: $57,300
+
+As long as BTC trades below $73,800, I'm treating every rally as corrective. $67,200 is the line separating choppy consolidation from much deeper downside.
+
+*That's your Bitcoin analysis. For free. Use it.*
+
+Bitcoin is only one chart. And right now, it's not even the most important one.
+
+One of the assets I track just confirmed a bearish divergence after losing its key level — the first time this has happened since my team started covering it. If you're holding it and you don't know about this, you're holding something that just broke and you don't even know it.
+
+*[Upgrade to Read the Full Report]*
+
+Adam
+Co-Founder, Cryptonary
+
+*P.S. I've been wrong before. But I've also been very right. Last week's levels were one of those times. I'm betting this week's will be too. The difference is whether you'll have them.*
+
+---
+WHAT THIS EMAIL TEACHES:
+• Opens with the proof immediately — no warm-up, straight to "I called it."
+• "Almost to the dollar" — specificity as credibility.
+• Admitting imperfection: "I expected Bitcoin to push a bit harder before rolling over. It didn't." — builds more trust than claiming perfection.
+• The free level handout is generous: Support, Resistance, Direction, Upside, Downside — feels like real value.
+• The tease after the free level: "Bitcoin is only one chart. And right now, it's not even the most important one." — perfect pivot.
+• Adds mystery asset ("just confirmed a bearish divergence") without naming it — curiosity gap.
+• P.S.: "I've been wrong before. But I've also been very right." — honest, confident, not defensive.
+
+
+═══════════════════════════════════════════════════════════
+STANDALONE PRO: FEB 16 2026 — WEEKLY SETUP
+STUDY THIS FOR: Strategy clarity, bear market framework, precise positioning logic
+═══════════════════════════════════════════════════════════
+
+Subject: We're 4 months into a bear market. Here's your gameplan.
+
+Gm [Name],
+
+We're about 4 months into a 6 to 9 month bear market.
+
+The crash part is done. BTC has fallen from $127K to $60K. That was the dramatic phase.
+
+What's ahead doesn't make headlines. And that's what makes it dangerous.
+
+It's the mornings where nothing moves. The rallies that go nowhere. The slow erosion of conviction.
+
+That's time capitulation. And it quietly destroys more portfolios than any crash.
+
+If this bear market has another 2-5 months to go, what's your plan?
+
+*You have one. Here it is in 6 sentences.*
+
+*Layered bids between $50K-$63K with 80% of our cash. Not chasing relief rallies. Not panicking on dips. Waiting for the levels to come to us. If we get filled, we hold for the long term. This is accumulation, not trading.*
+
+Now, let me tell you why.
+
+Over the weekend, BTC rallied to $71K and got rejected back to $68K. That move was driven by futures, not spot. Leveraged longs pushed it up. The moment they took profits, price rolled over. No real buying behind it.
+
+ETF outflows last week: -$360M. Coinbase Premium: negative throughout the week. *US buyers aren't showing up.*
+
+But the positioning underneath is shifting.
+• Long-term holders have started accumulating again.
+• Open Interest has pulled back significantly.
+• Funding rates? Flat to negative.
+• Fear & Greed is at record lows.
+• Traders are shorting altcoins already down 60-80%.
+
+*Historically, this isn't where you short. This is where the flush is completing. But the process takes months, not days.*
+
+BTC setup for the week: $65K support, $71-72K resistance. A bear flag is forming on the daily. Break above $72K opens $75K. Break below $65K opens a retest of $60K. The base case is continued chop inside the range.
+
+And if price drops another 15-20% into the $50K-$63K zone? *That's not the problem. That's exactly what we're waiting for. That's the setup.*
+
+I'll reiterate the strategy once again for emphasis.
+
+*Layered bids between $50K and $63K with 80% of our cash. Not chasing relief rallies. Not panicking on dips. Waiting for the levels to come to us.*
+
+*[Read the Full Weekly Setup]*
+
+Three months from now, when this range finally resolves and the real move begins, you'll already be positioned. That's the advantage of playing the grind instead of suffering through it.
+
+Adam
+Co-Founder, Cryptonary
+
+*P.S. Quick look at what's coming this week:
+Monday: You're reading it. The full bear market gameplan.
+Tuesday: Updated rotation levels across every asset on the watchlist. Know where to reload and where to take profits.
+Wednesday: "The Great De-Risking." What broke, what survived, and what comes next. If you read one thing this week beyond today's setup, make it this.
+Thursday: Live with the team. Bring your questions.
+Friday: Fresh levels + end of week setup before the weekend.*
+
+---
+WHAT THIS EMAIL TEACHES:
+• "You have one. Here it is in 6 sentences." — the best possible way to deliver a strategy.
+• Repeating the strategy at the end: saying it twice makes it feel like conviction, not repetition.
+• "That's not the problem. That's exactly what we're waiting for." — reframes a feared outcome as the desired one.
+• P.S. format: full week schedule — high-value for Pro, never done on Free.
+• No selling. No CTA pitch. The email IS the value. The CTA is just "read it."
+• "Playing the grind instead of suffering through it" — the transformation in one line.
+
+
+═══════════════════════════════════════════════════════════
+SUBJECT LINE PATTERNS — FROM 100 EMAILS
+═══════════════════════════════════════════════════════════
+
+FORMATS THAT APPEAR MOST OFTEN:
+
+WARNING hook (urgency/alarm):
+  "WARNING: Don't do anything until you read this."
+  "Iran just started laying mines in the Strait. We think BTC is about to rip."
+  "Each bounce is getting weaker. This is what it means."
+
+Specific data + implication:
+  "BTC just hit $97k. But there's a catch..."
+  "Inflation just dropped. BTC is bouncing. I'm still not buying."
+  "Iran talks just failed. Things are about to get messy."
+
+Contrarian/tension:
+  "I called $72K. Now I'm bearish."
+  "Oil is surging. Inflation is coming. So why is crypto pumping?"
+  "The crash is over. What comes next is what matters."
+
+Track record pivot:
+  "BTC resistance at $73,800? Rejected. Support at $65,650? Held."
+  "We called $97k. Here's what we're watching now."
+
+Question format (used sparingly):
+  "The entire crypto market hangs on one level. Do you know which one?"
+  "Will Bitcoin crash to $50K? My thoughts."
+  "Do you know what to do this weekend?"
+
+News hook:
+  "Iran's new Supreme Leader has been chosen. He's even more dangerous than the last."
+  "Job Market Disaster & Iran/US War is Escalating. Here's everything you need."
+
+Identity/aspiration (promo):
+  "Make your first million in crypto in 2026"
+  "I want to onboard you personally. Here's how."
+  "Our entire 2026 gameplan. Free. 35 minutes."
+
+PREVIEW TEXT PATTERNS:
+Preview almost always adds information the subject didn't give:
+  Subject: "The world is at war. BTC is at $74K. Is this a Trap"
+  Preview: "Oil at $100. BTC at $74k. Saylor just bought $1.6B more."
+
+  Subject: "Iran just started laying mines in the Strait."
+  Preview: "Sounds insane. Let me explain."
+
+  Subject: "Inflation just dropped. BTC is bouncing. I'm still not buying."
+  Preview: "4 emails. 4 sets of levels. All hit. Here's what comes next."
+
+The preview either: adds a specific data point, creates a second curiosity gap, or explains the tension in the subject line.
+
+"""
 
 performance_data = {}
 user_state = {}
