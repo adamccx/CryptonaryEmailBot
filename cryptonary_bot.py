@@ -24,9 +24,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 BOOK_KNOWLEDGE = """
 
-=== EXPANDED COPYWRITING KNOWLEDGE BASE ===
-
---- EXISTING FOUNDATIONS ---
+=== COPYWRITING KNOWLEDGE BASE ===
 
 FROM HORMOZI ($100M OFFERS / $100M LEADS):
 - Value Equation: Dream Outcome x Likelihood / Time x Effort = Value
@@ -59,191 +57,426 @@ FROM OGILVY ON ADVERTISING:
 - One CTA, one action, zero friction
 - Long copy outperforms short copy when the reader is interested
 
---- NEW BOOKS ---
-
-FROM 50 SCIENTIFICALLY PROVEN WAYS TO GET TO YES (CIALDINI / GOLDSTEIN / MARTIN):
-- Social proof is most powerful when the group is similar to the reader ("investors like you")
-- Defaults are powerful — frame the desired action as the natural/obvious choice
-- Loss aversion: people work harder to avoid losing than to acquire gains — frame as "don't miss" not "get"
-- Labelling: tell people what they are ("you're the kind of investor who...") and they live up to it
-- Implementation intentions: "when X happens, I will do Y" — make the next step dead obvious
-- Rhyme as reason: messages that rhyme are judged as more truthful
-- Giving a reason increases compliance dramatically — always say why
-- Scarcity + exclusivity: not just limited, but "only for people who qualify"
-- Progress principle: showing partial progress increases motivation to complete ("you're 80% there")
-- Reciprocity of disclosure: when you share something personal, they trust you more
-- The "but you are free" technique: remind people they can say no — paradoxically increases yes rates
-- Consistency through small commitments: get agreement on small points before the big ask
-
-FROM EXPERT SECRETS (RUSSELL BRUNSON):
-- The Big Domino: find the ONE belief that, if they had it, all other objections disappear
-- The Epiphany Bridge: share the story of when YOU had the breakthrough they need to have
-- The New Opportunity: don't improve their existing approach — offer a completely new vehicle
-- Future pacing: help them vividly imagine life after the transformation
-- Stack: present each element of the offer with its standalone value before revealing the price
-- The origin story: people buy the founder's journey as much as the product
-- Identity shift: the goal is not to sell a product but to create a new identity in the buyer
-- Teach the "what" for free, sell the "how" — give the concept, sell the system
-- Attractive character: flaws make you relatable, not weak
-- Movement vs product: build a cause people want to belong to, not just a product they buy
-
 FROM BUILDING A STORYBRAND (MILLER):
 - The reader is ALWAYS the hero — the brand is the guide
 - Guide characteristics: empathy (I understand your struggle) + authority (I can help)
 - The 3 levels of problem: external (the market), internal (the fear/frustration), philosophical (it's not fair)
 - A clear plan removes the risk of action — people don't act when confused
-- Direct CTA + transitional CTA: "Buy now" AND "Learn more" — not everyone is ready
 - Stakes must be clear: what do they gain if they act? What do they lose if they don't?
 - Success should be painted explicitly — never assume they'll imagine it themselves
 - One message, one call to action — confusion kills conversion
-- Position the villain clearly — it's not a person, it's a force (market noise, bad information, complexity)
 
 FROM ALCHEMY (SUTHERLAND):
 - Logic is not what drives decisions — perceived value and meaning drive decisions
 - Reframing changes everything: the same thing positioned differently creates different desire
-- Psycho-logic over logic: people don't want the optimal solution, they want the one that feels right
-- Signalling: expensive or inconvenient things signal quality and commitment (application-only = exclusive)
-- The opposite of a good idea can also be a good idea — test counterintuitive angles
 - Loss aversion framing is more powerful than gain framing in almost every context
-- Context and environment change perception completely — same message, different result
-- The threshold effect: small price changes near a threshold ($997 vs $1,000) matter more than large changes elsewhere
+- Signalling: expensive or inconvenient things signal quality and commitment
 - Dare to be trivial: small, specific, seemingly irrelevant details make claims feel more credible
 - People don't know why they want things — emotion precedes rationalisation
-- Trust signals that are inefficient (e.g. a long sales page) paradoxically signal you have nothing to hide
-
-FROM MADE TO STICK (HEATH & HEATH):
-- SUCCESs framework: Simple, Unexpected, Concrete, Credible, Emotional, Story
-- Simple: find the core idea and hammer it relentlessly — "the lead"
-- Unexpected: break a pattern to get attention, then fill the gap with your message
-- Concrete: abstract ideas don't stick — sensory, specific language does
-- Credible: use details, statistics, and authorities — but also "testable credentials" (try it and see)
-- Emotional: people don't care about information, they care about what it means for THEM
-- Story: simulation (how to handle a situation) + inspiration (this is possible) = action
-- The curse of knowledge: the more you know, the harder it is to remember what it's like not to know
-- Ideas that stick violate expectations, then resolve the tension
-- Use names and individuals not statistics — "a child named Rokia" beats "10 million in poverty"
-
-FROM EVERYBODY WRITES (HANDLEY):
-- Writing is a habit not a talent — clarity comes from rewriting
-- The reader is always the most important person in the room — write for them, not for you
-- Lead with what matters most — bury the lead and you lose the reader
-- Use the word "you" more than any other word
-- Short sentences accelerate pace — vary length intentionally
-- Avoid weasel words: "very," "quite," "rather," "really" — delete them all
-- Read it out loud — if you stumble, the reader will too
-- Kill the passive voice — active voice is stronger, more direct, more credible
-- The best writing is rewriting — first draft is just raw material
-- Every piece of content should answer "so what?" and "what do I do next?"
-- Empathy maps: know what your reader feels, fears, wants, and hears
-
-FROM IDENTITY-BASED MARKETING / IDENTITY ECONOMICS:
-- People buy to affirm who they are or who they want to become — identity is the deepest motivator
-- "People like us do things like this" — Seth Godin's core identity principle
-- Reference groups matter: show who is already in, so the prospect can see themselves in that group
-- Status is a primary motivator — people want to move up in their reference group
-- Belonging and exclusion are two sides of the same lever — use both
-- Labels are self-fulfilling: "you're one of the serious investors" creates the behaviour
-- Values-based messaging outlasts feature-based messaging
-- Community signals identity: who else is in the room matters as much as what's in the room
-- The product is often just the ticket to the identity — Inner Circle is not advice, it's membership
-
-FROM BREAKTHROUGH ADVERTISING (SCHWARTZ):
-- Market sophistication: match the message to where the market's awareness is — don't shout "new" to a saturated market
-- The 5 levels of market awareness: unaware → problem aware → solution aware → product aware → most aware
-- Breakthrough copy does not create desire — it channels desire that already exists
-- The headline's job: stop the prospect, select the right prospect, pull them into the first line
-- Mass desire: tap into a pre-existing desire already present in the market
-- Mechanisms: "how it works" claims are more believable than "what it does" claims
-- Spread: your product's claimed ability to fulfil desire across multiple situations creates breadth
-- Fresh claims must feel NEW even if the product is not — reframe, repackage, rename
-- The most powerful headline states the end result the prospect most desires
-- Voice: write in the voice of the prospect's internal monologue, not your own
-
-FROM THIS IS MARKETING (GODIN):
-- Smallest viable market: don't try to reach everyone — reach the smallest group that matters most and make something specifically for them
-- Find the people who are already looking — don't interrupt people who aren't
-- People don't want what you make — they want how it will make them feel and who it will allow them to become
-- Tension and release: create tension (the status quo is not acceptable) then offer the release (the solution)
-- Permission marketing: earn the right to communicate, then use it carefully
-- Status roles: people want to be seen, respected, and safe — and they want to give status to others
-- Generous: show up with real value before asking for anything
-- Tension is the engine of change — without it, people stay where they are
-- The price is a signal — low price signals low value; pricing communicates positioning
-- Marketing is not about persuasion — it's about finding the people who already want what you have and letting them know it exists
 
 --- WRITING FRAMEWORKS ---
 
-The bot is aware of these frameworks and can apply them when appropriate:
-
 AIDA (Attention → Interest → Desire → Action)
-- Classic direct response structure
-- Attention: stop the scroll / open the email
+- Attention: stop the scroll
 - Interest: hold them with a relevant problem or story
 - Desire: build the want through proof, benefits, transformation
 - Action: one clear CTA
-- Best for: ads, emails, landing pages
 
 PAS (Problem → Agitate → Solution)
-- Lean into the pain before offering the fix
 - Problem: name the exact problem
 - Agitate: make them feel how bad it is — the cost of inaction
-- Solution: position the product as the relief
-- Best for: short-form copy, ads, email openers
-
-PASTOR (Problem → Amplify → Story → Transformation → Offer → Response)
-- Extension of PAS with proof and story
-- Amplify: stakes — what happens if they don't solve this
-- Story: a real person who had the problem and fixed it
-- Transformation: the before/after contrast
-- Offer: the complete value stack
-- Response: the CTA
-- Best for: long-form sales pages, VSLs
-
-4 Ps (Promise → Picture → Proof → Push)
-- Promise: the headline benefit
-- Picture: paint the vivid future state
-- Proof: evidence it's real and achievable
-- Push: urgency to act now
-- Best for: landing page sections, email CTAs
-
-BAB (Before → After → Bridge)
-- Before: life with the problem
-- After: life with the problem solved
-- Bridge: how to get from before to after (the product)
-- Best for: social ads, short email hooks, carousel slides
-
-FAB (Features → Advantages → Benefits)
-- Features: what it is
-- Advantages: why that matters
-- Benefits: what the reader gets as a result
-- Best for: product descriptions, value stacks
-
-The 4 Us (Urgent → Unique → Useful → Ultra-specific)
-- Framework for evaluating headlines and hooks
-- Best for: auditing subject lines and ad headlines
-
-PPPP (Picture → Promise → Prove → Push)
-- Similar to 4Ps, more narrative-led
-- Best for: email sequences, story-led landing pages
-
-QUEST (Qualify → Understand → Educate → Stimulate → Transition)
-- Qualification-first approach — filter for the right reader
-- Best for: Inner Circle copy, high-ticket offers
-
-SLAP (Stop → Look → Act → Purchase)
-- Attention-focused framework for visual/social content
-- Best for: carousel slides, story sequences
-
-The Storybrand 7-Part Framework:
-1. Character (hero) who wants something
-2. Encounters a problem (villain/obstacle)
-3. Meets a guide (Cryptonary) who has empathy and authority
-4. Who gives them a plan
-5. And calls them to action
-6. That results in success
-7. And helps them avoid failure
+- Solution: position Cryptonary as the relief
 """
 
+
+# ══════════════════════════════════════════════════════════════════
+# CRYPTONARY BEST POSTS — PROVEN CONTENT REFERENCE LIBRARY
+# Extracted from top performing Instagram posts sorted by engagement,
+# shares, saves and reach. Used as reference when generating concepts.
+# ══════════════════════════════════════════════════════════════════
+
+BEST_POSTS = """
+
+=== CRYPTONARY TOP PERFORMING INSTAGRAM POSTS ===
+
+These are real posts from @Cryptonary that have proven high engagement.
+Use these as creative reference — study the hooks, formats, angles and
+what made each one work. Do not copy verbatim. Extract the pattern.
+
+--- ENGAGEMENT BAIT (Comments/Shares focused) ---
+
+POST: "Tag a friend that isn't into crypto but should be."
+TYPE: Static | ENGAGEMENT: 1.24% | LIKES: 4,956 | COMMENTS: 1,940
+WHY IT WORKED: Ultra low friction ask. Peer-to-peer shareability. Identity signal ("I'm in, you should be").
+
+POST: "You can only pick one... [BTC / ETH / XRP / DOGE / ? grid]"
+TYPE: Static | ENGAGEMENT: 1.44% | LIKES: 6,538 | COMMENTS: 1,513
+WHY IT WORKED: Binary/forced choice triggers debate. Coin tribalism drives comments. Simple visual.
+
+POST: "Comment your biggest mistakes in crypto."
+TYPE: Static | ENGAGEMENT: 2.88% | LIKES: 14,892 | COMMENTS: 1,138
+WHY IT WORKED: Vulnerability prompt. Collective commiseration. People love sharing their losses.
+
+POST: "What was the first crypto you purchased? [coin grid]"
+TYPE: Static | ENGAGEMENT: 2.66% | LIKES: 14,810 | COMMENTS: 340
+WHY IT WORKED: Nostalgia + identity. Everyone has an origin story. Grid visual makes it scrollable.
+
+POST: "What coin have you been bag holding for the last 2 years and can't let go?"
+TYPE: Static | ENGAGEMENT: 9.96% | LIKES: 55,106 | COMMENTS: 338
+WHY IT WORKED: Pain point + humour. Universal crypto experience. Relatable loss = huge response.
+
+POST: "What is your largest bag without telling us your largest bag?"
+TYPE: Static | ENGAGEMENT: 0.86% | LIKES: 3,797 | COMMENTS: 986
+WHY IT WORKED: Playful secrecy mechanic. Riddle format. Community inside joke energy.
+
+POST: "What made you start crypto and how did you first get started?"
+TYPE: Static | ENGAGEMENT: 0.98% | LIKES: 4,912 | COMMENTS: 526
+WHY IT WORKED: Origin story prompt. High personal investment in reply. Storytelling trigger.
+
+POST: "If you were given $2,500,000 what is the first thing you would do?"
+TYPE: Static | ENGAGEMENT: 3.09% | LIKES: 16,441 | COMMENTS: 787
+WHY IT WORKED: Fantasy scenario. Zero barrier to entry. Universal aspiration.
+
+POST: "Without dropping any names, what's your favourite crypto famous for?"
+TYPE: Static | ENGAGEMENT: 0.55% | LIKES: 2,658 | COMMENTS: 414
+WHY IT WORKED: Inside-joke format. Insider community feel. Coded language = belonging signal.
+
+POST: "Share your dumbest crypto trading story with us, go."
+TYPE: Static | ENGAGEMENT: 0.9% | LIKES: 4,280 | COMMENTS: 710
+WHY IT WORKED: Confessional format. Humour + pain. Story prompt = high-effort comments.
+
+POST: "$250K sitting in your crypto exchange account. What are you doing with it?"
+TYPE: Static | ENGAGEMENT: 0.58% | LIKES: 2,883 | COMMENTS: 357
+WHY IT WORKED: Aspirational scenario. Forces real strategy thinking. Debate-generating.
+
+--- BREAKING NEWS / MACRO (Shares + Reach focused) ---
+
+POST: "WARNING! CRYPTO IS ON ROCKY GROUNDS. Here's everything you need to know in 60 seconds."
+TYPE: Static | ENGAGEMENT: 0.41% | LIKES: 1,521 | SHARES: 792 | VIEWS: 193,631
+WHY IT WORKED: Fear + urgency. WARNING hook. Time promise (60 seconds). Dark aesthetic + explosion visual.
+
+POST: "SOLD BTC AT BOTTOM. BOUGHT OIL AT $118"
+TYPE: Reel | ENGAGEMENT: 0.33% | LIKES: 1,217 | SHARES: 969 | VIEWS: 379,861
+WHY IT WORKED: Cringe/pain narrative. Highest shares in recent batch. Human failure story = virality.
+
+POST: "MARKETS POST WAR [chart grid showing Buy the War pattern across conflicts]"
+TYPE: Carousel | ENGAGEMENT: 0.29% | LIKES: 997 | SHARES: 764
+WHY IT WORKED: Data-led historical pattern. Counterintuitive insight. Actionable for investors.
+
+POST: "IRAN JUST NAMED A NEW SUPREME LEADER AND HE'S MORE DANGEROUS THAN THE LAST ONE"
+TYPE: Carousel | ENGAGEMENT: 0.29% | LIKES: 1,359 | SHARES: 372 | VIEWS: 234,697
+WHY IT WORKED: Geopolitical tension. Real-world macro hook. Crypto implications for informed audience.
+
+POST: "CRYPTO IS NOW BIGGER THAN THE ENTIRE UK STOCK MARKET"
+TYPE: Static | ENGAGEMENT: 1.53% | LIKES: 7,403 | SHARES: 49
+WHY IT WORKED: Milestone credibility stat. Legitimacy narrative. Shocks the skeptic.
+
+POST: "BRICS TO OFFICIALLY ABANDON US DOLLAR FOR TRADE SETTLEMENTS"
+TYPE: Static | ENGAGEMENT: 6.58% | LIKES: 29,018 | SHARES: 2,372 | SAVES: 4,348 | VIEWS: 729,123
+WHY IT WORKED: Macro news with direct crypto implication. High saves = reference content. Geopolitical fear.
+
+POST: "US JUDGE RULES RIPPLE XRP IS NOT A SECURITY"
+TYPE: Static | ENGAGEMENT: 2.84% | LIKES: 12,597 | SHARES: 2,177
+WHY IT WORKED: Major regulatory win. Instant share trigger. XRP community mobilised.
+
+POST: "$1 BILLION WIPED FROM THE CRYPTO MARKET IN 60 MINUTES"
+TYPE: Static | ENGAGEMENT: 0.88% | LIKES: 4,009 | SHARES: 2,011 | VIEWS: 855,387
+WHY IT WORKED: Shock number. Time specificity. Fear = share. Macro audience crossover.
+
+POST: "EMIRATES TO ACCEPT BITCOIN AND CRYPTO FOR FLIGHTS"
+TYPE: Static | ENGAGEMENT: 2.35% | LIKES: 13,607 | SHARES: 1,851 | VIEWS: 2,448,771
+WHY IT WORKED: Adoption story. Mainstream brand = credibility. Shareable to non-crypto audience.
+
+POST: "OVER $1 TRILLION WIPED OUT FROM CRYPTO & US STOCK MARKET"
+TYPE: Static | ENGAGEMENT: 0.5% | LIKES: 2,305 | SHARES: 957 | VIEWS: 222,153
+WHY IT WORKED: Trillion = attention. Stock market crossover = wider audience. Fear share.
+
+POST: "RUSSIA & IRAN LAUNCHING GOLD-BACKED STABLECOIN"
+TYPE: Static | ENGAGEMENT: 2.52% | LIKES: 11,206 | SHARES: 709 | SAVES: 1,718 | VIEWS: 161,548
+WHY IT WORKED: Geopolitical + crypto convergence. Contrarian macro angle. High saves.
+
+POST: "BINANCE SEIZED ALL PALESTINIAN ASSETS AT ISRAEL'S REQUEST"
+TYPE: Static | ENGAGEMENT: 1.54% | LIKES: 7,532 | SHARES: 88 | SAVES: 1,046 | REACH: 353,213
+WHY IT WORKED: Controversy + moral debate. Self-custody argument. Very high saves.
+
+POST: "DOJ LAUNCHES INVESTIGATION INTO IRAN USING BINANCE TO EVADE SANCTIONS"
+TYPE: Static | ENGAGEMENT: 0.15% | LIKES: 666 | SHARES: 324
+WHY IT WORKED: Regulatory fear. Exchange risk narrative. Timely news hook.
+
+POST: "PRICE CHANGES SINCE WAR STARTED [BTC/ETH/SOL/AXIE with % gains]"
+TYPE: Static | ENGAGEMENT: 0.14% | LIKES: 612 | SHARES: 287
+WHY IT WORKED: Data table + war angle. Counterintuitive "buy the war" thesis. Timely and specific.
+
+--- DATA / COMPARISON / HISTORICAL (Saves focused) ---
+
+POST: "CRYPTO JUST CHANGED FOREVER [16 tokens reclassified as securities]"
+TYPE: Static | ENGAGEMENT: 0.22% | LIKES: 741 | COMMENTS: 71 | SHARES: 436 | SAVES: 355
+WHY IT WORKED: Regulatory milestone. "Forever" framing. List format = saves magnet.
+
+POST: "2026 FEELS LIKE A TIME MACHINE [BTC/ETH/SEI 2024 vs 2026 prices same]"
+TYPE: Static | ENGAGEMENT: 0.2% | LIKES: 959 | SHARES: 349
+WHY IT WORKED: Ironic data insight. Cognitive dissonance. "We're back to square one" angle.
+
+POST: "THE CRYPTO YOUR FRIEND BOUGHT vs THE CRYPTO YOU SOLD [wavy lines chart]"
+TYPE: Static | ENGAGEMENT: 0.18% | LIKES: 740 | SHARES: 520
+WHY IT WORKED: Relatable pain. FOMO + regret combo. Visual simplicity. No text needed.
+
+POST: "BITCOIN AT $70K IN 2024 [Extreme Greed] vs BITCOIN AT $70K IN 2026 [Extreme Fear]"
+TYPE: Static | ENGAGEMENT: 0.18% | LIKES: 965 | SHARES: 224
+WHY IT WORKED: Same number, opposite sentiment. Contrarian insight. Market psychology angle.
+
+POST: "BITCOIN PRICES ON EID [2010: $0.06 → 2026: $70,600 table]"
+TYPE: Carousel | ENGAGEMENT: 0.13% | LIKES: 638 | SHARES: 180 | SAVES: 86
+WHY IT WORKED: Cultural hook (Eid). Historical journey. Aspirational wealth narrative.
+
+POST: "BITCOIN SURPASSES $125K [NEW ATH]"
+TYPE: Static | ENGAGEMENT: 0.48% | LIKES: 2,327 | SHARES: 855
+WHY IT WORKED: Milestone celebration. ATH = instant share. Simple, bold, celebratory.
+
+POST: "BTC ALL-TIME HIGH $100K"
+TYPE: Static | ENGAGEMENT: 1.06% | LIKES: 5,221 | SHARES: 47 | SAVES: 1,403
+WHY IT WORKED: Historic milestone. Bold visual. High saves as memento.
+
+POST: "ETH Monthly Prices [Jan $1,300 → May ???]"
+TYPE: Static | ENGAGEMENT: 1.15% | LIKES: 6,073 | COMMENTS: 348
+WHY IT WORKED: Cliffhanger data. Forces prediction in comments. Monthly cadence = repeatable.
+
+POST: "JAMIE DIMON ON BITCOIN [2014-2016 quotes all wrong]"
+TYPE: Static | ENGAGEMENT: 1.09% | LIKES: 6,009 | COMMENTS: 90
+WHY IT WORKED: Authority figure proven wrong. Vindication for HODLers. Screenshot-worthy.
+
+POST: "ETH has risen +3,870% from March 2020. Why has it risen so much and where will it head?"
+TYPE: Carousel | ENGAGEMENT: 2.67% | LIKES: 14,593 | SHARES: 0 | SAVES: 0
+WHY IT WORKED: Specific % gain. Education + curiosity gap. Carousel = read-through.
+
+POST: "DOLLAR VS BITCOIN [visual comparison bar]"
+TYPE: Static | ENGAGEMENT: 1.72% | LIKES: 9,446 | COMMENTS: 118
+WHY IT WORKED: Simple visual contrast. Devaluation narrative. Bitcoin maximalist bait.
+
+POST: "What is Solana [carousel explainer with saves: 1,716]"
+TYPE: Carousel | ENGAGEMENT: 1.2% | LIKES: 4,864 | SAVES: 1,716
+WHY IT WORKED: Evergreen education. High saves = bookmarked reference. New entrant traffic.
+
+POST: "1 ETH = 1 AIRPOD MAX [December 2020]"
+TYPE: Static | ENGAGEMENT: 1.29% | LIKES: 7,087 | COMMENTS: 101
+WHY IT WORKED: Relatable price anchor. Consumer goods comparison. Timing: peak cycle nostalgia.
+
+POST: "BTC AT 60K: 'This is going to 100K, strong people buy strength, time to buy'"
+TYPE: Static | ENGAGEMENT: 1.36% | LIKES: 7,378 | COMMENTS: 176
+WHY IT WORKED: Conviction quote. Bold market call. Tribal "strong hands" identity.
+
+--- MEME / POP CULTURE CROSSOVER ---
+
+POST: "RUG BOYS [Elon Musk + Vitalik Buterin as movie characters]"
+TYPE: Static | ENGAGEMENT: 3.58% | LIKES: 19,502 | COMMENTS: 451
+WHY IT WORKED: Celebrity faces. Film poster format. Humour + tribalism. Instantly shareable.
+
+POST: "Pick your pill [6 crypto outcomes: send BTC to 100K / send ETH to 5K / etc.]"
+TYPE: Static | ENGAGEMENT: 0.95% | LIKES: 4,911 | COMMENTS: 396
+WHY IT WORKED: Matrix reference. Forced fantasy choice. Debate in comments. Pop culture hook.
+
+POST: "MY PORTFOLIO 3 MONTHS AGO [Tesla Cybertruck] / MY PORTFOLIO NOW [rusted bin]"
+TYPE: Static | ENGAGEMENT: 0.16% | LIKES: 661 | SHARES: 431
+WHY IT WORKED: Meme format. Self-deprecating loss humour. Highly shareable. No text needed to get it.
+
+POST: "WHEN MY PORTFOLIO KEEPS GETTING HIT [battered man meme]"
+TYPE: Reel | ENGAGEMENT: 0.14% | LIKES: 567 | SHARES: 371 | VIEWS: 203,693
+WHY IT WORKED: Pain meme. Universal investor experience. High views = algorithmic push.
+
+POST: "What is a bigger flex? [$10M in cash vs $10M on a ledger]"
+TYPE: Static | ENGAGEMENT: 18.05% | LIKES: 99,346 | COMMENTS: 387 | SHARES: 332 | SAVES: 580
+WHY IT WORKED: HIGHEST ENGAGEMENT POST. Debate mechanic. Status + crypto conviction. Simple binary.
+
+POST: "Elon went from Robin Hood to Hood Robbin."
+TYPE: Static | ENGAGEMENT: 1.76% | LIKES: 9,418 | COMMENTS: 378 | SHARES: 45
+WHY IT WORKED: Wordplay pun. Cultural moment. Sharp one-liner. Screenshot/share bait.
+
+POST: "YouTube star KSI buys $2.8 Million of LUNA, which is now worth less than $10"
+TYPE: Static | ENGAGEMENT: 1.78% | LIKES: 8,651 | COMMENTS: 253 | SAVES: 993
+WHY IT WORKED: Celebrity schadenfreude. LUNA collapse moment. Warning narrative.
+
+POST: "Vitalik Buterin sells $SHIB and $AKITA and donates $1B to India Covid Crypto Fund"
+TYPE: Static | ENGAGEMENT: 5.24% | LIKES: 28,485 | COMMENTS: 735
+WHY IT WORKED: Celebrity action + charity = viral. Meme coin angle. News + emotion combo.
+
+POST: "My enemies made me short Bitcoin at $42K! I'm at war, please send 50 ETH today."
+TYPE: Static | ENGAGEMENT: 1.74% | LIKES: 7,807 | COMMENTS: 207 | SAVES: 504
+WHY IT WORKED: Scam awareness humour. Relatable parody. Community in-joke format.
+
+POST: "DID COINBASE MAKE THE BEST CRYPTO AD EVER?"
+TYPE: Reel | ENGAGEMENT: 0.15% | LIKES: 779 | COMMENTS: 14 | SHARES: 145
+WHY IT WORKED: Engagement question. Industry credibility moment. Debate trigger.
+
+--- EDUCATIONAL / EVERGREEN ---
+
+POST: "Reasons why you should never take crypto advice from a friend."
+TYPE: Static | ENGAGEMENT: 0.69% | LIKES: 3,171 | COMMENTS: 444 | SAVES: 193
+WHY IT WORKED: Warning format. Relatable mistake. Positions Cryptonary as the better alternative.
+
+POST: "HOW TO BUY A CAR FOR FREE [crypto gains guide]"
+TYPE: Carousel | ENGAGEMENT: 2.37% | LIKES: 7,258 | COMMENTS: 189 | SAVES: 5,770
+WHY IT WORKED: Aspirational outcome. Specific tangible goal. High saves = practical guide.
+
+POST: "THE LUNA SAGA: EXPLAINED FROM $100 TO $0.003 IN 48 HOURS — BUT HOW?"
+TYPE: Carousel | ENGAGEMENT: 2.34% | LIKES: 9,209 | COMMENTS: 229
+WHY IT WORKED: Explainer of a disaster. Curiosity gap. "But how?" hook. High shareability.
+
+POST: "2013: Bitcoin is a scam / 2015: Blockchains are a scam / ... / 2021: Web3 is a scam"
+TYPE: Static | ENGAGEMENT: 2.8% | LIKES: 12,178 | COMMENTS: 247 | SAVES: 3,117
+WHY IT WORKED: Pattern recognition list. Vindicates believers. Screenshot + share magnet.
+
+POST: "DeFi-ing the rules of traditional finance [coin orbit visual]"
+TYPE: Static | ENGAGEMENT: 1.28% | LIKES: 7,070 | COMMENTS: 59
+WHY IT WORKED: Wordplay headline. Visual identity of the space. Educational positioning.
+
+POST: "MUST WATCH FINANCE MOVIES & DOCUMENTARIES [series]"
+TYPE: Carousel | ENGAGEMENT: 1.1% / 1.08% | LIKES: 6,006 / 5,929
+WHY IT WORKED: Evergreen saves content. Useful list. Positions as curator not just news.
+
+POST: "Buying crypto now is like buying Dubai land in March 2026 [Tweet format]"
+TYPE: Static | ENGAGEMENT: 0.14% | LIKES: 690 | COMMENTS: 36
+WHY IT WORKED: Analogy format. Local cultural reference. Conviction statement.
+
+POST: "Crypto Twitter raised $800,000 for a 6-year-old who just beat leukemia"
+TYPE: Static | ENGAGEMENT: 1.69% | LIKES: 9,359 | COMMENTS: 77
+WHY IT WORKED: Human interest + crypto good news. Emotional story. Contradicts negative narrative.
+
+POST: "SATOSHI NAKAMOTO [bold name reveal energy]"
+TYPE: Static | ENGAGEMENT: 1.1% | LIKES: 4,988 | COMMENTS: 809 | SAVES: 254
+WHY IT WORKED: Mystery figure. Debate magnet. Name alone triggers massive comment response.
+
+POST: "WE ARE HERE [market cycle chart with arrow at bottom]"
+TYPE: Static | ENGAGEMENT: 2.01% | LIKES: 8,247 | SAVES: 4,121 | VIEWS: 508,514
+WHY IT WORKED: Market cycle positioning. Accumulation narrative. High saves = reference content.
+
+POST: "WHERE DO YOU THINK WE ARE? [market psychology chart]"
+TYPE: Static | ENGAGEMENT: 1.18% | LIKES: 6,173 | COMMENTS: 387
+WHY IT WORKED: Participation mechanic. Everyone has an opinion. Psychological model = saves.
+
+POST: "HODL = misspelled HOLD [plain text]"
+TYPE: Static | ENGAGEMENT: 1.4% | LIKES: 7,665 | COMMENTS: 129
+WHY IT WORKED: Crypto etymology. Inside knowledge signal. Clean minimal design.
+
+POST: "If you know, you know."
+TYPE: Static | ENGAGEMENT: 0.49% | LIKES: 1,753 | COMMENTS: 985
+WHY IT WORKED: Exclusivity signal. Insider community. Drove 985 comments = massive engagement.
+
+POST: "How are you feeling 24 hours later? [Twitter screenshot format]"
+TYPE: Static | ENGAGEMENT: 0.88% | LIKES: 4,578 | COMMENTS: 346
+WHY IT WORKED: Follow-up content mechanic. Community check-in. Simple and timely.
+
+POST: "The year is 2025 / The price of ETH is... [cliffhanger]"
+TYPE: Carousel | ENGAGEMENT: 1.19% | LIKES: 5,963 | COMMENTS: 653
+WHY IT WORKED: Prediction cliffhanger. Forces swipe. Debate in comments about the answer.
+
+POST: "Bitcoin just formed 10 consecutive green candles in July"
+TYPE: Static | ENGAGEMENT: 1.02% | LIKES: 5,618 | COMMENTS: 97
+WHY IT WORKED: Specific data point. Bullish signal. Timely market observation.
+
+POST: "EVER WONDERED HOW MUCH $100,000 STAKED TODAY CAN GENERATE?"
+TYPE: Carousel | ENGAGEMENT: 1.05% | LIKES: 5,706 | COMMENTS: 126
+WHY IT WORKED: Financial fantasy. Specific number. Passive income angle. Swipe to reveal.
+
+POST: "I'm proud for not investing in crypto — Charlie Munger [quote card]"
+TYPE: Static | ENGAGEMENT: 1.32% | LIKES: 6,527 | COMMENTS: 296 | SAVES: 536
+WHY IT WORKED: Authority figure quote. Contrarian vindication. Tribal anger + saves.
+
+POST: "Warren Buffet invests $1 Billion into Bitcoin-friendly Nubank"
+TYPE: Static | ENGAGEMENT: 1.26% | LIKES: 5,516 | SAVES: 527 | REACH: 140,242
+WHY IT WORKED: Credibility transfer. Buffett + crypto = cognitive dissonance. News moment.
+
+POST: "Stars who bounced back from financial losses [celebrity feature]"
+TYPE: Carousel | ENGAGEMENT: 1.01% | LIKES: 4,655 | SAVES: 959
+WHY IT WORKED: Celebrity + resilience narrative. Relatable to investors in drawdown. Saves = inspiration.
+
+POST: "WHICH OF THESE IS HAPPENING FIRST? [BTC $100K / $10K / $1K + altcoins]"
+TYPE: Static | ENGAGEMENT: 2.02% | LIKES: 10,134 | COMMENTS: 1,121
+WHY IT WORKED: Prediction poll format. Bullish vs bearish debate. Grid visual = quick read.
+
+POST: "PENTAGON HEXAGON OCTAGON PORTFOLIOGONE [chart showing crash]"
+TYPE: Static | ENGAGEMENT: 5.87% | LIKES: 30,961 | SHARES: 2,285 | SAVES: 4,562 | VIEWS: 1,407,145
+WHY IT WORKED: HIGHEST REACH POST. Wordplay punchline reveal. Chart visual. Meme energy.
+Shares 2,285 — highest share post. Saves 4,562. Reach 1.36M. Follower change +780.
+
+POST: "It's 2025... What's the price of Bitcoin? [then vs now]"
+TYPE: Static | ENGAGEMENT: 4.36% | LIKES: 23,136 | COMMENTS: 1,196 | VIEWS: 136,797
+WHY IT WORKED: Prediction mechanic. Aspirational year framing. Comment your answer = high engagement.
+
+POST: "It's 2025... What's the price of Ethereum?"
+TYPE: Static | ENGAGEMENT: 3.92% | LIKES: 21,215 | COMMENTS: 625
+WHY IT WORKED: Same mechanic as above. Prediction + community input. Series format.
+
+POST: "January 2022: $2,604 / February: $2,629 / March: $3,383 [ETH monthly prices]"
+TYPE: Static | ENGAGEMENT: 4.19% | LIKES: 22,318 | COMMENTS: 552 | VIEWS: 0
+WHY IT WORKED: Data cadence. Month-by-month narrative. Repeatable format. Bullish momentum chart.
+
+POST: "One has to go... [BTC / ETH / BNB / ADA / XRP grid]"
+TYPE: Static | ENGAGEMENT: 0.74% | LIKES: 3,440 | COMMENTS: 678
+WHY IT WORKED: Forced elimination game. Tribalism trigger. Repeat engagement mechanic.
+
+POST: "You have $10 to pick your trio [coin grid]"
+TYPE: Static | ENGAGEMENT: 0.97% | LIKES: 4,674 | COMMENTS: 732
+WHY IT WORKED: Budget constraint + choice = debate. Portfolio strategy in comment form.
+
+POST: "BTC OR ETH? [$1M hardware wallet visual]"
+TYPE: Static | ENGAGEMENT: 1.41% | LIKES: 7,135 | COMMENTS: 711
+WHY IT WORKED: Simple binary debate. Store of value thesis. Visual anchor = premium feel.
+
+POST: "My Ukrainian credit cards don't work... Crypto is the only money I still have [Tweet]"
+TYPE: Static | ENGAGEMENT: 4.65% | LIKES: 15,781 | SHARES: 7,534 | SAVES: 2,453
+WHY IT WORKED: Real human story. Crypto as freedom/survival narrative. Emotional share trigger.
+
+POST: "These scam coins are getting crazy: 27 trillion in circulation, unlimited supply..."
+TYPE: Static | ENGAGEMENT: 1.06% | LIKES: 5,816 | COMMENTS: 96
+WHY IT WORKED: Obvious reference (USD). Subversive angle. Forces the reframe. Insider laugh.
+
+POST: "EVER WONDERED HOW MUCH $100,000 STAKED can generate?"
+TYPE: Carousel | ENGAGEMENT: 1.05% | LIKES: 5,706
+WHY IT WORKED: Specific aspiration. Passive income hook. Curiosity gap swipe format.
+
+POST: "CRYPTO MINE RAID FOUND THOUSANDS OF PS4s"
+TYPE: Carousel | ENGAGEMENT: 0.87% | LIKES: 4,736 | COMMENTS: 103
+WHY IT WORKED: Bizarre news story. Visual hook. Unusual = shareworthy.
+
+POST: "Like Bitcoin as a portfolio diversifier — Paul Tudor Jones [quote]"
+TYPE: Carousel | ENGAGEMENT: 0.86% | LIKES: 4,776
+WHY IT WORKED: TradFi authority validates BTC. Credibility bridge for skeptics.
+
+=== KEY PATTERNS THAT DRIVE CRYPTONARY PERFORMANCE ===
+
+FORMAT INSIGHTS:
+- Engagement bait (pick/choose/comment) = highest comment count
+- Breaking news with share implication = highest shares
+- Data tables + historical prices = highest saves
+- Meme crossovers = highest viral reach
+- Quote cards from TradFi figures = credibility + debate
+
+HOOK PATTERNS THAT WORK:
+- "X years ago [price] → today [price]"
+- "WARNING: [thing happening]"
+- "You can only pick one..."
+- "What was your [first/biggest/worst]..."
+- "[Year] feels like a time machine"
+- "Without dropping names..."
+- "If you know, you know."
+- "One has to go..."
+- "[Specific stat] in [specific time]"
+- "[Celebrity/institution] just [did crypto thing]"
+- "[Thing everyone said was a scam] list"
+- "What is a bigger flex?"
+
+CONTENT ANGLES:
+- Geopolitical events → crypto implications
+- TradFi/institution adoption → legitimacy
+- Famous person proven wrong about crypto → vindication
+- Real human crypto story → emotional share
+- Market cycle positioning → saves
+- Price prediction → comment debate
+- Scam/loss awareness → warning + humour
+- Crypto as freedom/sovereignty → identity
+- Forced choice/debate → tribal comments
+
+"""
 
 
 CTA_OPTIONS = {
@@ -635,20 +868,24 @@ def ask_context(chat_id):
     send(chat_id, "*Any extra context to factor in?*\n\n_Promos, discounts, Inner Circle open, upcoming events, factoids, PSAs..._", keyboard)
 
 def gen_angles(chat_id):
+    """Generate ONE set of angles used for BOTH Free and Pro emails."""
     report = sanitise(user_state[chat_id].get("report", ""))
     context = sanitise(user_state[chat_id].get("context", ""))
     perf = get_perf_context(chat_id)
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
     prompt += perf
-    prompt += "\n\nGenerate exactly 4 distinct email angles. Different emotional lenses or hook strategies. Apply copywriting principles. If performance data exists, weight toward high-performing patterns. Format your response as a simple numbered list:\n1. [angle one]\n2. [angle two]\n3. [angle three]\n4. [angle four]\nNothing else. No JSON, no preamble."
+    prompt += "\n\nGenerate exactly 4 distinct content angles for this crypto update. Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). Different emotional lenses or hook strategies. Apply copywriting principles.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
     send(chat_id, "Finding angles...")
     try:
         raw = claude(prompt)
         angles = parse_numbered_list(raw, 4)
+        # Store under both keys for compatibility
         user_state[chat_id]["angles"] = angles
+        user_state[chat_id]["free_angles"] = angles
+        user_state[chat_id]["pro_angles"] = angles
         user_state[chat_id]["stage"] = "pick_angle"
-        text = "*Pick an angle:*\n\n"
+        text = "*Pick an angle:*\n_(Used for both Free and Pro emails)_\n\n"
         keyboard = []
         for i, a in enumerate(angles):
             text += "*" + str(i+1) + ".* " + a + "\n\n"
@@ -1066,6 +1303,15 @@ def gen_social_selected(chat_id):
     if state.get("social_angle") and not state.get("social_hooks"):
         gen_social_hooks(chat_id)
         return
+    # If reel/video selected and no framework chosen yet, ask PAS or AIDA first
+    video_fmts = {"fmt_reel", "fmt_story_single", "fmt_story_multi"}
+    if any(f in video_fmts for f in selected) and not state.get("social_framework"):
+        keyboard = [
+            [{"text": "AIDA — build desire then act", "callback_data": "social_fw_aida"}],
+            [{"text": "PAS — problem, agitate, solve", "callback_data": "social_fw_pas"}]
+        ]
+        send(chat_id, "*Which framework?*\n\n*AIDA* — Attention → Interest → Desire → Action. Builds want, then converts.\n*PAS* — Problem → Agitate → Solution. Opens on pain, intensifies it, then offers the fix.", keyboard)
+        return
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
@@ -1077,7 +1323,13 @@ def gen_social_selected(chat_id):
         "fmt_story_single": ("Story (single)", lambda c: gen_story(c, multi=False)),
         "fmt_story_multi": ("Story (multi)", lambda c: gen_story(c, multi=True)),
     }
-    send(chat_id, "Generating " + str(len(selected)) + " format(s) based on " + source_label + " email...")
+    # Only say "email" in the status if we're actually coming from the email flow
+    origin = state.get("social_origin", "email")
+    if origin == "idea_engine":
+        status_msg = "Generating " + str(len(selected)) + " format(s)..."
+    else:
+        status_msg = "Generating " + str(len(selected)) + " format(s) based on " + source_label + " email..."
+    send(chat_id, status_msg)
     for fmt_cb in selected:
         if fmt_cb in fmt_map:
             label, fn = fmt_map[fmt_cb]
@@ -1094,10 +1346,16 @@ def gen_reel(chat_id):
     hook = state.get("selected_social_hooks", {}).get("fmt_reel", "")
     word_count = int(reel_duration * 2.3)
     voice_examples = get_voice_corpus_context(chat_id)
+    framework = state.get("social_framework", "AIDA")
+    fw_instruction = {
+        "AIDA": "Structure: Attention (hook stops scroll) → Interest (relevant problem/insight) → Desire (show the transformation/benefit) → Action (follow Cryptonary).",
+        "PAS": "Structure: Problem (name the exact pain or risk) → Agitate (make them feel the cost of inaction, intensify) → Solution (position Cryptonary as the relief)."
+    }.get(framework, "")
     try:
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
             "Write a " + str(reel_duration) + "-second Instagram Reel voiceover script for Cryptonary.\n\n" +
+            "FRAMEWORK: " + framework + " — " + fw_instruction + "\n\n" +
             ("OPENING HOOK (use this as the first spoken line): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
@@ -1107,8 +1365,11 @@ def gen_reel(chat_id):
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
         state["stage"] = "social_ready"
-        send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s)*\n\n" + result)
-        send(chat_id, "Reel script ready.", format_action_keyboard("fmt_reel", "Reel Script"))
+        other_fw = "PAS" if framework == "AIDA" else "AIDA"
+        send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s) — " + framework + "*\n\n" + result)
+        reel_kb = format_action_keyboard("fmt_reel", "Reel Script")
+        reel_kb.append([{"text": "Switch to " + other_fw, "callback_data": "social_switch_fw"}])
+        send(chat_id, "Reel script ready.", reel_kb)
     except Exception as e:
         send(chat_id, "Error generating reel: " + str(e))
 
@@ -1572,13 +1833,45 @@ def handle_message(msg):
         show_main_menu(chat_id)
         return
 
-    # URL detection — drop any link to get ideas or critique
+    # URL detection — drop any link, route based on current flow
     url_match = URL_PATTERN.search(text)
     if url_match and len(text.strip()) < 500 and text.strip().startswith("http"):
         url = url_match.group(0)
         user_state.setdefault(chat_id, {"stage": "idle"})
         current_stage = user_state[chat_id].get("stage", "idle")
-        # Determine mode based on stage or default to ideas
+
+        # EMAIL FLOW — if in email mode, fetch URL content and treat as report
+        email_stages = {"awaiting_email_report", "awaiting_report", "buffering_report"}
+        if current_stage in email_stages or user_state[chat_id].get("mode") == "email":
+            send(chat_id, "Fetching content from link...")
+            fetched = fetch_url_content(url, detect_url_type(url))
+            if fetched and len(fetched.strip()) > 50:
+                user_state[chat_id]["stage"] = "awaiting_context_choice"
+                user_state[chat_id]["report"] = fetched[:4000]
+                user_state[chat_id]["mode"] = "email"
+                ask_context(chat_id)
+            else:
+                send(chat_id, "Could not read content from that link. Paste the text directly instead.")
+            return
+
+        # SOCIAL FLOW — if in social mode, fetch and use as report
+        social_stages = {"awaiting_social_report"}
+        if current_stage in social_stages:
+            send(chat_id, "Fetching content from link...")
+            fetched = fetch_url_content(url, detect_url_type(url))
+            if fetched and len(fetched.strip()) > 50:
+                user_state[chat_id]["report"] = fetched[:4000]
+                show_standalone_social_menu(chat_id)
+            else:
+                send(chat_id, "Could not read content from that link. Paste the text directly instead.")
+            return
+
+        # IDEA ENGINE INSPIRATION FLOW — awaiting_inspiration handles URL directly
+        if current_stage == "ie_awaiting_inspiration":
+            analyse_url(chat_id, url, mode="ideas")
+            return
+
+        # DEFAULT — route to ideas
         mode = "critique" if current_stage == "ie_awaiting_screenshot_critique" else "ideas"
         user_state[chat_id]["stage"] = "idea_engine_idle"
         analyse_url(chat_id, url, mode=mode)
@@ -1763,12 +2056,44 @@ def handle_message(msg):
             send(chat_id, "Please paste a valid URL starting with https://")
         return
 
+    if stage == "ie_awaiting_inspiration":
+        # User dropped a brief, article, or URL into the inspiration flow
+        import re as _rei
+        url_match = _rei.search(r"https?://\S+", text)
+        if url_match:
+            # It's a link — use analyse_url
+            url = url_match.group(0)
+            user_state[chat_id]["ie_idea_type"] = "instagram"
+            analyse_url(chat_id, url, mode="ideas")
+        elif len(text.strip()) < 200:
+            # Short message = a brief. Use it as direct creative direction.
+            user_state[chat_id]["ie_source_content"] = ""
+            user_state[chat_id]["ie_source_label"] = "Brief: " + text.strip()[:60]
+            user_state[chat_id]["ie_idea_type"] = "instagram"
+            # Inject the brief as source content so generate_ie_concept picks it up
+            user_state[chat_id]["ie_source_content"] = "CREATIVE BRIEF: " + text.strip()
+            generate_ie_concept(chat_id)
+        else:
+            # Long text = reference material. Analyse and extract concepts.
+            user_state[chat_id]["ie_idea_type"] = "instagram"
+            _process_ie_text_content(chat_id, stage, text, "Pasted content", mode="ideas")
+        return
+
+    if stage == "ie_awaiting_pasted_text":
+        # User pasted text from a platform we couldn't scrape (Twitter, Instagram, TikTok, etc.)
+        mode = user_state[chat_id].get("pending_url_mode", "ideas")
+        platform = user_state[chat_id].get("pending_url_platform", "Pasted content")
+        user_state[chat_id]["stage"] = "idea_engine_idle"
+        _process_ie_text_content(chat_id, stage, text, platform, mode=mode)
+        return
+
     if stage == "ie_pending_url":
         # Format was selected, now fetch the URL and generate concepts
         url = user_state[chat_id].get("ie_pending_url", "")
         if url:
             fetched = fetch_url_content(url, detect_url_type(url))
             user_state[chat_id]["ie_source_content"] = fetched[:2000] if fetched else ""
+            user_state[chat_id]["ie_source_label"] = url[:60]
         generate_ie_concept(chat_id)
         return
 
@@ -1874,6 +2199,7 @@ def handle_message(msg):
         user_state[chat_id]["stage"] = "awaiting_social_report"
         user_state[chat_id]["report"] = "IDEA TO DEVELOP:\n" + idea_text + "\n\nFULL IDEAS CONTEXT:\n" + last_ideas[:500]
         user_state[chat_id]["social_angle"] = idea_text[:100]
+        user_state[chat_id]["social_origin"] = "idea_engine"
         show_standalone_social_menu(chat_id)
         return
 
@@ -1937,7 +2263,7 @@ def handle_message(msg):
 
     if stage == "awaiting_lp_context_text":
         state["lp_context"] = text
-        generate_landing_page(chat_id)
+        generate_lp_outline(chat_id)
         return
 
     if stage == "awaiting_lp_quick_edit":
@@ -2021,29 +2347,45 @@ def handle_message(msg):
 
     if len(text) > 100:
         current_stage = user_state.get(chat_id, {}).get("stage", "idle")
-        # Buffer multi-message pastes
+
+        # Already buffering — append and extend the window, never trigger twice
         if current_stage == "buffering_report":
             user_state[chat_id]["report_buffer"] += "\n" + text
             user_state[chat_id]["buffer_timer"] = time.time()
             return
-        elif current_stage in ["idle", "awaiting_context_choice"] and user_state.get(chat_id, {}).get("buffer_timer"):
+
+        # Suppress stale chunks arriving after buffer already resolved
+        if current_stage in ["awaiting_context_choice", "pick_angle", "pick_free_hook",
+                              "pick_pro_hook", "social_ready", "emails_ready"]:
             return
-        # Route based on what mode we're in
-        elif current_stage == "awaiting_email_report":
-            user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text, "buffer_timer": time.time(), "mode": "email"}
-            time.sleep(1.5)
+
+        # EMAIL REPORT — buffer and wait for all chunks
+        if current_stage == "awaiting_email_report":
+            user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text,
+                                    "buffer_timer": time.time(), "mode": "email"}
+            time.sleep(2)
             if user_state.get(chat_id, {}).get("stage") == "buffering_report":
                 full_report = user_state[chat_id].get("report_buffer", text)
                 user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
                 ask_context(chat_id)
-        else:
-            # Legacy: treat as email report
-            user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text, "buffer_timer": time.time(), "mode": "email"}
-            time.sleep(1.5)
-            if user_state.get(chat_id, {}).get("stage") == "buffering_report":
-                full_report = user_state[chat_id].get("report_buffer", text)
-                user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
-                ask_context(chat_id)
+            return
+
+        # SOCIAL REPORT — buffer and wait
+        if current_stage == "awaiting_social_report":
+            user_state[chat_id]["report"] = (user_state[chat_id].get("report", "") + "\n" + text).strip()
+            # Don't trigger again — awaiting_social_report already handled above
+            return
+
+        # DEFAULT fallback — treat as email report
+        if current_stage in ["idle", "buffering_report"]:
+            return
+        user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text,
+                                "buffer_timer": time.time(), "mode": "email"}
+        time.sleep(2)
+        if user_state.get(chat_id, {}).get("stage") == "buffering_report":
+            full_report = user_state[chat_id].get("report_buffer", text)
+            user_state[chat_id] = {"stage": "awaiting_context_choice", "report": full_report, "mode": "email"}
+            ask_context(chat_id)
     else:
         stage = user_state.get(chat_id, {}).get("stage", "idle")
         if stage == "idle":
@@ -2085,8 +2427,8 @@ def handle_callback(cb):
         send(chat_id, "Paste your report or content to base social posts on:")
 
     elif data == "mode_landing":
-        user_state[chat_id] = {"stage": "pick_lp_avatars", "selected_avatars": []}
-        show_lp_avatar_menu(chat_id)
+        user_state[chat_id] = {"stage": "lp_idle", "selected_avatars": [], "lp_outline": {}, "lp_full_copy": {}}
+        start_landing_page_flow(chat_id)
 
     elif data.startswith("adavatar_"):
         avatar_key = data.replace("adavatar_", "")
@@ -2166,14 +2508,19 @@ def handle_callback(cb):
         if not selected:
             send(chat_id, "Please select at least one avatar.")
         else:
-            show_lp_cta_menu(chat_id)
+            state["stage"] = "awaiting_lp_context"
+            keyboard = [
+                [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
+                [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
+            ]
+            send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
     elif data == "lpcta_pro":
         state["lp_cta"] = "pro"
         state["stage"] = "awaiting_lp_context"
         keyboard = [
             [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
-            [{"text": "No — generate now", "callback_data": "lp_context_no"}]
+            [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
         ]
         send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
@@ -2182,7 +2529,7 @@ def handle_callback(cb):
         state["stage"] = "awaiting_lp_context"
         keyboard = [
             [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
-            [{"text": "No — generate now", "callback_data": "lp_context_no"}]
+            [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
         ]
         send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
@@ -2192,7 +2539,7 @@ def handle_callback(cb):
 
     elif data == "lp_context_no":
         state["lp_context"] = ""
-        generate_landing_page(chat_id)
+        generate_lp_outline(chat_id)
 
     elif data == "lp_quick_edit":
         state["stage"] = "awaiting_lp_quick_edit"
@@ -2290,14 +2637,17 @@ def handle_callback(cb):
         free_angles = state.get("free_angles", [])
         if idx < len(free_angles):
             state["selected_free_angle"] = free_angles[idx]
+            state["selected_pro_angle"] = free_angles[idx]
             state["selected_angle"] = free_angles[idx]
-        show_pro_angle_picker(chat_id)
+        gen_hooks(chat_id)
 
     elif data.startswith("pro_angle_"):
         idx = int(data.replace("pro_angle_", ""))
-        pro_angles = state.get("pro_angles", [])
+        pro_angles = state.get("pro_angles", state.get("angles", []))
         if idx < len(pro_angles):
             state["selected_pro_angle"] = pro_angles[idx]
+            state["selected_angle"] = pro_angles[idx]
+            state["selected_free_angle"] = pro_angles[idx]
         gen_hooks(chat_id)
 
     elif data == "regen_free_angles":
@@ -2350,13 +2700,14 @@ def handle_callback(cb):
         send(chat_id, "Type your Pro email hook:\n_Format: Subject | Preview_")
 
     elif data.startswith("angle_"):
-        # Legacy — route to free angle selection
         idx = int(data.split("_")[1])
         angles = state.get("angles", state.get("free_angles", []))
         if idx < len(angles):
+            # One angle serves both Free and Pro emails
             state["selected_angle"] = angles[idx]
             state["selected_free_angle"] = angles[idx]
-        show_pro_angle_picker(chat_id)
+            state["selected_pro_angle"] = angles[idx]
+        gen_hooks(chat_id)
 
     elif data == "regen_hooks":
         gen_hooks(chat_id)
@@ -2501,20 +2852,40 @@ def handle_callback(cb):
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
-        show_social_source_menu(chat_id)
+        # If we already have report/context from a previous generation, skip source menu
+        if state.get("report") or state.get("current_social"):
+            state["stage"] = "pick_social_formats"
+            show_standalone_social_menu(chat_id)
+        else:
+            show_social_source_menu(chat_id)
 
     elif data.startswith("social_angle_"):
         idx = int(data.replace("social_angle_", ""))
         angles = state.get("social_angles", [])
         if idx < len(angles):
             state["social_angle"] = angles[idx]
-        state["stage"] = "pick_social_formats"
-        state["selected_social_formats"] = []
-        show_standalone_social_menu(chat_id)
+        # Don't reset formats — go straight to hooks since formats already selected
+        gen_social_hooks(chat_id)
 
     elif data == "social_regen_angles":
         state["stage"] = "awaiting_social_report"
         gen_social_angles(chat_id)
+
+    elif data == "social_fw_aida":
+        state["social_framework"] = "AIDA"
+        gen_social_selected(chat_id)
+
+    elif data == "social_fw_pas":
+        state["social_framework"] = "PAS"
+        gen_social_selected(chat_id)
+
+    elif data == "social_switch_fw":
+        # Switch framework and regenerate
+        current = state.get("social_framework", "AIDA")
+        new_fw = "PAS" if current == "AIDA" else "AIDA"
+        state["social_framework"] = new_fw
+        state["social_hooks"] = None  # force re-generate
+        gen_social_selected(chat_id)
 
     elif data == "gen_social_confirmed":
         gen_social_selected(chat_id)
@@ -2898,6 +3269,22 @@ def handle_callback(cb):
     elif data == "open_idea_engine":
         show_idea_engine_menu(chat_id)
 
+    elif data == "ie_from_scratch":
+        # Pull from saved library and generate immediately — no input needed
+        state["ie_idea_type"] = "instagram"
+        state["ie_source_label"] = "Saved library"
+        sources = load_idea_sources()
+        fetched = fetch_source_content(sources)
+        source_text = "\n".join(["[" + i["source"] + "] " + i["content"][:100] for i in fetched[:10]])
+        state["ie_source_content"] = source_text
+        generate_ie_concept(chat_id)
+
+    elif data == "ie_from_inspiration":
+        # Wait for user to drop text, URL, brief, or image
+        state["stage"] = "ie_awaiting_inspiration"
+        state["ie_idea_type"] = "instagram"
+        send(chat_id, "*Generate from Inspiration*\n\nDrop anything:\n\n• A link\n• A screenshot or image\n• Paste text (article, caption, post)\n• Or just type a brief — e.g. \"market manipulation ideas\"")
+
     elif data == "ie_generate_all":
         generate_ideas(chat_id, "both")
 
@@ -2962,20 +3349,31 @@ def handle_callback(cb):
             fetched = fetch_source_content(load_idea_sources())
             source_text = "\n".join(["[" + i["source"] + "] " + i["content"][:100] for i in fetched[:10]])
             state["ie_source_content"] = source_text
+            state["ie_source_label"] = "Saved library"
         generate_ie_concept(chat_id)
 
     elif data.startswith("ie_develop_concept_"):
         num = int(data.replace("ie_develop_concept_", "")) - 1
         concepts_raw = state.get("ie_concepts", "")
-        # Extract the nth concept
+        # Extract the nth numbered idea block (matches "1." or "2." etc)
         import re as _re
-        concept_blocks = _re.split(r"CONCEPT \d+:", concepts_raw)
-        concept_blocks = [c.strip() for c in concept_blocks if c.strip()]
-        if num < len(concept_blocks):
-            concept_text = concept_blocks[num][:200]
+        # New format: numbered blocks "1. CONCEPT: ..."
+        blocks = _re.split(r"(?=\n?\d+\.\s+CONCEPT:)", concepts_raw)
+        blocks = [b.strip() for b in blocks if b.strip() and _re.match(r"\d+\.", b.strip())]
+        if not blocks:
+            # Fallback: old CONCEPT [N]: format
+            blocks = _re.split(r"CONCEPT \[?\d+\]?:", concepts_raw)
+            blocks = [b.strip() for b in blocks if b.strip()]
+        if num < len(blocks):
+            concept_text = blocks[num][:300]
         else:
-            concept_text = concepts_raw[:200]
-        generate_ie_angle_from_concept(chat_id, concept_text)
+            concept_text = concepts_raw[:300]
+        # Skip angle picker — concept already contains the angle. Go straight to content flow.
+        state["report"] = "INSTAGRAM CONCEPT TO DEVELOP:\n" + concept_text
+        state["social_angle"] = concept_text[:120]
+        state["social_origin"] = "idea_engine"
+        state["stage"] = "pick_social_formats"
+        show_standalone_social_menu(chat_id)
 
     elif data == "ie_regen_concepts":
         generate_ie_concept(chat_id)
@@ -2987,12 +3385,12 @@ def handle_callback(cb):
     elif data == "ie_back_to_concepts":
         concepts_raw = state.get("ie_concepts", "")
         if concepts_raw:
-            send_plain(chat_id, "*CONCEPTS*\n\n" + concepts_raw)
+            send_plain(chat_id, "*IDEAS*\n\n" + concepts_raw)
             keyboard = [
-                [{"text": "Develop concept " + str(i+1), "callback_data": "ie_develop_concept_" + str(i+1)}]
+                [{"text": str(i+1) + " — Expand this", "callback_data": "ie_develop_concept_" + str(i+1)}]
                 for i in range(4)
             ] + [[{"text": "Regenerate", "callback_data": "ie_regen_concepts"}]]
-            send(chat_id, "Pick a concept:", keyboard)
+            send(chat_id, "Tap a number to expand into full content:", keyboard)
 
     elif data.startswith("ie_angle_"):
         idx = int(data.replace("ie_angle_", ""))
@@ -3072,11 +3470,13 @@ def handle_callback(cb):
         if "reel" in ie_format or "video" in ie_format:
             user_state[chat_id]["report"] = content_val
             user_state[chat_id]["social_angle"] = state.get("ie_selected_angle", "")
+            user_state[chat_id]["social_origin"] = "idea_engine"
             user_state[chat_id]["stage"] = "pick_social_formats"
             show_standalone_social_menu(chat_id)
         elif "carousel" in ie_format or "story" in ie_format or "static_post" in ie_format:
             user_state[chat_id]["report"] = content_val
             user_state[chat_id]["social_angle"] = state.get("ie_selected_angle", "")
+            user_state[chat_id]["social_origin"] = "idea_engine"
             user_state[chat_id]["stage"] = "pick_social_formats"
             show_standalone_social_menu(chat_id)
         elif "static" in ie_format or "video_script" in ie_format:
@@ -3270,7 +3670,9 @@ def poll():
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
-                                "ie_awaiting_screenshot_critique"]
+                                "ie_awaiting_screenshot_critique",
+                                "ie_awaiting_pasted_text",
+                                "ie_awaiting_inspiration"]
                             if stage in content_stages:
                                 handle_content_file(chat_id, msg["photo"][-1], "image")
                             elif stage in ie_stages:
@@ -3286,7 +3688,9 @@ def poll():
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
-                                "ie_awaiting_screenshot_critique"]
+                                "ie_awaiting_screenshot_critique",
+                                "ie_awaiting_pasted_text",
+                                "ie_awaiting_inspiration"]
                             if stage in content_stages:
                                 if "pdf" in mime:
                                     ftype = "pdf"
@@ -5425,33 +5829,109 @@ def check_and_send_briefing():
 
 IDEA_ENGINE_SOURCES_FILE = "idea_sources.json"
 
-# Cryptonary's source list
+# ── RSS FEED LIBRARY ─────────────────────────────────────────────
+# All feeds verified live. Grouped by priority tier.
+RSS_FEEDS = [
+    # TIER 1 — Mainstream crypto news
+    {"name": "CoinDesk",        "url": "https://coindesk.com/arc/outboundfeeds/rss/",  "tier": 1},
+    {"name": "CoinTelegraph",   "url": "https://cointelegraph.com/rss",                "tier": 1},
+    {"name": "Decrypt",         "url": "https://decrypt.co/feed",                      "tier": 1},
+    {"name": "Bitcoin Magazine","url": "https://bitcoinmagazine.com/feed",              "tier": 1},
+    {"name": "NewsBTC",         "url": "https://newsbtc.com/feed",                     "tier": 1},
+    # TIER 2 — Analysis & data
+    {"name": "Messari",         "url": "https://messari.io/rss",                       "tier": 2},
+    {"name": "Glassnode",       "url": "https://insights.glassnode.com/rss",           "tier": 2},
+    {"name": "The Defiant",     "url": "https://thedefiant.io/api/feed",               "tier": 2},
+    {"name": "Blockworks",      "url": "https://blockworks.co/feed",                   "tier": 2},
+    # TIER 3 — Market & price focused
+    {"name": "U.Today",         "url": "https://u.today/rss",                          "tier": 3},
+    {"name": "Crypto.news",     "url": "https://crypto.news/feed",                     "tier": 3},
+    {"name": "Investing.com",   "url": "https://investing.com/rss/news_301.rss",       "tier": 3},
+    {"name": "CoinJournal",     "url": "https://coinjournal.net/feed",                 "tier": 3},
+    # TIER 4 — Broader web3
+    {"name": "Watcher Guru",    "url": "https://watcherguru.com/feed",                 "tier": 4},
+    {"name": "Milk Road",       "url": "https://milkroad.substack.com/feed",           "tier": 4},
+    {"name": "Glassnode Blog",  "url": "https://glassnode.com/feed",                   "tier": 4},
+    {"name": "Santiment",       "url": "https://santiment.net/blog/feed",              "tier": 4},
+]
+
+# Reddit still works reliably — keep as supplement
+REDDIT_SOURCES = ["cryptocurrency", "bitcoin", "CryptoMarkets"]
+
 DEFAULT_SOURCES = {
-    "instagram": [
-        "cryptonary",
-        "altcoinpost", "coinsauce", "algoresearch", "daytrading",
-        "simplyougrow", "0x100x", "mange.marketing", "lukedavis.ig",
-        "watcher.guru", "moonpay", "coinbase", "cryptocomofficial",
-        "bitcoinmagazine"
-    ],
-    "twitter": [
-        "watcherguru", "trendingbitcoin", "capitalflows", "coindesk",
-        "bloomberg", "FT", "glxyresearch", "caprioleio",
-        "lookonchain", "wublockchain", "documentingbtc"
-    ],
-    "twitter_ads_inspiration": ["the_adprofessor"],
-    "facebook_pages": ["730238507162118"],
-    "facebook_urls": [
-        "https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=GB&is_targeted_country=false&media_type=all&search_type=page&sort_data[direction]=desc&sort_data[mode]=total_impressions&view_all_page_id=730238507162118"
-    ],
+    "reddit": REDDIT_SOURCES,
     "telegram": [],
-    "reddit": ["cryptocurrency", "bitcoin", "ethfinance", "CryptoMarkets"],
-    "own_accounts": {
-        "instagram": "cryptonary",
-        "twitter": "cryptonary",
-        "facebook_page_id": "730238507162118"
-    }
 }
+
+
+def fetch_rss_feed(feed, max_items=3):
+    """Fetch and parse a single RSS feed. Returns list of headline dicts."""
+    import xml.etree.ElementTree as ET
+    import re as _re
+    results = []
+    try:
+        req = urllib.request.Request(
+            feed["url"],
+            headers={"User-Agent": "Mozilla/5.0 (compatible; CryptonaryBot/1.0)"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+        root = ET.fromstring(raw)
+        # Handle both RSS <item> and Atom <entry> formats
+        items = root.findall(".//item") or root.findall(".//{http://www.w3.org/2005/Atom}entry")
+        for item in items[:max_items]:
+            title = (
+                item.findtext("title") or
+                item.findtext("{http://www.w3.org/2005/Atom}title") or ""
+            ).strip()
+            # Strip HTML from description
+            desc_raw = (
+                item.findtext("description") or
+                item.findtext("{http://www.w3.org/2005/Atom}summary") or ""
+            )
+            desc = _re.sub(r"<[^>]+>", " ", desc_raw).strip()[:150]
+            if title:
+                results.append({
+                    "source": feed["name"],
+                    "tier": feed["tier"],
+                    "title": title,
+                    "desc": desc,
+                })
+    except Exception as e:
+        print(f"RSS fetch error [{feed['name']}]: {e}", flush=True)
+    return results
+
+
+def fetch_rss_headlines(max_per_feed=2, max_total=20):
+    """Pull fresh headlines from all RSS feeds. Tier 1 first, then 2, 3, 4."""
+    all_headlines = []
+    # Sort by tier so best sources come first
+    sorted_feeds = sorted(RSS_FEEDS, key=lambda f: f["tier"])
+    for feed in sorted_feeds:
+        if len(all_headlines) >= max_total:
+            break
+        items = fetch_rss_feed(feed, max_items=max_per_feed)
+        all_headlines.extend(items)
+    return all_headlines[:max_total]
+
+
+def format_rss_context(headlines):
+    """Format RSS headlines into a clean context string for the prompt."""
+    if not headlines:
+        return ""
+    lines = ["\n=== LIVE CRYPTO NEWS & TRENDS (pulled now) ==="]
+    current_tier = None
+    tier_labels = {1: "TOP STORIES", 2: "ANALYSIS", 3: "MARKET", 4: "COMMUNITY"}
+    for h in headlines:
+        if h["tier"] != current_tier:
+            current_tier = h["tier"]
+            lines.append("\n[" + tier_labels.get(current_tier, "NEWS") + "]")
+        line = "• " + h["source"] + ": " + h["title"]
+        if h.get("desc"):
+            line += " — " + h["desc"][:80]
+        lines.append(line)
+    lines.append("===")
+    return "\n".join(lines)
 
 def load_idea_sources():
     try:
@@ -5469,16 +5949,14 @@ def save_idea_sources(sources):
 
 def show_idea_engine_menu(chat_id):
     user_state[chat_id] = {"stage": "idea_engine_idle"}
-    sources = load_idea_sources()
-    source_count = sum(len(sources.get(k,[])) for k in ["instagram","twitter","facebook_pages","telegram","reddit"])
+    feed_count = len(RSS_FEEDS)
     keyboard = [
-        [{"text": "Ad idea", "callback_data": "ie_type_ad"}],
-        [{"text": "Instagram post idea", "callback_data": "ie_type_instagram"}],
-        [{"text": "Ideas from a screenshot", "callback_data": "ie_screenshot_ideas"}],
+        [{"text": "💡 Generate ideas from scratch", "callback_data": "ie_from_scratch"}],
+        [{"text": "🔗 Generate from inspiration", "callback_data": "ie_from_inspiration"}],
         [{"text": "Critique a screenshot", "callback_data": "ie_screenshot_critique"}],
-        [{"text": "Manage sources (" + str(source_count) + " saved)", "callback_data": "ie_manage_sources"}]
+        [{"text": "📡 News sources (" + str(feed_count) + " feeds)", "callback_data": "ie_manage_sources"}]
     ]
-    send(chat_id, "*Cryptonary Idea Engine*\n\nWhat idea are you looking for?", keyboard)
+    send(chat_id, "*Cryptonary Idea Engine*\n\nHow do you want to generate ideas?", keyboard)
 
 def show_ie_source_menu(chat_id, idea_type):
     """After type selection: pull from database or upload new inspiration."""
@@ -5510,11 +5988,10 @@ def show_ie_format_menu(chat_id):
         send(chat_id, "*What format?*", keyboard)
 
 def generate_ie_concept(chat_id):
-    """Generate concept ideas — first stage of Concept → Angle → Hook flow."""
+    """Generate concept ideas — Instagram post focused. Concept + Angle + Source per idea."""
     state = user_state[chat_id]
-    idea_type = state.get("ie_idea_type", "ad")
-    ie_format = state.get("ie_format", "")
     source_content = state.get("ie_source_content", "")
+    source_label = state.get("ie_source_label", "Cryptonary library")
     ctx = get_content_context(chat_id)
 
     market = fetch_market_data()
@@ -5523,50 +6000,62 @@ def generate_ie_concept(chat_id):
         market_line = "BTC: ${:,.0f} | Fear & Greed: {} ({})".format(
             market["btc_price"], market.get("fng_value","?"), market.get("fng_label","?"))
 
-    format_context = {
-        "video_script": "Meta video ad (30-45 seconds, AIDA structure, spoken voiceover)",
-        "static": "Meta static image ad (headline + primary text + description)",
-        "reel": "Instagram Reel (15-60 seconds, spoken voiceover, stop-scroll hook)",
-        "carousel": "Instagram Carousel (6-8 slides, swipeable, saves-driven)",
-        "static_post": "Instagram static feed post (single image, caption-led)",
-        "story": "Instagram Story (full-screen, 1-3 slides, swipe-up)"
-    }.get(ie_format, ie_format)
+    # If no manual source content, pull live RSS headlines
+    if not source_content:
+        send(chat_id, "Pulling live trends...")
+        headlines = fetch_rss_headlines(max_per_feed=2, max_total=16)
+        rss_context = format_rss_context(headlines)
+        source_content = rss_context
+        if not user_state[chat_id].get("ie_source_label"):
+            user_state[chat_id]["ie_source_label"] = "Live news feeds"
 
     send(chat_id, "Generating concepts...")
 
     try:
-        prompt = "Generate 4 specific content CONCEPTS for Cryptonary.\n\n"
-        prompt += "FORMAT: " + format_context + "\n"
+        prompt = "Generate 4 Instagram content concepts for Cryptonary.\n\n"
         prompt += "MARKET: " + market_line + "\n"
         if source_content:
-            prompt += "\nINSPIRATION SOURCE:\n" + source_content[:1500] + "\n"
+            prompt += "\nINSPIRATION SOURCE (" + source_label + "):\n" + source_content[:2000] + "\n"
+        prompt += "\nCRYPTONARY PROVEN POST PATTERNS (use as creative reference):\n" + BEST_POSTS[:1500] + "\n"
         prompt += ctx
         prompt += """
-Each concept should be a distinct creative direction — different angle, emotion, or narrative.
 
-Format:
-CONCEPT [N]: [One punchy line describing the creative direction]
-HOOK: [The opening 3-5 words or visual direction]
-TARGET: [Which Cryptonary avatar — Trader/Investor/Passive Income/Portfolio Builder/100X/Skeptic/Burned/Student/9-5/Boomer/Side Hustle/Beginner/Universal]
-OBJECTIVE: [Awareness/Consideration/Conversion]
-WHY NOW: [Why this concept works in the current market context]
----
-(repeat for all 4)"""
+Each concept is a distinct Instagram post idea — different angle, emotion, or narrative.
+Keep each entry SHORT. No fluff.
 
-        raw = claude(prompt, max_tokens=1000, system=VOICE_GUIDE)
+Format EXACTLY:
+1. CONCEPT: [One punchy line — the big idea]
+   ANGLE: [The emotional or argumentative approach — why this hits]
+   SOURCE: [What inspired it — e.g. market data, competitor post, Cryptonary track record, user pain point]
+
+2. CONCEPT: ...
+   ANGLE: ...
+   SOURCE: ...
+
+3. CONCEPT: ...
+   ANGLE: ...
+   SOURCE: ...
+
+4. CONCEPT: ...
+   ANGLE: ...
+   SOURCE: ...
+
+Nothing else."""
+
+        raw = claude(prompt, max_tokens=800, system=VOICE_GUIDE)
         state["ie_concepts"] = raw
         state["stage"] = "ie_concept_review"
-        send_plain(chat_id, "*CONCEPTS*\n\n" + raw)
+        send_plain(chat_id, "*IDEAS*\n\n" + raw)
 
         keyboard = [
-            [{"text": "Develop concept 1", "callback_data": "ie_develop_concept_1"}],
-            [{"text": "Develop concept 2", "callback_data": "ie_develop_concept_2"}],
-            [{"text": "Develop concept 3", "callback_data": "ie_develop_concept_3"}],
-            [{"text": "Develop concept 4", "callback_data": "ie_develop_concept_4"}],
-            [{"text": "Regenerate concepts", "callback_data": "ie_regen_concepts"}],
-            [{"text": "✏️ Write my own concept", "callback_data": "ie_custom_concept"}]
+            [{"text": "1 — Expand this", "callback_data": "ie_develop_concept_1"}],
+            [{"text": "2 — Expand this", "callback_data": "ie_develop_concept_2"}],
+            [{"text": "3 — Expand this", "callback_data": "ie_develop_concept_3"}],
+            [{"text": "4 — Expand this", "callback_data": "ie_develop_concept_4"}],
+            [{"text": "Regenerate", "callback_data": "ie_regen_concepts"}],
+            [{"text": "✏️ Write my own", "callback_data": "ie_custom_concept"}]
         ]
-        send(chat_id, "Pick a concept to develop into angle → hook → content:", keyboard)
+        send(chat_id, "Tap a number to expand into full content:", keyboard)
 
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -5686,21 +6175,20 @@ def generate_ie_final_content(chat_id, hook_text):
 
 def show_ie_manage_sources(chat_id):
     sources = load_idea_sources()
-    msg = "*Manage Sources*\n\n"
-    if sources.get("instagram"):
-        msg += "Instagram: " + ", ".join("@" + s for s in sources["instagram"]) + "\n"
-    if sources.get("twitter"):
-        msg += "Twitter: " + ", ".join("@" + s for s in sources["twitter"]) + "\n"
-    if sources.get("facebook_pages"):
-        msg += "Facebook: " + ", ".join(sources["facebook_pages"]) + "\n"
+    # Show RSS feed count
+    msg = "*News Sources*\n\n"
+    msg += str(len(RSS_FEEDS)) + " RSS feeds active:\n"
+    tier_labels = {1: "Tier 1 (Mainstream)", 2: "Tier 2 (Analysis)", 3: "Tier 3 (Market)", 4: "Tier 4 (Community)"}
+    for tier in [1, 2, 3, 4]:
+        feeds_in_tier = [f["name"] for f in RSS_FEEDS if f["tier"] == tier]
+        if feeds_in_tier:
+            msg += "\n" + tier_labels[tier] + ":\n"
+            msg += ", ".join(feeds_in_tier) + "\n"
     if sources.get("telegram"):
-        msg += "Telegram: " + ", ".join("t.me/" + s for s in sources["telegram"]) + "\n"
+        msg += "\nTelegram: " + ", ".join("t.me/" + s for s in sources["telegram"]) + "\n"
     if sources.get("reddit"):
-        msg += "Reddit: " + ", ".join("r/" + s for s in sources["reddit"]) + "\n"
+        msg += "\nReddit: " + ", ".join("r/" + s for s in sources["reddit"]) + "\n"
     keyboard = [
-        [{"text": "Add Instagram account", "callback_data": "ie_add_instagram"}],
-        [{"text": "Add Twitter account", "callback_data": "ie_add_twitter"}],
-        [{"text": "Add Facebook page", "callback_data": "ie_add_facebook"}],
         [{"text": "Add Telegram channel", "callback_data": "ie_add_telegram"}],
         [{"text": "Add Reddit community", "callback_data": "ie_add_reddit"}],
         [{"text": "Back", "callback_data": "open_idea_engine"}]
@@ -5708,11 +6196,21 @@ def show_ie_manage_sources(chat_id):
     send(chat_id, msg, keyboard)
 
 def fetch_source_content(sources):
-    """Fetch live content from all saved sources using web search."""
+    """Fetch live content — now powered by RSS feeds + Reddit."""
     fetched = []
 
-    # Reddit — most reliable
-    for sub in sources.get("reddit", [])[:3]:
+    # RSS feeds — primary source, verified live
+    headlines = fetch_rss_headlines(max_per_feed=2, max_total=20)
+    for h in headlines:
+        fetched.append({
+            "source": h["source"],
+            "type": "rss",
+            "tier": h["tier"],
+            "content": h["title"] + (" — " + h["desc"] if h.get("desc") else "")
+        })
+
+    # Reddit — still works reliably as community sentiment layer
+    for sub in sources.get("reddit", [])[:2]:
         try:
             url = "https://www.reddit.com/r/" + sub + "/hot.json?limit=5"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -5722,21 +6220,10 @@ def fetch_source_content(sources):
                 for p in posts[:3]:
                     post = p.get("data", {})
                     title = post.get("title", "")
-                    score = post.get("score", 0)
                     if title:
-                        fetched.append({"source": "r/" + sub, "type": "reddit", "content": title, "score": score})
+                        fetched.append({"source": "r/" + sub, "type": "reddit", "tier": 3, "content": title})
         except Exception as e:
             print("Reddit fetch error " + sub + ":", e, flush=True)
-
-    # Facebook Ad Library — use saved URL directly
-    for fb_url in sources.get("facebook_urls", [])[:2]:
-        try:
-            req = urllib.request.Request(fb_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=15) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:8000]
-                fetched.append({"source": "Cryptonary FB Ads Library", "type": "facebook_ad", "content": html[:2000]})
-        except Exception as e:
-            print("FB Ad Library fetch error:", e, flush=True)
 
     # Telegram public channels
     for channel in sources.get("telegram", [])[:3]:
@@ -5745,54 +6232,14 @@ def fetch_source_content(sources):
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=10) as r:
                 html = r.read().decode("utf-8", errors="ignore")
-                # Extract message text from HTML
                 import re as _re
                 msgs = _re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', html, _re.DOTALL)
                 for msg in msgs[:3]:
                     clean = _re.sub(r'<[^>]+>', '', msg).strip()[:200]
                     if clean:
-                        fetched.append({"source": "t.me/" + channel, "type": "telegram", "content": clean})
+                        fetched.append({"source": "t.me/" + channel, "type": "telegram", "tier": 3, "content": clean})
         except Exception as e:
             print("Telegram fetch error " + channel + ":", e, flush=True)
-
-    # Twitter — fetch recent posts via search for each handle
-    all_twitter = sources.get("twitter", [])[:6]
-    ad_twitter = sources.get("twitter_ads_inspiration", [])
-    for handle in all_twitter:
-        try:
-            search_url = "https://www.google.com/search?q=%40" + handle + "+site:twitter.com+OR+site:x.com&num=3&tbs=qdr:w"
-            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:2000]
-                fetched.append({"source": "@" + handle + " (X)", "type": "twitter", "content": html[:400]})
-        except Exception as e:
-            print("Twitter fetch error " + handle + ":", e, flush=True)
-
-    # Ad inspiration accounts - flagged separately
-    for handle in ad_twitter:
-        try:
-            search_url = "https://www.google.com/search?q=%40" + handle + "+site:twitter.com+OR+site:x.com&num=3&tbs=qdr:w"
-            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:2000]
-                fetched.append({"source": "@" + handle + " (Ad Inspiration)", "type": "twitter_ads", "content": html[:400]})
-        except Exception as e:
-            print("Ad Twitter fetch error " + handle + ":", e, flush=True)
-
-    # Instagram — split into marketing inspiration vs crypto content
-    marketing_handles = {"mange.marketing", "lukedavis.ig", "simplyougrow", "daytrading"}
-    ig_handles = sources.get("instagram", [])
-    for handle in ig_handles[:8]:
-        try:
-            search_url = "https://www.google.com/search?q=site:instagram.com%2F" + handle + "&num=3&tbs=qdr:w"
-            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                html = r.read().decode("utf-8", errors="ignore")[:2000]
-                ig_type = "instagram_marketing" if handle in marketing_handles else ("instagram_own" if handle == "cryptonary" else "instagram")
-                label = "@" + handle + (" (Marketing Inspo)" if handle in marketing_handles else (" (Our IG)" if handle == "cryptonary" else " (IG)"))
-                fetched.append({"source": label, "type": ig_type, "content": html[:400]})
-        except Exception as e:
-            print("Instagram fetch error " + handle + ":", e, flush=True)
 
     return fetched
 
@@ -6222,7 +6669,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
 
         elif stage == "awaiting_lp_context_text":
             user_state[chat_id]["lp_context"] = sanitise(extracted[:500])
-            generate_landing_page(chat_id)
+            generate_lp_outline(chat_id)
 
         else:
             send(chat_id, "File received but not sure where to use it. Try again from the right step.")
@@ -6457,16 +6904,32 @@ def analyse_url(chat_id, url, mode="ideas"):
     state = user_state.get(chat_id, {})
     url_type = detect_url_type(url)
 
+    # Platform-specific fallbacks — these all block scrapers reliably
+    PASTE_TEXT_PLATFORMS = {
+        "tweet":     ("Twitter/X", "Twitter/X blocks automated access.\n\nPaste the tweet text below and I'll analyse it 👇"),
+        "instagram": ("Instagram", "Instagram blocks automated access.\n\nScreenshot the post and upload the image instead, or paste the caption text below 👇"),
+        "tiktok":    ("TikTok",    "TikTok blocks automated access.\n\nPaste the caption or script text below and I'll analyse it 👇"),
+        "facebook":  ("Facebook",  "Facebook blocks automated access.\n\nScreenshot the post and upload the image, or paste the post text below 👇"),
+        "fb_ads":    ("Facebook Ads Library", "The Ads Library is JS-rendered and can't be scraped.\n\nScreenshot the ad and upload the image instead 👇"),
+        "reddit":    ("Reddit",    "Reddit's API changes mean most posts can't be scraped.\n\nPaste the post text below and I'll analyse it 👇"),
+        "youtube":   ("YouTube",   "YouTube content is JS-rendered and can't be read directly.\n\nPaste the video transcript or description below and I'll analyse it 👇"),
+    }
+
+    if url_type in PASTE_TEXT_PLATFORMS:
+        platform_name, fallback_msg = PASTE_TEXT_PLATFORMS[url_type]
+        user_state[chat_id]["pending_url_mode"] = mode
+        user_state[chat_id]["pending_url_platform"] = platform_name
+        # Screenshot-only platforms go back to idle; paste platforms await text
+        if url_type in ("fb_ads",):
+            user_state[chat_id]["stage"] = "idea_engine_idle"
+        else:
+            user_state[chat_id]["stage"] = "ie_awaiting_pasted_text"
+        send(chat_id, fallback_msg)
+        return
+
     type_labels = {
-        "tweet": "tweet",
-        "instagram": "Instagram post",
-        "fb_ads": "Facebook Ad Library",
-        "facebook": "Facebook post",
-        "tiktok": "TikTok",
-        "youtube": "YouTube",
-        "reddit": "Reddit post",
         "telegram": "Telegram post",
-        "webpage": "webpage"
+        "webpage":  "webpage"
     }
     label = type_labels.get(url_type, "page")
     send(chat_id, "Fetching " + label + "...")
@@ -6474,7 +6937,7 @@ def analyse_url(chat_id, url, mode="ideas"):
     text_content = fetch_url_content(url, url_type)
 
     if not text_content or len(text_content.strip()) < 50:
-        send(chat_id, "Could not read content from that link. The page may require login or block bots.\\n\\nTry screenshotting it and uploading the image instead.")
+        send(chat_id, "Could not read content from that link. The page may require login or block bots.\n\nTry screenshotting it and uploading the image instead.")
         return
 
     _process_ie_text_content(chat_id, state.get("stage", "idea_engine_idle"), text_content,
@@ -6492,27 +6955,32 @@ def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=No
         try:
             result = claude(
                 "CONTENT FROM " + source_label.upper() + ":\\n" + text_content[:3000] +
-                "\\n\\nAnalyse this content and generate 6 Cryptonary content ideas inspired by it.\\n\\n" +
-                "For each idea:\\n" +
-                "IDEA [N]: [Format] — [Hook/Concept]\\n" +
-                "AVATAR: [which of Cryptonary\\'s 13 avatars]\\n" +
-                "OBJECTIVE: [Awareness/Consideration/Conversion]\\n" +
-                "INSPIRED BY: [what specifically in this content sparked it]\\n" +
-                "WHY IT WORKS: [one sentence — specific principle]\\n---" +
+                "\\n\\nGenerate 4 Instagram content concepts for Cryptonary inspired by this material.\\n\\n" +
+                "Format EXACTLY:\\n" +
+                "1. CONCEPT: [One punchy line — the big idea]\\n" +
+                "   ANGLE: [The emotional or argumentative approach]\\n" +
+                "   SOURCE: [What specifically in this material inspired it]\\n\\n" +
+                "2. CONCEPT: ...\\n   ANGLE: ...\\n   SOURCE: ...\\n\\n" +
+                "3. CONCEPT: ...\\n   ANGLE: ...\\n   SOURCE: ...\\n\\n" +
+                "4. CONCEPT: ...\\n   ANGLE: ...\\n   SOURCE: ...\\n\\n" +
+                "Nothing else." +
                 ctx,
-                max_tokens=1500,
+                max_tokens=800,
                 system=VOICE_GUIDE
             )
-            user_state[chat_id]["last_ideas"] = result
-            user_state[chat_id]["stage"] = "idea_engine_idle"
+            user_state[chat_id]["ie_concepts"] = result
+            user_state[chat_id]["ie_source_label"] = source_label
+            user_state[chat_id]["stage"] = "ie_concept_review"
             send_plain(chat_id, "*IDEAS FROM " + source_label.upper() + "*\\n\\n" + result)
             keyboard = [
-                [{"text": "Develop into social", "callback_data": "ie_develop"},
-                 {"text": "Develop into ad", "callback_data": "ie_develop_ad"}],
-                [{"text": "Generate more ideas", "callback_data": "ie_generate_all"}],
+                [{"text": "1 — Expand this", "callback_data": "ie_develop_concept_1"}],
+                [{"text": "2 — Expand this", "callback_data": "ie_develop_concept_2"}],
+                [{"text": "3 — Expand this", "callback_data": "ie_develop_concept_3"}],
+                [{"text": "4 — Expand this", "callback_data": "ie_develop_concept_4"}],
+                [{"text": "Regenerate", "callback_data": "ie_regen_concepts"}],
                 [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
             ]
-            send(chat_id, "Ideas generated.", keyboard)
+            send(chat_id, "Tap a number to expand into full content:", keyboard)
         except Exception as e:
             send(chat_id, "Error: " + str(e))
 
