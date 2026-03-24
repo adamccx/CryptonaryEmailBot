@@ -3947,6 +3947,16 @@ def poll():
     offset = 0
     processed_updates = set()
     print("Cryptonary Bot V9 running.", flush=True)
+
+    # Clear any webhook and resolve conflicts from previous instances
+    try:
+        tg("deleteWebhook", {"drop_pending_updates": True})
+        print("Webhook cleared.", flush=True)
+    except Exception as e:
+        print("Webhook clear error:", e, flush=True)
+
+    time.sleep(2)  # brief pause to let old instance die
+
     while True:
         try:
             url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=30&offset=" + str(offset)
@@ -3954,7 +3964,13 @@ def poll():
             with urllib.request.urlopen(req, timeout=35) as r:
                 data = json.loads(r.read())
             if not data.get("ok"):
-                time.sleep(5)
+                err_code = data.get("error_code", 0)
+                if err_code == 409:
+                    # Another instance is running — wait longer for it to die
+                    print("409 Conflict — waiting for old instance to stop...", flush=True)
+                    time.sleep(10)
+                else:
+                    time.sleep(5)
                 continue
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
@@ -4027,8 +4043,15 @@ def poll():
             print("Stopped.")
             break
         except Exception as e:
-            print("Poll error:", e, flush=True)
-            time.sleep(5)
+            err = str(e)
+            print("Poll error:", err, flush=True)
+            if "409" in err:
+                print("409 Conflict — another instance running. Waiting 15s...", flush=True)
+                time.sleep(15)
+            elif "400" in err:
+                time.sleep(3)
+            else:
+                time.sleep(5)
 
 # ── MAIN MENU ─────────────────────────────────────────────────────
 
@@ -7657,21 +7680,8 @@ def fetch_source_content(sources):
             "content": h["title"] + (" — " + h["desc"] if h.get("desc") else "")
         })
 
-    # Reddit — still works reliably as community sentiment layer
-    for sub in sources.get("reddit", [])[:2]:
-        try:
-            url = "https://www.reddit.com/r/" + sub + "/hot.json?limit=5"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                data = json.loads(r.read())
-                posts = data.get("data", {}).get("children", [])
-                for p in posts[:3]:
-                    post = p.get("data", {})
-                    title = post.get("title", "")
-                    if title:
-                        fetched.append({"source": "r/" + sub, "type": "reddit", "tier": 3, "content": title})
-        except Exception as e:
-            print("Reddit fetch error " + sub + ":", e, flush=True)
+    # Reddit removed — returns 403 Blocked when fetched from server IPs
+    # Users can still add Reddit as a source but it won't fetch live
 
     # Telegram public channels
     for channel in sources.get("telegram", [])[:3]:
