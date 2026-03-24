@@ -581,9 +581,16 @@ def tg(method, data):
     req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
+            result = json.loads(r.read())
+            if not result.get("ok"):
+                print(f"Telegram API error [{method}]: {result.get('description', 'unknown')}", flush=True)
+            return result
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"Telegram HTTP error [{method}] {e.code}: {body}", flush=True)
+        return None
     except Exception as e:
-        print("Telegram error:", e)
+        print(f"Telegram error [{method}]: {e}", flush=True)
         return None
 
 def send(chat_id, text, keyboard=None):
@@ -6680,12 +6687,14 @@ def send_image_url(chat_id, image_url, caption=""):
 
 def show_image_type_menu(chat_id):
     """Ask which AI to use for image generation."""
+    print(f"show_image_type_menu called for {chat_id}", flush=True)
     keyboard = [
         [{"text": "🤖 Claude — Storyboard / Layout / Data", "callback_data": "img_engine_claude"}],
         [{"text": "🎨 Gemini — Thumbnail / Graphic / Static", "callback_data": "img_engine_gemini"}],
         [{"text": "🖼️ DALL-E — Cinematic / Photo / Macro",   "callback_data": "img_engine_dalle"}],
     ]
-    send(chat_id, "*Which AI for image generation?*\n\n🤖 *Claude* — storyboards, layouts, data visuals, carousels\n🎨 *Gemini* — thumbnails, static posts, branded graphics\n🖼️ *DALL-E* — cinematic backgrounds, editorial photos", keyboard)
+    result = send(chat_id, "Which AI for image generation?\n\nClaude — storyboards, layouts, data visuals\nGemini — thumbnails, static posts, graphics\nDALL-E — cinematic backgrounds, editorial photos", keyboard)
+    print(f"Engine picker sent: {result}", flush=True)
 
 
 def show_image_style_menu(chat_id, engine):
