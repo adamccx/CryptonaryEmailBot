@@ -584,6 +584,10 @@ def tg(method, data):
             result = json.loads(r.read())
             if not result.get("ok"):
                 print(f"Telegram API error [{method}]: {result.get('description', 'unknown')}", flush=True)
+            elif method == "sendMessage":
+                msg_id = result.get("result", {}).get("message_id", "?")
+                chat = result.get("result", {}).get("chat", {}).get("id", "?")
+                print(f"Message sent ok: chat={chat} msg_id={msg_id}", flush=True)
             return result
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
@@ -3922,6 +3926,29 @@ def handle_callback(cb):
     elif data == "mark_complete":
         send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
 
+    elif data == "img_from_brief":
+        # Must be BEFORE img_ startswith catch below
+        brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
+        vb_type = state.get("last_visual_type", "static")
+        print(f"img_from_brief fired. chat_id={chat_id}, brief_len={len(brief)}", flush=True)
+        if not brief:
+            tg("sendMessage", {"chat_id": chat_id, "text": "No brief found. Generate a visual brief first."})
+            return
+        state["pending_img_concept"] = brief[:600]
+        state["last_visual_brief"] = brief
+        _global_brief_store[chat_id] = brief
+        keyboard = [
+            [{"text": "Claude (SVG + HTML file)",  "callback_data": "img_engine_claude"}],
+            [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
+            [{"text": "DALL-E (photo/cinematic)",   "callback_data": "img_engine_dalle"}],
+        ]
+        result = tg("sendMessage", {
+            "chat_id": chat_id,
+            "text": "Which AI for image generation?",
+            "reply_markup": {"inline_keyboard": keyboard}
+        })
+        print(f"Engine picker result: ok={result.get('ok') if result else 'None'}", flush=True)
+
     elif data.startswith("img_"):
         handle_image_callbacks(chat_id, data, state)
 
@@ -3935,34 +3962,6 @@ def handle_callback(cb):
     elif data == "vb_edit":
         state["stage"] = "vb_awaiting_edit"
         send(chat_id, "What to change in the brief?")
-
-    elif data == "img_from_brief":
-        brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
-        vb_type = state.get("last_visual_type", "static")
-        print(f"img_from_brief fired. brief_len={len(brief)}, vb_type={vb_type}", flush=True)
-        if not brief:
-            tg("sendMessage", {"chat_id": chat_id, "text": "No brief found. Generate a visual brief first."})
-            return
-        state["pending_img_concept"] = brief[:600]
-        state["last_visual_brief"] = brief
-        _global_brief_store[chat_id] = brief
-        # Send engine picker using raw tg() to avoid any Markdown issues
-        keyboard = [
-            [{"text": "Claude (SVG + HTML file)", "callback_data": "img_engine_claude"}],
-            [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
-            [{"text": "DALL-E (photo/cinematic)", "callback_data": "img_engine_dalle"}],
-        ]
-        result = tg("sendMessage", {
-            "chat_id": chat_id,
-            "text": "Which AI for image generation?",
-            "reply_markup": {"inline_keyboard": keyboard}
-        })
-        print(f"Engine picker tg result ok={result.get('ok') if result else 'None'}", flush=True)
-        if not result or not result.get("ok"):
-            print(f"Engine picker FAILED: {result}", flush=True)
-            # Try plain text fallback
-            tg("sendMessage", {"chat_id": chat_id, "text": "Tap to choose: Claude / Gemini / DALL-E",
-                "reply_markup": {"inline_keyboard": keyboard}})
 
     elif data == "approve_ad":
         ad_output = state.get("current_ad", "")
