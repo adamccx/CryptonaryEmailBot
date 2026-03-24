@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """
-Cryptonary Email Generator Bot - V9
-- Full feedback loop for emails and ads
-- Split test aggregation for emails
-- Video AIDA analytics + static ad analytics
-- Pattern recognition and iteration suggestions
-- New entry point: Email / Ads / Social
-- Full ad creation flow with multi-select avatar + stage
-- Static (3 variants) and Video (AIDA + 3 hooks)
-- Logic breakdown per ad set
-- Standalone social flow
-- Subject line A/B testing
-- Tone variants (Standard / Aggressive / Empathetic)
-- Audience segmentation for Free email (Hot / Warm / Cold)
-Clean flow with consistent Quick Edit / Enhance / Approve at every stage.
+Adam AI — Cryptonary OS
+Writing Studio | Data Studio | Creative Studio
+- Emails, Social Content, Ad Copy, Landing Pages
+- Idea generation with live RSS + X tweet context
+- Voice input via Whisper
+- Image generation via Gemini + DALL-E
+- Visual briefs: storyboards, thumbnails, slide briefs
+- Performance data feedback loops
+- Brand guidelines + best posts reference library
 """
 
 import os, json, ssl, urllib.request, time, re, traceback
@@ -869,13 +864,15 @@ def ad_action_keyboard():
 
 def format_action_keyboard(fmt_key, fmt_label):
     """Action keyboard for a specific format — encodes format in callback."""
-    return [
+    kb = [
         [{"text": "Quick Edit", "callback_data": "sfmt_edit_" + fmt_key},
-         {"text": "Enhance", "callback_data": "sfmt_enhance_" + fmt_key},
-         {"text": "Approve", "callback_data": "sfmt_approve_" + fmt_key}],
-        [{"text": "Critique", "callback_data": "critique_social_" + fmt_key},
-         {"text": "Length", "callback_data": "length_social"}]
+         {"text": "Enhance",    "callback_data": "sfmt_enhance_" + fmt_key},
+         {"text": "Approve",    "callback_data": "sfmt_approve_" + fmt_key}],
+        [{"text": "Critique",   "callback_data": "critique_social_" + fmt_key},
+         {"text": "Length",     "callback_data": "length_social"}],
+        [{"text": "🎨 Visual brief", "callback_data": "vb_auto"}],
     ]
+    return kb
 
 def social_action_keyboard():
     return [
@@ -2024,7 +2021,7 @@ def handle_message(msg):
         return
 
     if text == "/help":
-        send(chat_id, "*Cryptonary Content Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
+        send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
         return
 
     stage = user_state.get(chat_id, {}).get("stage", "idle")
@@ -2565,7 +2562,7 @@ def handle_callback(cb):
             [{"text": "Social Content", "callback_data": "mode_social"}],
             [{"text": "Landing Page", "callback_data": "mode_landing"}]
         ]
-        send(chat_id, "*Cryptonary Content Studio*\n\nWhat do you want to create?", keyboard)
+        send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
     elif data == "open_data_studio":
         show_data_studio_menu(chat_id)
@@ -3972,13 +3969,11 @@ def poll():
 def show_main_menu(chat_id):
     user_state[chat_id] = {"stage": "idle"}
     keyboard = [
-        [{"text": "Cryptonary Content Studio", "callback_data": "open_content_studio"}],
-        [{"text": "Cryptonary Data Studio",    "callback_data": "open_data_studio"}],
-        [{"text": "Cryptonary Idea Engine",    "callback_data": "open_idea_engine"}],
+        [{"text": "✍️ Writing Studio",  "callback_data": "open_content_studio"}],
+        [{"text": "📊 Data Studio",     "callback_data": "open_data_studio"}],
+        [{"text": "💡 Creative Studio", "callback_data": "open_idea_engine"}],
     ]
-    if OPENAI_KEY:
-        keyboard.append([{"text": "🎨 Image Studio", "callback_data": "img_open_studio"}])
-    send(chat_id, "*Cryptonary OS*\n\nWhat would you like to do?", keyboard)
+    send(chat_id, "*Adam AI*\n\nWhat would you like to do?", keyboard)
 
 
 # ── AD CREATION FLOW ──────────────────────────────────────────────
@@ -5129,7 +5124,7 @@ def show_data_studio_menu(chat_id):
         [{"text": "Emails", "callback_data": "ds_emails"}],
         [{"text": "Landing Pages", "callback_data": "ds_landing"}]
     ]
-    send(chat_id, "*Cryptonary Data Studio*\n\nWhich data would you like to analyse?", keyboard)
+    send(chat_id, "*Data Studio*\n\nWhich data would you like to analyse?", keyboard)
 
 # ── AD ANALYSIS ───────────────────────────────────────────────────
 
@@ -5887,9 +5882,10 @@ def save_briefing_subscribers(ids):
 # ══════════════════════════════════════════════════════════════════
 
 def transcribe_voice(file_id):
-    """Download a Telegram voice message and transcribe it via OpenAI Whisper."""
+    """Download a Telegram voice message and transcribe it via OpenAI Whisper.
+    Retries once on 429 rate limit errors."""
     if not OPENAI_KEY:
-        return None, "OpenAI key not configured. Add OPENAI_KEY to Render environment variables."
+        return None, "OpenAI key not configured. Add OPENAI_KEY to Render."
     try:
         # Step 1: Get file path from Telegram
         path_data = tg("getFile", {"file_id": file_id})
@@ -5903,9 +5899,8 @@ def transcribe_voice(file_id):
         with urllib.request.urlopen(req, timeout=30) as r:
             audio_data = r.read()
 
-        # Step 3: Send to Whisper API as multipart form
-        import io
-        boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+        # Step 3: Send to Whisper API — retry once on 429
+        boundary = "----WhisperBoundary7MA4YWx"
         body = (
             ("--" + boundary + "\r\n").encode() +
             b"Content-Disposition: form-data; name=\"file\"; filename=\"voice.ogg\"\r\n" +
@@ -5915,21 +5910,30 @@ def transcribe_voice(file_id):
             b"Content-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n" +
             ("--" + boundary + "--\r\n").encode()
         )
-        req = urllib.request.Request(
-            "https://api.openai.com/v1/audio/transcriptions",
-            data=body,
-            headers={
-                "Authorization": "Bearer " + OPENAI_KEY,
-                "Content-Type": "multipart/form-data; boundary=" + boundary
-            }
-        )
-        with urllib.request.urlopen(req, timeout=60) as r:
-            result = json.loads(r.read())
-            transcript = result.get("text", "").strip()
-            return transcript, None
+        for attempt in range(2):
+            try:
+                req = urllib.request.Request(
+                    "https://api.openai.com/v1/audio/transcriptions",
+                    data=body,
+                    headers={
+                        "Authorization": "Bearer " + OPENAI_KEY,
+                        "Content-Type": "multipart/form-data; boundary=" + boundary
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    result = json.loads(r.read())
+                    transcript = result.get("text", "").strip()
+                    return transcript, None
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str and attempt == 0:
+                    time.sleep(3)  # wait 3s then retry once
+                    continue
+                return None, "Transcription failed: " + err_str
     except Exception as e:
         print("Whisper error:", e, flush=True)
         return None, "Transcription failed: " + str(e)
+    return None, "Transcription failed after retry"
 
 
 def handle_voice_message(chat_id, voice):
@@ -6190,25 +6194,23 @@ IMAGE_STYLE_MAP = {
 }
 
 def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
-    """Build a detailed DALL-E prompt from concept + brand guidelines."""
+    """Build a clean image prompt. Keep under 800 chars, avoid policy-triggering terms."""
     style = IMAGE_STYLE_MAP.get(post_type, IMAGE_STYLE_MAP["background"])
+    # Truncate concept/angle tightly — long prompts cause 400 errors
+    concept_short = concept[:150].strip()
+    angle_short = angle[:80].strip()
     prompt = (
-        "Create a professional Instagram post image for Cryptonary, a crypto research platform.\n\n"
-        "BRAND COLOURS: Black #000000 background (default), White #FFFFFF text, "
-        "Cryptonary Blue #005EFF accents, Red #FF0000 for urgency, Green #0DA500 for gains, "
-        "Bitcoin Orange #F7931A for BTC content.\n\n"
-        "CONTENT CONCEPT: " + concept + "\n"
-        "ANGLE/TONE: " + angle + "\n\n"
-        "VISUAL STYLE: " + style + "\n\n"
-        "RULES: Square 1:1 format. Dark background preferred. "
-        "Photorealistic or bold graphic design style. "
-        "No watermarks other than @Cryptonary. "
-        "No copyrighted logos or brand marks from other companies. "
-        "High contrast, scroll-stopping visual."
+        "Professional digital graphic design. " +
+        style + " " +
+        "Topic: " + concept_short + ". " +
+        ("Tone: " + angle_short + ". " if angle_short else "") +
+        "Colour palette: black background, white text, blue and red accents. " +
+        "Square format 1:1. High contrast. Editorial quality. No logos."
     )
     if extra_direction:
-        prompt += "\n\nADDITIONAL DIRECTION: " + extra_direction
-    return prompt
+        prompt += " " + extra_direction[:100]
+    # Hard cap at 900 chars to stay well under DALL-E 4000 char limit
+    return prompt[:900]
 
 
 def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
@@ -6318,10 +6320,13 @@ def generate_and_send_image(chat_id, prompt, post_type="static"):
             return True
         else:
             print("Gemini failed:", error, flush=True)
+            # 429 = billing not enabled or quota exhausted
+            if error and "429" in str(error):
+                send(chat_id, "⚠️ Gemini image quota exhausted or billing not enabled.\nGo to console.cloud.google.com → Billing to enable paid access.")
             if OPENAI_KEY:
-                send(chat_id, "Gemini unavailable, trying DALL-E...")
+                send(chat_id, "Trying DALL-E instead...")
             else:
-                send(chat_id, "Image generation failed: " + (error or "unknown"))
+                send(chat_id, "Image generation failed. Enable billing on Google Cloud or add OPENAI_KEY.")
                 return False
 
     if OPENAI_KEY:
@@ -6558,12 +6563,14 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
         state["last_visual_type"] = content_type
         send_plain(chat_id, "*VISUAL BRIEF — " + content_type.upper().replace("_", " ") + "*\n\n" + result)
 
+        img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
         keyboard = [
-            [{"text": "🎨 Generate image from this", "callback_data": "img_from_brief"}],
-            [{"text": "✏️ Adjust brief",             "callback_data": "vb_edit"}],
-            [{"text": "✅ Done",                      "callback_data": "mark_complete"}],
+            [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
         ]
-        send(chat_id, "Visual brief ready.", keyboard)
+        if img_row:
+            keyboard.insert(0, img_row)
+        keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
+        send(chat_id, "Brief ready. Use this to brief your designer, or generate an AI image draft.", keyboard)
     except Exception as e:
         send(chat_id, "Error generating brief: " + str(e))
 
@@ -7005,7 +7012,7 @@ def show_idea_engine_menu(chat_id):
         [{"text": "Critique a screenshot", "callback_data": "ie_screenshot_critique"}],
         [{"text": "📡 News sources (" + str(feed_count) + " feeds)", "callback_data": "ie_manage_sources"}]
     ]
-    send(chat_id, "*Cryptonary Idea Engine*\n\nHow do you want to generate ideas?", keyboard)
+    send(chat_id, "*Creative Studio*\n\nHow do you want to generate ideas?", keyboard)
 
 def show_ie_source_menu(chat_id, idea_type):
     """After type selection: pull from database or upload new inspiration."""
@@ -7377,7 +7384,7 @@ Rules:
              {"text": "Ad ideas only", "callback_data": "ie_generate_ads"}],
             [{"text": "Develop an idea → Content Studio", "callback_data": "ie_develop"}],
             [{"text": "Develop an idea → Ad Copy", "callback_data": "ie_develop_ad"}],
-            [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+            [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
         ]
         send(chat_id, "8 ideas generated. Tap Develop to take any idea straight into the Content Studio.", keyboard)
 
@@ -7843,7 +7850,7 @@ WHY IT WORKS: [one sentence — specific principle or mechanic]
                 [{"text": "Develop into social content", "callback_data": "ie_develop"}],
                 [{"text": "Develop into ad", "callback_data": "ie_develop_ad"}],
                 [{"text": "Generate more ideas", "callback_data": "ie_generate_all"}],
-                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+                [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
             ]
             send(chat_id, "6 ideas generated from your screenshot.", keyboard)
 
@@ -7895,7 +7902,7 @@ OVERALL RATING: [A/B/C/D] — [one sentence verdict]"""
             send_plain(chat_id, "SCREENSHOT CRITIQUE\n\n" + result)
             keyboard = [
                 [{"text": "Ideas from this screenshot", "callback_data": "ie_screenshot_ideas"}],
-                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+                [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
             ]
             send(chat_id, "Critique complete.", keyboard)
 
@@ -8035,7 +8042,7 @@ def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=No
                 [{"text": "3 — Expand this", "callback_data": "ie_develop_concept_3"}],
                 [{"text": "4 — Expand this", "callback_data": "ie_develop_concept_4"}],
                 [{"text": "Regenerate", "callback_data": "ie_regen_concepts"}],
-                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+                [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
             ]
             send(chat_id, "Tap a number to expand into full content:", keyboard)
         except Exception as e:
@@ -8053,7 +8060,7 @@ def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=No
             send_plain(chat_id, "CRITIQUE OF " + source_label.upper() + "\\n\\n" + result)
             keyboard = [
                 [{"text": "Get ideas from this", "callback_data": "ie_screenshot_ideas"}],
-                [{"text": "Back to Idea Engine", "callback_data": "open_idea_engine"}]
+                [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
             ]
             send(chat_id, "Critique complete.", keyboard)
         except Exception as e:
