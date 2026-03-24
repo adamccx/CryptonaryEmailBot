@@ -573,6 +573,64 @@ user_state = {}
 _global_brief_store = {}  # persists visual briefs across state resets
 _last_callback_time = {}  # per-user callback cooldown (prevents double-fire)
 
+# ── CRYPTONARY LOGO (white, transparent bg) ───────────────────
+# LogomarkAlt_W.png encoded as base64 for watermarking generated images
+CRYPTONARY_LOGO_B64 = "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"
+
+# SVG wordmark for HTML file embedding
+CRYPTONARY_SVG_WORDMARK = """<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 28.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 563.91 94.4" style="enable-background:new 0 0 563.91 94.4;" xml:space="preserve">
+<style type="text/css">
+	.st0{clip-path:url(#SVGID_00000044857774131872014620000018353702127037256634_);}
+	.st1{fill:#FFFFFF;}
+	.st2{fill:#F9F9F9;}
+	.st3{fill:#005FFF;}
+	.st4{fill:#0043C9;}
+</style>
+<g>
+	<path class="st1" d="M84.29,1.21H7.22v77.06l14.92,14.91H99.2V16.12L84.29,1.21z M89.05,40.55H74.14V25.64h-42.1v42.11h42.1V52.84
+		l14.91,14.91v14.91H32.03L17.11,67.75V10.73l14.92,14.91V10.73h42.1l14.91,14.91V40.55z"/>
+</g>
+<g>
+	<g>
+		<path class="st1" d="M140.33,30.9c12.48,0,19.13,7.71,19.89,14.75h-9.91c-0.23-0.76-2.87-6.05-10.21-6.05
+			c-6.81,0-10.96,4.23-11.04,11.04c0,6.73,4.39,11.57,11.34,11.65c7.18,0,9.91-5.29,10.13-6.13h9.91
+			c-1.21,7.41-7.64,14.82-19.74,14.9c-12.48-0.08-20.8-8.02-20.8-20.34C119.91,38.39,128.07,30.9,140.33,30.9z"/>
+		<path class="st1" d="M195.38,30.9v8.62c-9.38,0-19.13,3.33-19.13,13.84v16.49h-9.23V32.03h9.23v1.13c0,2.87-1.59,6.35-2.72,9
+			l1.59,0.68c1.13-2.65,2.34-6.43,4.69-8.17C183.81,31.58,187.97,30.9,195.38,30.9z"/>
+		<path class="st1" d="M221.24,53.21c1.29,2.72,1.29,6.58,1.29,9.6h1.74c0-3.02,0-6.88,1.29-9.6l9.83-21.17h11.34l-18.38,37.74
+			c-1.13,2.34-2.19,4.23-3.33,6.65c-3.4,7.34-6.96,12.33-13.31,12.33h-10.29v-9.23h5.97c4.54,0,6.2-2.42,8.39-6.5l2.34-4.54
+			l-18.07-36.45h11.34L221.24,53.21z"/>
+		<path class="st1" d="M261.69,88.75l-9.3,0.08V32.11l9.3-0.08v2.72c0,2.27-1.29,4.92-2.04,7.11l1.59,0.53
+			c0.76-2.19,1.13-5.29,2.65-6.88c2.8-2.95,6.73-4.69,11.8-4.69c11.34,0,19.13,8.77,18.91,19.96c-0.3,10.89-7.94,20.19-18.91,20.19
+			c-4.99,0-8.92-1.97-11.72-4.92c-1.59-1.59-1.97-4.69-2.72-6.81l-1.59,0.53c0.68,2.19,2.04,4.84,2.04,7.11V88.75z M263.36,50.64
+			c0,6.43,4.01,11.72,11.04,11.72c7.11,0,10.89-5.29,10.89-11.72c0-6.35-3.78-11.19-10.89-11.19
+			C267.36,39.44,263.36,44.28,263.36,50.64z"/>
+		<path class="st1" d="M306.84,40.12h-7.56v-8.09h7.56V17.74h9.23v14.29h9.83v8.09h-9.83v17.02c0,3.18,1.44,4.08,4.99,4.08h4.46
+			v8.62h-9.15c-7.11,0-9.53-6.65-9.53-12.7V40.12z"/>
+		<path class="st1" d="M352.97,30.9c13.08,0,21.63,8.32,21.63,19.96c0,11.72-8.55,20.19-21.63,20.19
+			c-13.01,0-21.55-8.02-21.55-20.19S339.96,30.9,352.97,30.9z M352.97,62.13c8.39,0,11.8-5.07,11.8-11.27
+			c0-6.2-3.4-11.04-11.8-11.04c-8.39,0-11.72,4.84-11.72,11.04C341.24,57.06,344.65,62.13,352.97,62.13z"/>
+		<path class="st1" d="M404.84,30.9c7.71,0,13.69,4.39,13.69,13.01v25.94h-9.3V50.56c0-7.26-2.65-10.51-8.17-10.51
+			c-6.05,0-11.19,3.25-11.19,10.51v19.28h-9.23V32.03h9.23v0.6c0,3.03-1.51,6.66-2.65,9.53l1.59,0.68c1.13-2.87,2.19-6.96,4.61-8.85
+			C396.6,31.5,399.92,30.9,404.84,30.9z"/>
+		<path class="st1" d="M444.01,71.05c-11.27,0-19.21-9.07-19.21-20.34c0-11.27,7.94-19.81,19.21-19.81c5.07,0,9,1.74,11.72,4.69
+			c1.59,1.66,1.89,4.76,2.65,6.96l1.59-0.53c-0.68-2.19-2.04-4.84-2.04-7.11l-0.08-2.87h9.3v37.81h-9.3l0.08-3.1
+			c0-2.27,1.36-4.99,2.04-7.11l-1.66-0.53c-0.68,2.12-0.98,5.22-2.5,6.96C453.01,69.16,449.08,71.05,444.01,71.05z M444.54,62.43
+			c6.2,0,10.36-5.52,10.59-11.72c0-6.65-3.71-11.19-10.59-11.19c-6.28,0-10.44,4.76-10.44,11.19
+			C434.1,57.06,438.26,62.43,444.54,62.43z"/>
+		<path class="st1" d="M504.05,30.9v8.62c-9.38,0-19.13,3.33-19.13,13.84v16.49h-9.23V32.03h9.23v1.13c0,2.87-1.59,6.35-2.72,9
+			l1.59,0.68c1.13-2.65,2.34-6.43,4.69-8.17C492.48,31.58,496.64,30.9,504.05,30.9z"/>
+		<path class="st1" d="M529.91,53.21c1.29,2.72,1.29,6.58,1.29,9.6h1.74c0-3.02,0-6.88,1.29-9.6l9.83-21.17h11.34l-18.38,37.74
+			c-1.13,2.34-2.19,4.23-3.33,6.65c-3.4,7.34-6.96,12.33-13.31,12.33H510.1v-9.23h5.97c4.54,0,6.2-2.42,8.39-6.5l2.34-4.54
+			l-18.07-36.45h11.34L529.91,53.21z"/>
+	</g>
+</g>
+</svg>
+"""
+
 # ── HELPERS ───────────────────────────────────────────────────────
 
 def tg(method, data):
@@ -3937,23 +3995,51 @@ def handle_callback(cb):
         state["pending_img_concept"] = brief[:600]
         state["last_visual_brief"] = brief
         _global_brief_store[chat_id] = brief
-        keyboard = [
-            [{"text": "Claude (SVG + HTML file)",  "callback_data": "img_engine_claude"}],
-            [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
-            [{"text": "DALL-E (photo/cinematic)",   "callback_data": "img_engine_dalle"}],
-        ]
-        result = tg("sendMessage", {
-            "chat_id": chat_id,
-            "text": "Which AI for image generation?",
-            "reply_markup": {"inline_keyboard": keyboard}
-        })
-        print(f"Engine picker result: ok={result.get('ok') if result else 'None'}", flush=True)
+        # Auto-route structured content to Claude, photographic to Gemini
+        social_type = state.get("current_social_type", "")
+        auto_engine = None
+        if any(t in social_type for t in ["Carousel", "Reel", "Story"]):
+            auto_engine = "claude"
+        elif any(t in social_type for t in ["Static"]):
+            auto_engine = "gemini"
+        if auto_engine:
+            state["img_engine"] = auto_engine
+            show_image_style_menu(chat_id, auto_engine)
+        else:
+            keyboard = [
+                [{"text": "Claude (SVG + HTML file)",  "callback_data": "img_engine_claude"}],
+                [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
+                [{"text": "DALL-E (photo/cinematic)",   "callback_data": "img_engine_dalle"}],
+            ]
+            result = tg("sendMessage", {
+                "chat_id": chat_id,
+                "text": "Which AI for image generation?",
+                "reply_markup": {"inline_keyboard": keyboard}
+            })
+            print(f"Engine picker result: ok={result.get('ok') if result else 'None'}", flush=True)
 
     elif data.startswith("img_"):
         handle_image_callbacks(chat_id, data, state)
 
     elif data == "vb_auto":
-        show_visual_brief_menu(chat_id)
+        # Auto-detect type from current content — skip picker
+        social_type = state.get("current_social_type", "")
+        if "Carousel" in social_type:
+            state["img_engine"] = "claude"
+            generate_visual_brief(chat_id, "carousel")
+        elif "Reel" in social_type:
+            state["img_engine"] = "claude"
+            generate_visual_brief(chat_id, "reel")
+        elif "Static" in social_type:
+            generate_visual_brief(chat_id, "static")
+        elif "Story" in social_type:
+            generate_visual_brief(chat_id, "story")
+        elif state.get("current_emails"):
+            generate_visual_brief(chat_id, "email")
+        elif state.get("current_ad"):
+            generate_visual_brief(chat_id, "ad_static")
+        else:
+            show_visual_brief_menu(chat_id)
 
     elif data.startswith("vb_type_"):
         vb_type = data.replace("vb_type_", "")
@@ -6610,7 +6696,7 @@ def generate_claude_html(brief, post_type, angle=""):
     type_instructions = {
         "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame has a number, title, and description. Dark theme, professional.",
         "static":     "An Instagram post mockup (1080x1080px equivalent). Bold headline, dark background, brand colours. Looks like a real post.",
-        "carousel":   "A carousel slide design showing the cover slide. Swipe indicators at bottom.",
+        "carousel":   "A FULL Instagram carousel — ALL slides from the brief, displayed as scrollable vertical pages. Each slide is 1080x1080px, dark background, with its own headline and visual direction. Include navigation dots or slide numbers. Show every slide from the brief, not just the cover.",
         "story":      "A vertical story frame (9:16 ratio). Full-screen design, bold text, mobile-optimised.",
         "thumbnail":  "An email header thumbnail (600x200px). Bold headline, clean layout.",
         "data":       "A data visualisation with styled numbers, charts using CSS, clean layout.",
@@ -6626,7 +6712,7 @@ TYPE: """ + instruction + """
 
 BRAND COLOURS: #000000 bg, #FFFFFF text, #005EFF blue accent, #0DA500 green, #FF0000 red, #F7931A bitcoin orange
 FONTS: system-ui, Arial, sans-serif — bold for headlines
-Add "@Cryptonary" small bottom-right.
+LOGO: Place the Cryptonary wordmark SVG in the bottom-right corner. Use this exact SVG inline: <svg style="position:absolute;bottom:16px;right:16px;width:120px;opacity:0.9" viewBox="0 0 500 100"><text x="0" y="80" font-family="Arial,sans-serif" font-weight="bold" font-size="80" fill="white">cryptonary</text></svg>
 
 RULES:
 - Return ONLY the complete HTML starting with <!DOCTYPE html>
@@ -6705,16 +6791,24 @@ def send_file_bytes(chat_id, file_bytes, filename, mime_type="application/octet-
 def generate_claude_visual(chat_id, brief, post_type, send_html=True):
     """Generate SVG + HTML visual using Claude and send both."""
     vtype_label = post_type.replace("_", " ").title()
+    # Store so Give direction / Regenerate work after Claude visual
+    user_state.setdefault(chat_id, {})
+    user_state[chat_id]["last_img_prompt"] = brief[:600]
+    user_state[chat_id]["last_img_type"] = "claude_" + post_type
+    user_state[chat_id]["last_claude_brief"] = brief[:600]
+    user_state[chat_id]["last_claude_type"] = post_type
 
     # Step 1: Generate SVG (send as image)
     send(chat_id, "🤖 Claude generating " + vtype_label + " visual...")
     svg, svg_err = generate_claude_svg(brief, post_type)
 
     if svg:
+        print(f"SVG generated: {len(svg)} chars", flush=True)
         ok = send_svg_as_image(chat_id, svg)
         if not ok:
-            send(chat_id, "SVG generated but couldn\'t convert to image.")
+            send(chat_id, "SVG generated but couldn't send it.")
     else:
+        print(f"SVG generation failed: {svg_err}", flush=True)
         send(chat_id, "SVG generation failed: " + (svg_err or "unknown"))
 
     # Step 2: Generate HTML (send as downloadable file)
@@ -6728,6 +6822,37 @@ def generate_claude_visual(chat_id, brief, post_type, send_html=True):
         else:
             send(chat_id, "HTML generation failed: " + (html_err or "unknown"))
 
+
+def apply_logo_watermark(image_bytes, mime_type="image/png"):
+    """Overlay Cryptonary logomark on bottom-right of image."""
+    try:
+        from PIL import Image
+        import io, base64
+        # Load the generated image
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        w, h = img.size
+        # Load logo from base64
+        logo_bytes = base64.b64decode(CRYPTONARY_LOGO_B64)
+        logo = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
+        # Scale logo to ~8% of image width
+        logo_w = max(60, int(w * 0.08))
+        ratio = logo_w / logo.width
+        logo_h = int(logo.height * ratio)
+        logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
+        # Position: bottom-right with 16px padding
+        padding = int(w * 0.015)
+        pos = (w - logo_w - padding, h - logo_h - padding)
+        # Composite onto image
+        img.paste(logo, pos, logo)
+        # Convert back to bytes
+        output = io.BytesIO()
+        img.convert("RGB").save(output, format="PNG")
+        return output.getvalue(), "image/png"
+    except Exception as e:
+        print(f"Watermark error: {e}", flush=True)
+        return image_bytes, mime_type  # return original if watermark fails
+
+
 def generate_and_send_image(chat_id, prompt, post_type="static"):
     """Route to best model for post type, generate and send image."""
     # Gemini: better for graphics with text, thumbnails, statics, branded assets
@@ -6740,6 +6865,7 @@ def generate_and_send_image(chat_id, prompt, post_type="static"):
         send(chat_id, "🎨 Generating with Gemini...")
         img_bytes, mime, error = generate_gemini_image(prompt)
         if img_bytes:
+            img_bytes, mime = apply_logo_watermark(img_bytes, mime)
             send_image_bytes(chat_id, img_bytes, mime)
             return True
         else:
@@ -6757,7 +6883,16 @@ def generate_and_send_image(chat_id, prompt, post_type="static"):
         send(chat_id, "🎨 Generating with DALL-E...")
         url, info = generate_dalle_image(prompt)
         if url:
-            send_image_url(chat_id, url)
+            # Download and watermark before sending
+            try:
+                import urllib.request as _req
+                with _req.urlopen(url, timeout=30) as _r:
+                    dalle_bytes = _r.read()
+                dalle_bytes, _ = apply_logo_watermark(dalle_bytes, "image/png")
+                send_image_bytes(chat_id, dalle_bytes, "image/png")
+            except Exception as _e:
+                print(f"DALL-E watermark error: {_e}", flush=True)
+                send_image_url(chat_id, url)  # fallback to direct URL
             return True
         else:
             send(chat_id, "Image generation failed: " + info)
@@ -7104,6 +7239,7 @@ def handle_image_callbacks(chat_id, data, state):
                 send(chat_id, "🎨 Generating with Gemini...")
                 img_bytes, mime, err = generate_gemini_image(prompt)
                 if img_bytes:
+                    img_bytes, mime = apply_logo_watermark(img_bytes, mime)
                     send_image_bytes(chat_id, img_bytes, mime)
                     send(chat_id, "Image ready.", img_action_kb)
                 else:
@@ -7121,7 +7257,14 @@ def handle_image_callbacks(chat_id, data, state):
                 send(chat_id, "🖼️ Generating with DALL-E...")
                 url, info = generate_dalle_image(prompt)
                 if url:
-                    send_image_url(chat_id, url)
+                    try:
+                        import urllib.request as _rq
+                        with _rq.urlopen(url, timeout=30) as _r:
+                            _b = _r.read()
+                        _b, _ = apply_logo_watermark(_b, "image/png")
+                        send_image_bytes(chat_id, _b, "image/png")
+                    except:
+                        send_image_url(chat_id, url)
                     send(chat_id, "Image ready.", img_action_kb)
                 else:
                     # DALL-E failed — try stripped prompt (content policy fix)
@@ -7174,14 +7317,20 @@ def handle_image_callbacks(chat_id, data, state):
             send(chat_id, "No previous prompt found.")
             return
         post_type = state.get("last_img_type", "static")
-        success = generate_and_send_image(chat_id, prompt, post_type)
-        keyboard = [
+        img_kb = [
             [{"text": "🔄 Try again",           "callback_data": "img_regen"}],
             [{"text": "✏️ Give direction",       "callback_data": "img_direction"}],
-            [{"text": "🎨 Different style",      "callback_data": "img_restyle"}],
+            [{"text": "🎨 Different engine",     "callback_data": "img_restyle"}],
             [{"text": "✅ Done",                 "callback_data": "mark_complete"}],
         ]
-        send(chat_id, "New version ready." if success else "Generation failed — try again.", keyboard)
+        if post_type.startswith("claude_"):
+            actual_type = post_type.replace("claude_", "")
+            brief = state.get("last_claude_brief", prompt[:400])
+            generate_claude_visual(chat_id, brief, actual_type, send_html=False)
+            send(chat_id, "Regenerated.", img_kb)
+        else:
+            success = generate_and_send_image(chat_id, prompt, post_type)
+            send(chat_id, "New version ready." if success else "Generation failed — try again.", img_kb)
 
     elif data == "img_direction":
         state["stage"] = "img_awaiting_direction"
@@ -7203,14 +7352,28 @@ def handle_image_direction(chat_id, text):
     """Apply user direction to regenerate image."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
-    base_prompt = state.get("last_img_prompt", "")
+    base_prompt = state.get("last_img_prompt", "") or state.get("last_claude_brief", "")
     post_type = state.get("last_img_type", "background")
     if not base_prompt:
         send(chat_id, "No previous image to refine. Start a new one.")
         return
-    refined_prompt = base_prompt + "\n\nREFINEMENT: " + text
-    state["last_img_prompt"] = refined_prompt
-    success = generate_and_send_image(chat_id, refined_prompt, post_type)
+    refined = base_prompt + "\n\nREFINEMENT: " + text
+    state["last_img_prompt"] = refined
+
+    # Route back to correct engine
+    if post_type.startswith("claude_"):
+        actual_type = post_type.replace("claude_", "")
+        state["last_claude_brief"] = refined
+        generate_claude_visual(chat_id, refined, actual_type, send_html=False)
+        keyboard = [
+            [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
+            [{"text": "✏️ Give direction",   "callback_data": "img_direction"}],
+            [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
+            [{"text": "✅ Done",             "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Updated.", keyboard)
+        return
+    success = generate_and_send_image(chat_id, refined, post_type)
     if success:
         keyboard = [
             [{"text": "🔄 Regenerate",      "callback_data": "img_regen"}],
