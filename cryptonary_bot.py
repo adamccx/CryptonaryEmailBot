@@ -955,6 +955,7 @@ def gen_angles(chat_id):
 
 def gen_hooks(chat_id):
     """Generate hooks — one set used for both Free and Pro emails."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -990,6 +991,7 @@ def gen_hooks(chat_id):
 
 def show_pro_angle_picker(chat_id):
     """Show Pro angle picker after Free angle is selected."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     pro_angles = state.get("pro_angles", [])
     state["stage"] = "pick_pro_angle"
@@ -1004,6 +1006,7 @@ def show_pro_angle_picker(chat_id):
 
 def gen_pro_hooks(chat_id):
     """Generate Pro email hooks — called after Free hook selected."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1047,6 +1050,7 @@ def ask_pro_cta(chat_id):
     send(chat_id, "*Pro email CTA:*", keyboard)
 
 def gen_emails(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1097,6 +1101,7 @@ def ask_quick_edit(chat_id, mode="email"):
     send(chat_id, "*Quick Edit*\n\nType your instruction:\n\n_Examples: Make the opening more urgent / Shorten the P.S. / Make the CTA stronger / Add a specific number to paragraph 2_")
 
 def apply_quick_edit(chat_id, instruction):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     mode = state.get("quick_edit_mode", "email")
     if mode == "social":
@@ -1147,6 +1152,7 @@ def apply_quick_edit(chat_id, instruction):
 # ── ENHANCE ───────────────────────────────────────────────────────
 
 def gen_enhance(chat_id, mode="email"):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     if mode == "social":
         content = state.get("current_social", "")
@@ -1202,6 +1208,7 @@ def gen_enhance(chat_id, mode="email"):
             send(chat_id, "Error: " + str(e))
 
 def toggle_enhancement(chat_id, enh_id, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_enhancements", [])
     suggestions = state.get("enhance_suggestions", [])
@@ -1218,6 +1225,7 @@ def toggle_enhancement(chat_id, enh_id, message_id):
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def apply_enhancements(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected_ids = state.get("selected_enhancements", [])
     suggestions = state.get("enhance_suggestions", [])
@@ -1279,6 +1287,7 @@ def apply_enhancements(chat_id):
 # ── SOCIAL CONTENT ────────────────────────────────────────────────
 
 def show_social_source_menu(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     emails = state.get("current_emails", {})
     segments = state.get("current_segments", {})
@@ -1297,6 +1306,7 @@ def show_social_source_menu(chat_id):
     send(chat_id, "*Which email should social content be based on?*", keyboard)
 
 def show_social_format_menu(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     formats = [
@@ -1315,6 +1325,7 @@ def show_social_format_menu(chat_id):
     send(chat_id, "*Select formats to generate:*\n_(tap to select multiple)_", keyboard)
 
 def toggle_social_format(chat_id, fmt_cb, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     if fmt_cb in selected:
@@ -1341,6 +1352,7 @@ def toggle_social_format(chat_id, fmt_cb, message_id):
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def get_social_source_text(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     source = state.get("social_source", "free")
     emails = state.get("current_emails", {})
@@ -1354,6 +1366,7 @@ def get_social_source_text(chat_id):
     return extract_text(emails.get("free", ""))
 
 def gen_social_selected(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     if not selected:
@@ -1410,6 +1423,7 @@ def gen_social_selected(chat_id):
     state["selected_social_formats"] = []
 
 def gen_reel(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1447,6 +1461,7 @@ def gen_reel(chat_id):
         send(chat_id, "Error generating reel: " + str(e))
 
 def gen_carousel(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1476,6 +1491,7 @@ def gen_carousel(chat_id):
 
 def gen_static(chat_id):
     """Generate a static Instagram post — limited on-screen text + full caption."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1526,6 +1542,7 @@ Return as plain string.""",
         send(chat_id, "Error generating static post: " + str(e))
 
 def gen_story(chat_id, multi=False):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
@@ -1591,6 +1608,7 @@ def show_length_menu(chat_id, mode="email"):
         send(chat_id, "*Adjust length:*", keyboard)
 
 def apply_length(chat_id, direction):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     mode = state.get("length_mode", "email")
     instruction = "Make this significantly longer. Add more detail, context, and depth. Keep Adam's voice." if direction == "extend" else "Make this significantly shorter. Cut anything that doesn't earn its place. Keep the core message and Adam's voice."
@@ -1641,6 +1659,7 @@ def start_log_performance(chat_id):
     send(chat_id, "*Log Performance*\n\nEnter the subject line of the email you want to log:")
 
 def log_step(chat_id, text):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     stage = state.get("stage")
     if stage == "log_subject":
@@ -1709,6 +1728,7 @@ def show_stats(chat_id):
 # ── SUBJECT LINE A/B (MULTI-SELECT) ─────────────────────────────
 
 def gen_subject_ab(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     hook = state.get("selected_hook", {})
     current_subject = hook.get("subject", "")
@@ -1745,6 +1765,7 @@ def gen_subject_ab(chat_id):
         state["stage"] = "emails_ready"
 
 def toggle_subject_select(chat_id, idx, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_subjects", [])
     alternatives = state.get("subject_alternatives", [])
@@ -1763,6 +1784,7 @@ def toggle_subject_select(chat_id, idx, message_id):
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def apply_subjects(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected_ids = state.get("selected_subjects", [])
     alternatives = state.get("subject_alternatives", [])
@@ -1833,6 +1855,7 @@ def show_tone_menu(chat_id):
     send(chat_id, "*Choose tone:*\n\nRewrites both emails in the selected tone. Same content, different emotional delivery.", keyboard)
 
 def apply_tone(chat_id, tone_key):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     tone_label, tone_instruction = TONE_DEFS.get(tone_key, TONE_DEFS["standard"])
     emails = state.get("current_emails", {})
@@ -1872,6 +1895,7 @@ SEG_DEFS = {
 }
 
 def gen_segments(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     emails = state.get("current_emails", {})
     free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
@@ -1917,6 +1941,7 @@ def ask_seg_edit(chat_id, segment):
     send(chat_id, "*Quick Edit — " + label + "*\n\nType your instruction:")
 
 def apply_seg_edit(chat_id, instruction):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     segment = state.get("seg_edit_target", "hot")
     segments = state.get("current_segments", {})
@@ -3894,15 +3919,23 @@ def handle_callback(cb):
         vb_type = state.get("last_visual_type", "static")
         print(f"img_from_brief fired. brief_len={len(brief)}, vb_type={vb_type}", flush=True)
         if not brief:
-            send(chat_id, "No brief found. Generate a visual brief first using the 🎨 Visual brief button.")
+            tg("sendMessage", {"chat_id": chat_id, "text": "No brief found. Generate a visual brief first."})
             return
-        # Store brief as pending concept and show engine picker
         state["pending_img_concept"] = brief[:600]
-        state["pending_img_angle"] = state.get("selected_angle", "")
-        state["last_visual_brief"] = brief  # ensure it persists
+        state["last_visual_brief"] = brief
         _global_brief_store[chat_id] = brief
-        send(chat_id, "Loading engine picker...")
-        show_image_type_menu(chat_id)
+        # Send engine picker using raw tg() to avoid any Markdown issues
+        keyboard = [
+            [{"text": "Claude (SVG + HTML file)", "callback_data": "img_engine_claude"}],
+            [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
+            [{"text": "DALL-E (photo/cinematic)", "callback_data": "img_engine_dalle"}],
+        ]
+        result = tg("sendMessage", {
+            "chat_id": chat_id,
+            "text": "Which AI for image generation?",
+            "reply_markup": {"inline_keyboard": keyboard}
+        })
+        print(f"Engine picker result: {result}", flush=True)
 
     elif data == "approve_ad":
         ad_output = state.get("current_ad", "")
@@ -4134,6 +4167,7 @@ COPYWRITING PRINCIPLES TO APPLY:
 """
 
 def show_avatar_menu(chat_id, page=0):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_avatars", [])
     state["avatar_page"] = page
@@ -4157,6 +4191,7 @@ def show_avatar_menu(chat_id, page=0):
     send(chat_id, "*Pick avatars:* " + page_label + "\n_(tap to select multiple)_", keyboard)
 
 def show_stage_menu(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_stages", [])
     keyboard = []
@@ -4179,6 +4214,7 @@ def show_existing_ad_action_menu(chat_id):
 
 def generate_existing_ad_action(chat_id, action):
     """Generate based on existing ad as creative base."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     existing = state.get("existing_ad_content", "")
     product_context = state.get("ad_product_context", "")
@@ -4241,6 +4277,7 @@ def show_adtype_menu(chat_id):
     send(chat_id, "*Static or Video?*", keyboard)
 
 def toggle_avatar(chat_id, avatar_key, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_avatars", [])
     if avatar_key in selected: selected.remove(avatar_key)
@@ -4266,6 +4303,7 @@ def toggle_avatar(chat_id, avatar_key, message_id):
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def toggle_stage(chat_id, stage_key, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_stages", [])
     if stage_key in selected: selected.remove(stage_key)
@@ -4279,6 +4317,7 @@ def toggle_stage(chat_id, stage_key, message_id):
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def generate_all_ads(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     avatars = state.get("selected_avatars", [])
     stages = state.get("selected_stages", [])
@@ -4344,6 +4383,7 @@ def generate_all_ads(chat_id):
 # ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
 
 def gen_social_angles(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     selected_formats = state.get("selected_social_formats", [])
@@ -4376,6 +4416,7 @@ def gen_social_angles(chat_id):
         state["stage"] = "idle"
 
 def gen_social_hooks(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     angle = state.get("social_angle", "")
@@ -4424,6 +4465,7 @@ def gen_social_hooks(chat_id):
     show_social_hook_picker(chat_id, 0)
 
 def show_social_hook_picker(chat_id, fmt_idx):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     formats = state.get("selected_social_formats", [])
     if fmt_idx >= len(formats):
@@ -4460,6 +4502,7 @@ def show_social_hook_picker(chat_id, fmt_idx):
     send(chat_id, text, keyboard)
 
 def show_standalone_social_menu_confirm(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     formats = state.get("selected_social_formats", [])
     selected_hooks = state.get("selected_social_hooks", {})
@@ -4481,6 +4524,7 @@ def show_standalone_social_menu_confirm(chat_id):
     send(chat_id, summary, keyboard)
 
 def show_standalone_social_menu(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     formats = [
@@ -4516,6 +4560,7 @@ def start_log_email(chat_id):
     send(chat_id, "*Log Email Performance*\n\nEnter the subject line of the email:")
 
 def handle_email_log_step(chat_id, text):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     log = state.get("log_data", {})
     step = state.get("log_stage", "")
@@ -4572,6 +4617,7 @@ def save_email_log(chat_id, log):
         email_log[chat_id] = []
     email_log[chat_id].append(log)
     save_all_data()
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "idle"
     records = email_log[chat_id]
@@ -4593,6 +4639,7 @@ def save_email_log(chat_id, log):
 # ── AD LOGGING ────────────────────────────────────────────────────
 
 def start_log_ad(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "logging_ad"
     state["log_data"] = {}
@@ -4603,6 +4650,7 @@ def start_log_ad(chat_id):
     send(chat_id, "*Log Ad Performance*\n\nVideo or Static?", keyboard)
 
 def handle_ad_log_step(chat_id, text):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     log = state.get("log_data", {})
     step = state.get("log_stage", "")
@@ -4913,6 +4961,7 @@ def start_landing_page_flow(chat_id):
 
 def show_lp_avatar_menu(chat_id, page=0):
     """Step 2: Avatar selection — different options for CPRO vs IC."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     goal = state.get("lp_goal", "pro")
     selected = state.get("selected_avatars", [])
@@ -4941,6 +4990,7 @@ def show_lp_avatar_menu(chat_id, page=0):
     send(chat_id, title, keyboard)
 
 def toggle_lp_avatar(chat_id, avatar_key, message_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     goal = state.get("lp_goal", "pro")
     selected = state.get("selected_avatars", [])
@@ -4975,6 +5025,7 @@ def toggle_lp_avatar(chat_id, avatar_key, message_id):
 
 def generate_lp_outline(chat_id):
     """Step 3: Generate short BrandScript outline (1-2 sentences per section)."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     goal = state.get("lp_goal", "pro")
     avatar_keys = state.get("selected_avatars", [])
@@ -5035,6 +5086,7 @@ Nothing else. Just the 7 sections."""
 
 def apply_lp_outline_feedback(chat_id, feedback_text):
     """Step 4: Apply numbered feedback to outline."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     current_outline = state.get("lp_outline_raw", "")
     send(chat_id, "Applying feedback to outline...")
@@ -5057,6 +5109,7 @@ def apply_lp_outline_feedback(chat_id, feedback_text):
 
 def generate_lp_full_copy(chat_id):
     """Step 5: Generate comprehensive BrandScript copy from approved outline."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     goal = state.get("lp_goal", "pro")
     avatar_keys = state.get("selected_avatars", [])
@@ -5139,6 +5192,7 @@ INNER CIRCLE SPECIFIC CONTEXT:
 
 def generate_lp_design_brief(chat_id):
     """Step 8: Generate design brief for UI team based on approved copy."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     lp_content = state.get("current_lp", "")
     goal = state.get("lp_goal", "pro")
@@ -5256,6 +5310,7 @@ def show_data_studio_menu(chat_id):
 # ── AD ANALYSIS ───────────────────────────────────────────────────
 
 def start_ds_adverts(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_ad_format_filter"
     keyboard = [
@@ -5267,6 +5322,7 @@ def start_ds_adverts(chat_id):
     send(chat_id, msg, keyboard)
 
 def analyse_ads(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
@@ -5346,6 +5402,7 @@ Format clearly with headers for each step.
 # ── SOCIAL ANALYSIS ───────────────────────────────────────────────
 
 def start_ds_social(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_social_format_filter"
     keyboard = [
@@ -5357,6 +5414,7 @@ def start_ds_social(chat_id):
     send(chat_id, "*Instagram Performance Analysis*\n\nWhich formats do you want to analyse?", keyboard)
 
 def analyse_social(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
@@ -5462,17 +5520,20 @@ Format clearly with headers."""
 # ── EMAIL ANALYSIS ────────────────────────────────────────────────
 
 def start_ds_emails(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_awaiting_email_splitvar"
     state["ds_images"] = []
     send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
 
 def start_ds_email_splittest(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_awaiting_email_splitvar"
     send(chat_id, "*Split Test Analysis*\n\nWhat variable are you testing? (e.g. 'name in subject line', 'curiosity gap vs data hook', 'short vs long preview')")
 
 def analyse_emails(chat_id, split_var=None):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
@@ -5597,6 +5658,7 @@ Generate 5 specific subject line and angle ideas based on what the patterns sugg
 # ── LANDING PAGE ANALYSIS ─────────────────────────────────────────
 
 def start_ds_landing(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_landing_scope"
     keyboard = [
@@ -5606,11 +5668,13 @@ def start_ds_landing(chat_id):
     send(chat_id, "*Landing Page Analysis*\n\nData source: VWO screenshots or any analytics platform.\n\nTesting a single page variant or comparing multiple pages?", keyboard)
 
 def start_ds_landing_splittest(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_awaiting_landing_splitvar"
     send(chat_id, "*Landing Page Split Test*\n\nWhat variable are you testing? (e.g. 'hero headline A vs B', 'Pro vs Inner Circle CTA', 'with guarantee vs without')")
 
 def analyse_landing(chat_id, split_var=None):
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
@@ -7105,6 +7169,7 @@ def handle_image_callbacks(chat_id, data, state):
 
 def handle_image_direction(chat_id, text):
     """Apply user direction to regenerate image."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     base_prompt = state.get("last_img_prompt", "")
     post_type = state.get("last_img_type", "background")
@@ -7485,6 +7550,7 @@ def show_ie_format_menu(chat_id):
 
 def generate_ie_concept(chat_id):
     """Generate concept ideas — Instagram post focused. Concept + Angle + Source per idea."""
+    user_state.setdefault(chat_id, {"stage": "idea_engine_idle"})
     state = user_state[chat_id]
     source_content = state.get("ie_source_content", "")
     source_label = state.get("ie_source_label", "Cryptonary library")
@@ -7562,6 +7628,7 @@ Nothing else."""
 
 def generate_ie_angle_from_concept(chat_id, concept_text):
     """Generate angles for a selected concept."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     ie_format = state.get("ie_format", "")
     state["ie_selected_concept"] = concept_text
@@ -7591,6 +7658,7 @@ def generate_ie_angle_from_concept(chat_id, concept_text):
 
 def generate_ie_hook_from_angle(chat_id, angle_text):
     """Generate hooks for a selected angle."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     ie_format = state.get("ie_format", "")
     concept = state.get("ie_selected_concept", "")
@@ -7631,6 +7699,7 @@ def generate_ie_hook_from_angle(chat_id, angle_text):
 
 def generate_ie_final_content(chat_id, hook_text):
     """Generate the final content from concept → angle → hook."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     ie_format = state.get("ie_format", "")
     concept = state.get("ie_selected_concept", "")
@@ -7914,6 +7983,7 @@ If the content is strong, open with: "STRONG COPY — [one sentence on what's wo
 
 def run_critique(chat_id, content_type):
     """Run a critique on the current piece of content."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["critique_content_type"] = content_type
 
@@ -7979,6 +8049,7 @@ def run_critique(chat_id, content_type):
 
 def apply_critique_fixes(chat_id, fix_numbers):
     """Apply one or more critique fixes, show diff, offer revert."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     critique = state.get("current_critique", "")
     original = state.get("critique_original", "")
