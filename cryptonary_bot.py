@@ -3885,6 +3885,7 @@ def handle_callback(cb):
     elif data == "img_from_brief":
         brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
         vb_type = state.get("last_visual_type", "static")
+        print(f"img_from_brief fired. brief_len={len(brief)}, vb_type={vb_type}", flush=True)
         if not brief:
             send(chat_id, "No brief found. Generate a visual brief first using the 🎨 Visual brief button.")
             return
@@ -3893,6 +3894,7 @@ def handle_callback(cb):
         state["pending_img_angle"] = state.get("selected_angle", "")
         state["last_visual_brief"] = brief  # ensure it persists
         _global_brief_store[chat_id] = brief
+        send(chat_id, "Loading engine picker...")
         show_image_type_menu(chat_id)
 
     elif data == "approve_ad":
@@ -6641,9 +6643,9 @@ def show_image_type_menu(chat_id):
 
 def show_image_style_menu(chat_id, engine):
     """After engine selected, ask what style/type."""
-    state = user_state.get(chat_id, {})
-    state["img_engine"] = engine
-    user_state[chat_id] = state
+    user_state.setdefault(chat_id, {})
+    user_state[chat_id]["img_engine"] = engine
+    state = user_state[chat_id]
 
     if engine == "claude":
         keyboard = [
@@ -6913,8 +6915,10 @@ def show_visual_brief_menu(chat_id, auto_type=None):
 
 def handle_image_callbacks(chat_id, data, state):
     """Handle all image-related callbacks."""
+    print(f"handle_image_callbacks: {data}", flush=True)
     if data.startswith("img_engine_"):
         engine = data.replace("img_engine_", "")
+        print(f"Engine selected: {engine}", flush=True)
         show_image_style_menu(chat_id, engine)
 
     elif data.startswith("img_style_"):
@@ -6924,6 +6928,7 @@ def handle_image_callbacks(chat_id, data, state):
                  state.get("pending_img_concept", "") or
                  state.get("last_visual_brief", "") or
                  state.get("report", ""))[:600]
+        print(f"img_style_ fired. style={style}, engine={engine}, brief_len={len(brief)}", flush=True)
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
         state["last_img_type"] = style
 
