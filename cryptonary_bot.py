@@ -1959,8 +1959,19 @@ def tg(method, data):
         print(f"Telegram error [{method}]: {e}", flush=True)
         return None
 
+def _safe_md(text):
+    """Escape unmatched markdown symbols that break Telegram's parser."""
+    if text.count("*") % 2 != 0:
+        text = text.replace("*", r"\*")
+    if text.count("_") % 2 != 0:
+        text = text.replace("_", r"\_")
+    if text.count("`") % 2 != 0:
+        text = text.replace("`", r"\`")
+    return text
+
 def send(chat_id, text, keyboard=None):
     # Telegram max message length is 4096 chars - chunk if needed
+    text = _safe_md(text)
     max_len = 4000
     if len(text) <= max_len:
         data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
@@ -5561,6 +5572,7 @@ def poll():
                             doc = msg["document"]
                             mime = doc.get("mime_type", "")
                             content_stages = ["awaiting_report","buffering_report",
+                                "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
@@ -8602,7 +8614,7 @@ def show_visual_brief_menu(chat_id, auto_type=None):
         generate_visual_brief(chat_id, "story")
     elif state.get("current_emails"):
         generate_visual_brief(chat_id, "email")
-    elif state.get("current_ad"):
+    elif state.get("current_ad_output") or state.get("current_ad"):
         ad_type = state.get("ad_type", "static")
         generate_visual_brief(chat_id, "ad_" + ad_type)
     else:
@@ -9246,19 +9258,15 @@ Keep each entry SHORT. No fluff.
 Format EXACTLY:
 1. CONCEPT: [One punchy line — the big idea]
    ANGLE: [The emotional or argumentative approach — why this hits]
-   SOURCE: [What inspired it — e.g. market data, competitor post, Cryptonary track record, user pain point]
 
 2. CONCEPT: ...
    ANGLE: ...
-   SOURCE: ...
 
 3. CONCEPT: ...
    ANGLE: ...
-   SOURCE: ...
 
 4. CONCEPT: ...
    ANGLE: ...
-   SOURCE: ...
 
 Nothing else."""
 
