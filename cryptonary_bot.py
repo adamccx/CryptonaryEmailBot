@@ -6789,10 +6789,6 @@ def start_ds_adverts(chat_id):
     msg = "*Ad Performance Analysis*\n\nData sources: Meta Ads Manager, Mixpanel, or any format showing ad metrics.\n\nSelect which ads to analyse:"
     send(chat_id, msg, keyboard)
 
-def analyse_ads(chat_id):
-    user_state.setdefault(chat_id, {"stage": "idle"})
-    state = user_state[chat_id]
-
 def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, system_prompt, max_tokens=3000, timeout=90):
     """Send images to Claude in batches of 5 to avoid context window limits. Returns combined result."""
     MAX_IMGS = 5
@@ -6831,6 +6827,9 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     with urllib.request.urlopen(synth_req, timeout=timeout) as r:
         return json.loads(r.read())["content"][0]["text"]
 
+def analyse_ads(chat_id):
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
@@ -9231,7 +9230,8 @@ Format EXACTLY:
 
 Nothing else."""
 
-        raw = claude(prompt, max_tokens=800, system=VOICE_GUIDE)
+        IE_SYSTEM = "You are a creative strategist for Cryptonary, a crypto research brand with 300K+ subscribers. Generate sharp, distinct Instagram content concepts. Be specific, data-led, and punchy. No filler."
+        raw = claude(prompt, max_tokens=1200, system=IE_SYSTEM)
         state["ie_concepts"] = raw
         state["stage"] = "ie_concept_review"
         send_plain(chat_id, "*IDEAS*\n\n" + raw)
