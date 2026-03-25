@@ -2014,7 +2014,7 @@ def send_plain(chat_id, text, keyboard=None):
 
 def claude(prompt, max_tokens=1500, system=None):
     payload = json.dumps({
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-sonnet-4-5",
         "max_tokens": max_tokens,
         "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
@@ -2024,9 +2024,36 @@ def claude(prompt, max_tokens=1500, system=None):
         data=payload,
         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"}
     )
-    with urllib.request.urlopen(req, timeout=60) as r:
-        data = json.loads(r.read())
-        return "".join(c.get("text", "") for c in data["content"])
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = json.loads(r.read())
+            return "".join(c.get("text", "") for c in data["content"])
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Claude API error " + str(e.code) + ": " + body, flush=True)
+        raise Exception("API error " + str(e.code) + ": " + body[:200])
+
+def anthropic_vision(messages, max_tokens=1500, system=None):
+    """Make a direct Anthropic API call with vision/multimodal content. Proper error logging."""
+    payload = json.dumps({
+        "model": "claude-sonnet-4-5",
+        "max_tokens": max_tokens,
+        "system": system if system else "You are a helpful assistant.",
+        "messages": messages
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            data = json.loads(r.read())
+            return "".join(c.get("text", "") for c in data["content"])
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Anthropic vision error " + str(e.code) + ": " + body, flush=True)
+        raise Exception("API error " + str(e.code) + ": " + body[:200])
 
 def clean_json(s):
     s = s.replace("```json", "").replace("```", "").strip()
@@ -6794,12 +6821,17 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     MAX_IMGS = 5
     def _call(blocks, prompt, tokens):
         blocks_with_prompt = blocks + [{"type": "text", "text": prompt}]
-        pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": tokens,
+        pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": tokens,
             "system": system_prompt, "messages": [{"role": "user", "content": blocks_with_prompt}]}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
             headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read())["content"][0]["text"]
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read())["content"][0]["text"]
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")
+            print("batched_vision error " + str(e.code) + ": " + body, flush=True)
+            raise Exception("API error " + str(e.code) + ": " + body[:200])
 
     if len(images) <= MAX_IMGS:
         blocks = [{"type": "image", "source": {"type": "base64", "media_type": i["type"], "data": i["data"]}} for i in images]
@@ -6820,7 +6852,7 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     send(chat_id, "Synthesising all data...")
     combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
     synth_blocks = [{"type": "text", "text": "Synthesise all batches into one complete analysis:\n\n" + combined + "\n\n" + analysis_prompt}]
-    synth_pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": max_tokens,
+    synth_pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": max_tokens,
         "system": system_prompt, "messages": [{"role": "user", "content": synth_blocks}]}).encode()
     synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_pay,
         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -6853,7 +6885,7 @@ def analyse_ads(chat_id):
         if images:
             result = batched_vision_call(chat_id, images, ads_prompt, extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
-            pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this Meta Ads Manager CSV:\n\n" + csv_text + "\n\n" + ads_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
@@ -6980,7 +7012,7 @@ Format clearly with headers."""
                         content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
                     batch_prompt = analysis_prompt if batch_num == 1 else "Extract all post data from these screenshots. For each post: caption snippet, format, reach, likes, comments, saves, shares, views if reel. Calculate engagement rate. Return as a data table only — no analysis yet."
                     content_blocks.append({"type": "text", "text": batch_prompt})
-                    batch_payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 2000,
+                    batch_payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 2000,
                         "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content": content_blocks}]}).encode()
                     batch_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=batch_payload,
                         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -6990,7 +7022,7 @@ Format clearly with headers."""
                 # Final synthesis pass combining all batch data
                 send(chat_id, "Synthesising all data...")
                 combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
-                synth_payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                synth_payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                     "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                         "I have extracted Instagram data in batches. Synthesise all of it into a single complete analysis.\n\n" +
                         combined + "\n\n" + analysis_prompt}]}).encode()
@@ -7004,7 +7036,7 @@ Format clearly with headers."""
                     content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
                 content_blocks.append({"type": "text", "text": analysis_prompt})
                 messages = [{"role": "user", "content": content_blocks}]
-                payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                     "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
                 req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                     headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -7012,7 +7044,7 @@ Format clearly with headers."""
                     result = json.loads(r.read())["content"][0]["text"]
         else:
             messages = [{"role": "user", "content": "Analyse this Instagram CSV data:\n\n" + csv_text + "\n\n" + analysis_prompt}]
-            payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                 headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -7147,7 +7179,7 @@ Generate 5 specific subject line and angle ideas based on what the patterns sugg
         if images:
             result = batched_vision_call(chat_id, images, analysis_prompt, email_extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
-            pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+            pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this email CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
@@ -7246,7 +7278,7 @@ STEP 5 — VERDICT: Winner, confidence, one recommendation. Keep it simple.
         else:
             messages = [{"role": "user", "content": "Analyse this landing page CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]
 
-        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+        payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
             "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
             headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -7307,7 +7339,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             else:
                 try:
                     check_payload = json.dumps({
-                        "model": "claude-sonnet-4-20250514",
+                        "model": "claude-sonnet-4-5",
                         "max_tokens": 150,
                         "messages": [{"role": "user", "content": [
                             {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
@@ -9779,35 +9811,23 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             elif file_path.endswith(".webp"): mime = "image/webp"
             encoded = base64.b64encode(file_bytes).decode()
 
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 2000,
-                "messages": [{"role": "user", "content": [
+            extracted = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
-                    {"type": "text", "text": "Extract all the text and data from this image. This is likely a research report, market analysis, or data table. Return everything you can read as plain text, preserving structure. Include all numbers, dates, percentages, and key points."}
-                ]}]
-            }).encode()
-
-            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                extracted = json.loads(r.read())["content"][0]["text"]
+                    {"type": "text", "text": "Extract all the text and data from this image. Return everything as plain text, preserving structure. Include all numbers, dates, percentages, and key points."}
+                ]}],
+                max_tokens=2000
+            )
 
         elif file_type == "pdf":
-            # Send PDF directly to Claude API as document
             encoded = base64.b64encode(file_bytes).decode()
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 3000,
-                "messages": [{"role": "user", "content": [
+            extracted = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
-                    {"type": "text", "text": "Extract all the content from this document. This is likely a research report, market analysis, newsletter, or data report. Return the full content as plain text preserving all key information, numbers, analysis, and structure."}
-                ]}]
-            }).encode()
-            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req, timeout=180) as r:
-                extracted = json.loads(r.read())["content"][0]["text"]
+                    {"type": "text", "text": "Extract all the content from this document as plain text preserving all key information, numbers, analysis, and structure."}
+                ]}],
+                max_tokens=3000
+            )
 
         elif file_type == "doc":
             # Extract docx using stdlib zipfile + XML — no python-docx needed
@@ -9928,20 +9948,15 @@ def handle_ie_screenshot(chat_id, file_info, stage):
         is_doc = "word" in mime_type or "docx" in mime_type or "officedocument" in mime_type
 
         if is_pdf:
-            # Use Claude API document extraction
             encoded = base64.b64encode(file_bytes).decode()
             send(chat_id, "Reading PDF...")
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514", "max_tokens": 2000,
-                "messages": [{"role": "user", "content": [
+            text_content = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
                     {"type": "text", "text": "Extract the key content from this document — headlines, copy, data, analysis. Return as plain text."}
-                ]}]
-            }).encode()
-            req2 = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req2, timeout=180) as r:
-                text_content = json.loads(r.read())["content"][0]["text"]
+                ]}],
+                max_tokens=2000
+            )
             _process_ie_text_content(chat_id, stage, text_content, "PDF")
             return
 
@@ -10002,21 +10017,14 @@ INSPIRED BY: [what specifically in the screenshot sparked this]
 WHY IT WORKS: [one sentence — specific principle or mechanic]
 ---"""
 
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 1500,
-                "system": VOICE_GUIDE,
-                "messages": [{"role": "user", "content": [
+            result = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
                     {"type": "text", "text": prompt_text}
-                ]}]
-            }).encode()
-
-            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                result = json.loads(r.read())["content"][0]["text"]
-
+                ]}],
+                max_tokens=1500,
+                system="You are a creative strategist for Cryptonary, a crypto brand with 300K+ subscribers. Generate sharp, distinct content ideas. Be specific and punchy."
+            )
             user_state[chat_id]["last_ideas"] = result
             send_plain(chat_id, "*IDEAS FROM SCREENSHOT*\n\n" + result)
             keyboard = [
@@ -10057,21 +10065,14 @@ ISSUES:
 
 OVERALL RATING: [A/B/C/D] — [one sentence verdict]"""
 
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 1200,
-                "system": CRITIQUE_SYSTEM,
-                "messages": [{"role": "user", "content": [
+            result = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
                     {"type": "text", "text": prompt_text}
-                ]}]
-            }).encode()
-
-            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                result = json.loads(r.read())["content"][0]["text"]
-
+                ]}],
+                max_tokens=1200,
+                system=CRITIQUE_SYSTEM
+            )
             send_plain(chat_id, "SCREENSHOT CRITIQUE\n\n" + result)
             keyboard = [
                 [{"text": "Ideas from this screenshot", "callback_data": "ie_screenshot_ideas"}],
@@ -10203,17 +10204,13 @@ def handle_ie_file(chat_id, file_info, file_type="pdf"):
 
         if file_type == "pdf":
             encoded = base64.b64encode(file_bytes).decode()
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514", "max_tokens": 3000,
-                "messages": [{"role": "user", "content": [
+            text_content = anthropic_vision(
+                [{"role": "user", "content": [
                     {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
                     {"type": "text", "text": "Extract the full content from this document. Return all key information, analysis, data, and structure as plain text."}
-                ]}]
-            }).encode()
-            req2 = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req2, timeout=180) as r:
-                text_content = json.loads(r.read())["content"][0]["text"]
+                ]}],
+                max_tokens=3000
+            )
 
         elif file_type == "doc":
             try:
