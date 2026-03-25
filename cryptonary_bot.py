@@ -2012,7 +2012,7 @@ def send_plain(chat_id, text, keyboard=None):
                 time.sleep(0.3)
 
 
-def claude(prompt, max_tokens=900, system=None):
+def claude(prompt, max_tokens=1500, system=None):
     payload = json.dumps({
         "model": "claude-sonnet-4-20250514",
         "max_tokens": max_tokens,
@@ -2528,7 +2528,7 @@ def gen_enhance(chat_id, mode="email"):
             raw = claude(
                 "Analyse this Cryptonary " + social_type + " and generate exactly 6 specific improvement suggestions. Each must reference a copywriting principle and give a concrete fix.\n\nCONTENT:\n" + content +
                 "\n\nFormat as a numbered list:\n1. PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific improvement]\n\n2. PRINCIPLE: ...\nAnd so on for all 6. Nothing else.",
-                max_tokens=900
+                max_tokens=1200
             )
             suggestions = parse_enhance_suggestions(raw)
             state["enhance_suggestions"] = suggestions
@@ -2820,7 +2820,7 @@ def gen_reel(chat_id):
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             "\n\nRULES:\n- Approximately " + str(word_count) + " words (matches " + str(reel_duration) + "s at natural pace)\n- First 3 seconds must stop the scroll\n- Format: voiceover text | [B-roll instruction] for each line\n- CTA at end: follow Cryptonary\n- Adam's voice: punchy, direct, data-led\n\nReturn as plain string.",
-            max_tokens=900
+            max_tokens=1500
         )
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
@@ -2843,15 +2843,17 @@ def gen_carousel(chat_id):
     source_email = get_social_source_text(chat_id)[:500]
     hook = state.get("selected_social_hooks", {}).get("fmt_carousel", "")
     voice_examples = get_voice_corpus_context(chat_id)
+    # Scale max_tokens with slide count — more slides needs more output budget
+    carousel_tokens = max(900, slide_count * 160)
     try:
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
             "Create a " + str(slide_count) + "-slide Instagram Carousel for Cryptonary.\n\n" +
             ("COVER SLIDE HEADLINE (use this): " + hook + "\n\n" if hook else "") +
-            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+            "SOURCE:\nReport: " + report[:1500] + ("\nContext: " + context[:300] if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Format: SLIDE N: [headline max 8 words] + [visual direction in brackets]\n- Mix bold text, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more\n\nReturn as plain string.",
-            max_tokens=900
+            max_tokens=carousel_tokens
         )
         state["current_social"] = result
         state["current_social_type"] = "Carousel"
@@ -2859,7 +2861,11 @@ def gen_carousel(chat_id):
         send_plain(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
         send(chat_id, "Carousel ready.", format_action_keyboard("fmt_carousel", "Carousel"))
     except Exception as e:
-        send(chat_id, "Error generating carousel: " + str(e))
+        err_msg = str(e)
+        if "400" in err_msg or "Bad Request" in err_msg:
+            send(chat_id, "The carousel is too large to generate in one go. Try reducing the slide count or shortening the source report.")
+        else:
+            send(chat_id, "Error generating carousel: " + err_msg)
 
 
 def gen_static(chat_id):
@@ -3947,7 +3953,7 @@ def handle_message(msg):
                 "CURRENT BRIEF:\n" + brief[:1500] +
                 "\n\nUSER FEEDBACK: " + text +
                 "\n\nUpdate the brief applying this feedback. Keep the same format and structure. Only change what was specified.",
-                max_tokens=900
+                max_tokens=1200
             )
             _global_brief_store[chat_id] = updated
             user_state[chat_id]["last_visual_brief"] = updated
@@ -5533,7 +5539,10 @@ def poll():
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
-                                "ie_awaiting_inspiration"]
+                                "ie_awaiting_inspiration",
+                                "ie_awaiting_custom_concept",
+                                "ie_concept_review",
+                                "idea_engine_idle"]
                             if stage in content_stages:
                                 if "pdf" in mime:
                                     ftype = "pdf"
@@ -5542,8 +5551,14 @@ def poll():
                                 else:
                                     ftype = "doc"
                                 handle_content_file(chat_id, doc, ftype)
-                            elif stage in ie_stages_doc:
-                                handle_ie_screenshot(chat_id, doc, stage)
+                            elif stage in ie_stages_doc or stage.startswith("ie_"):
+                                if "pdf" in mime:
+                                    ftype = "pdf"
+                                elif "word" in mime or "docx" in mime or "officedocument" in mime:
+                                    ftype = "doc"
+                                else:
+                                    ftype = "doc"
+                                handle_ie_file(chat_id, doc, ftype)
                             else:
                                 ftype = "image" if mime.startswith("image/") else "csv"
                                 handle_ds_file(chat_id, doc, ftype)
@@ -6777,6 +6792,45 @@ def start_ds_adverts(chat_id):
 def analyse_ads(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
+
+def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, system_prompt, max_tokens=3000, timeout=90):
+    """Send images to Claude in batches of 5 to avoid context window limits. Returns combined result."""
+    MAX_IMGS = 5
+    def _call(blocks, prompt, tokens):
+        blocks_with_prompt = blocks + [{"type": "text", "text": prompt}]
+        pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": tokens,
+            "system": system_prompt, "messages": [{"role": "user", "content": blocks_with_prompt}]}).encode()
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())["content"][0]["text"]
+
+    if len(images) <= MAX_IMGS:
+        blocks = [{"type": "image", "source": {"type": "base64", "media_type": i["type"], "data": i["data"]}} for i in images]
+        return _call(blocks, analysis_prompt, max_tokens)
+
+    # Multiple batches needed
+    send(chat_id, "Processing " + str(len(images)) + " images in batches...")
+    batch_results = []
+    for start in range(0, len(images), MAX_IMGS):
+        batch = images[start:start + MAX_IMGS]
+        bn = start // MAX_IMGS + 1
+        tb = (len(images) + MAX_IMGS - 1) // MAX_IMGS
+        send(chat_id, "Batch " + str(bn) + " of " + str(tb) + "...")
+        blocks = [{"type": "image", "source": {"type": "base64", "media_type": i["type"], "data": i["data"]}} for i in batch]
+        prompt = analysis_prompt if bn == 1 else extraction_prompt
+        batch_results.append(_call(blocks, prompt, 2000))
+
+    send(chat_id, "Synthesising all data...")
+    combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
+    synth_blocks = [{"type": "text", "text": "Synthesise all batches into one complete analysis:\n\n" + combined + "\n\n" + analysis_prompt}]
+    synth_pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": max_tokens,
+        "system": system_prompt, "messages": [{"role": "user", "content": synth_blocks}]}).encode()
+    synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_pay,
+        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+    with urllib.request.urlopen(synth_req, timeout=timeout) as r:
+        return json.loads(r.read())["content"][0]["text"]
+
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
@@ -6786,56 +6840,27 @@ def analyse_ads(chat_id):
     # Get content context and history
     ctx = get_content_context(chat_id)
     try:
+        ads_prompt = ("Extract and analyse all ad performance data from these screenshots.\n\n"
+            "META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle\n\n"
+            "FILTER: Only analyse " + {"all": "all ad types", "video": "VIDEO (VID) ads only", "static": "STATIC (IMG) ads only"}.get(state.get("ds_ad_filter","all"), "all ad types") + "\n\n"
+            "STEP 1 — DATA EXTRACTION: List every qualifying ad with all metrics.\n"
+            "STEP 2 — GRADING (A/B/C/D quartiles): Rate each ad SCALE/KEEP/TEST/KILL\n"
+            "STEP 3 — COHORT ANALYSIS: Grade against cohort (same avatar + stage)\n"
+            "STEP 4 — VIDEO AIDA DIAGNOSIS (video only)\n"
+            "STEP 5 — PATTERN RECOGNITION: patterns across avatar, stage, angle, type\n"
+            "STEP 6 — IDEAS: 5 specific new ad ideas from the data\n\n"
+            "Format clearly with headers.\n" + ctx)
+        extraction_prompt = "Extract all ad data from these screenshots. For each ad: name, type (IMG/VID), stage, metrics. Return as a data table only."
         if images:
-            content_blocks = []
-            for img_data in images:
-                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
-            content_blocks.append({"type": "text", "text": """Extract and analyse all ad performance data from these screenshots.
-
-META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle
-
-FILTER: Only analyse """ + {"all": "all ad types", "video": "VIDEO (VID) ads only — ignore any IMG/static ads", "static": "STATIC (IMG) ads only — ignore any VID/video ads"}.get(state.get("ds_ad_filter","all"), "all ad types") + """
-
-IMPORTANT: First count how many qualifying ads are visible. State total count.
-
-STEP 1 — DATA EXTRACTION:
-List every qualifying ad with: Ad Name, Type (IMG/VID), Stage, Avatar, Angle, all metrics visible.
-
-STEP 2 — GRADING (A/B/C/D quartiles within cohort):
-Grade each ad on every metric. For CPP/CPC lower=better so invert grading.
-Give each ad an overall rating: SCALE / KEEP / TEST / KILL
-
-STEP 3 — COHORT ANALYSIS:
-Grade each ad against its own cohort (same avatar + stage) AND overall.
-
-STEP 4 — VIDEO AIDA DIAGNOSIS (video ads only):
-Map where each video's funnel breaks: Attention → Interest → Desire → Action.
-
-STEP 5 — PATTERN RECOGNITION:
-What patterns emerge across avatar, stage, angle, ad type? Be specific.
-
-STEP 6 — IDEAS:
-Generate 5 specific new ad ideas based on what the patterns suggest. Not generic — specific angles, avatars, hooks derived from the data.
-
-Format clearly with headers for each step.
-""" + ctx})
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 3000,
-                "system": DATA_STUDIO_SYSTEM,
-                "messages": [{"role": "user", "content": content_blocks}]
-            }).encode()
+            result = batched_vision_call(chat_id, images, ads_prompt, extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
-            payload = json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 3000,
-                "system": DATA_STUDIO_SYSTEM,
-                "messages": [{"role": "user", "content": "Analyse this Meta Ads Manager CSV data:\n\n" + csv_text + "\n\nApply full grading, cohort analysis, AIDA diagnosis for videos, pattern recognition, and generate 5 specific new ad ideas."}]
-            }).encode()
-        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-        with urllib.request.urlopen(req, timeout=90) as r:
-            result = json.loads(r.read())["content"][0]["text"]
+            pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
+                "Analyse this Meta Ads Manager CSV:\n\n" + csv_text + "\n\n" + ads_prompt}]}).encode()
+            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
@@ -6941,20 +6966,60 @@ STEP 8 — TOTALS SUMMARY:
 Format clearly with headers."""
 
         if images:
-            content_blocks = []
-            for img_data in images:
-                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
-            content_blocks.append({"type": "text", "text": analysis_prompt})
-            messages = [{"role": "user", "content": content_blocks}]
+            # Cap at 5 images per API call — more than that exceeds context window
+            MAX_IMGS = 5
+            if len(images) > MAX_IMGS:
+                send(chat_id, "Processing " + str(len(images)) + " images in batches...")
+                batch_results = []
+                for batch_start in range(0, len(images), MAX_IMGS):
+                    batch = images[batch_start:batch_start + MAX_IMGS]
+                    batch_num = batch_start // MAX_IMGS + 1
+                    total_batches = (len(images) + MAX_IMGS - 1) // MAX_IMGS
+                    send(chat_id, "Analysing batch " + str(batch_num) + " of " + str(total_batches) + "...")
+                    content_blocks = []
+                    for img_data in batch:
+                        content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+                    batch_prompt = analysis_prompt if batch_num == 1 else "Extract all post data from these screenshots. For each post: caption snippet, format, reach, likes, comments, saves, shares, views if reel. Calculate engagement rate. Return as a data table only — no analysis yet."
+                    content_blocks.append({"type": "text", "text": batch_prompt})
+                    batch_payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 2000,
+                        "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content": content_blocks}]}).encode()
+                    batch_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=batch_payload,
+                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                    with urllib.request.urlopen(batch_req, timeout=90) as r:
+                        batch_results.append(json.loads(r.read())["content"][0]["text"])
+
+                # Final synthesis pass combining all batch data
+                send(chat_id, "Synthesising all data...")
+                combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
+                synth_payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                    "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
+                        "I have extracted Instagram data in batches. Synthesise all of it into a single complete analysis.\n\n" +
+                        combined + "\n\n" + analysis_prompt}]}).encode()
+                synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_payload,
+                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                with urllib.request.urlopen(synth_req, timeout=90) as r:
+                    result = json.loads(r.read())["content"][0]["text"]
+            else:
+                content_blocks = []
+                for img_data in images:
+                    content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
+                content_blocks.append({"type": "text", "text": analysis_prompt})
+                messages = [{"role": "user", "content": content_blocks}]
+                payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                    "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
+                req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                with urllib.request.urlopen(req, timeout=90) as r:
+                    result = json.loads(r.read())["content"][0]["text"]
         else:
             messages = [{"role": "user", "content": "Analyse this Instagram CSV data:\n\n" + csv_text + "\n\n" + analysis_prompt}]
+            payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
+            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                result = json.loads(r.read())["content"][0]["text"]
 
-        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
-            "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
-        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-        with urllib.request.urlopen(req, timeout=90) as r:
-            result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
@@ -7079,21 +7144,17 @@ Generate 5 specific subject line and angle ideas based on what the patterns sugg
         else:
             send_msg = "Running full analysis..."
 
+        email_extraction_prompt = "Extract all email data from these screenshots. For each email: subject line, send date, recipients, open rate, CTR. Return as a data table only."
         if images:
-            content_blocks = []
-            for img_data in images:
-                content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
-            content_blocks.append({"type": "text", "text": analysis_prompt})
-            messages = [{"role": "user", "content": content_blocks}]
+            result = batched_vision_call(chat_id, images, analysis_prompt, email_extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
-            messages = [{"role": "user", "content": "Analyse this email performance CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]
-
-        payload = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
-            "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
-        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-        with urllib.request.urlopen(req, timeout=90) as r:
-            result = json.loads(r.read())["content"][0]["text"]
+            pay = json.dumps({"model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
+                "Analyse this email CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]}).encode()
+            req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
         send_plain(chat_id, result)
@@ -8471,7 +8532,7 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
             "Inter/Tungsten/Termina fonts, colours: black #000000, white #FFFFFF, "
             "blue #005EFF, red #FF0000, green #0DA500, bitcoin orange #F7931A. "
             "Logo @Cryptonary always bottom-right.",
-            max_tokens=900
+            max_tokens=1500
         )
         state["last_visual_brief"] = result
         state["last_visual_type"] = content_type
@@ -8714,14 +8775,22 @@ def handle_image_direction(chat_id, text):
         send(chat_id, "Updated.", keyboard)
 
 
+# Cache for market data — keyed by timestamp bucket (5 min intervals)
+_market_cache = {"data": {}, "fetched_at": 0}
+
 def fetch_market_data():
-    """Fetch BTC price, Fear & Greed index, and top crypto news."""
+    """Fetch BTC price and Fear & Greed index. Cached for 5 minutes to avoid rate limits."""
+    now = time.time()
+    if now - _market_cache["fetched_at"] < 300 and _market_cache["data"]:
+        return _market_cache["data"]
+
     results = {}
+
+    # Try CoinGecko first, fall back to Binance (no rate limit on public ticker)
     try:
-        # BTC price from CoinGecko public API
         req = urllib.request.Request(
             "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_7d_change=true",
-            headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+            headers={"Accept": "application/json", "User-Agent": "CryptonaryBot/1.0"}
         )
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
@@ -8729,17 +8798,28 @@ def fetch_market_data():
             results["btc_price"] = btc.get("usd", 0)
             results["btc_24h"] = round(btc.get("usd_24h_change", 0), 1)
             results["btc_7d"] = round(btc.get("usd_7d_change", 0), 1)
-    except Exception as e:
-        results["btc_price"] = 0
-        results["btc_24h"] = 0
-        results["btc_7d"] = 0
-        print("BTC price fetch error:", e, flush=True)
+    except Exception:
+        # Fallback: Binance public API — no rate limit issues
+        try:
+            req2 = urllib.request.Request(
+                "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",
+                headers={"Accept": "application/json"}
+            )
+            with urllib.request.urlopen(req2, timeout=10) as r:
+                btc2 = json.loads(r.read())
+                results["btc_price"] = float(btc2.get("lastPrice", 0))
+                results["btc_24h"] = round(float(btc2.get("priceChangePercent", 0)), 1)
+                results["btc_7d"] = 0
+        except Exception as e:
+            results["btc_price"] = 0
+            results["btc_24h"] = 0
+            results["btc_7d"] = 0
+            print("BTC price fetch error:", e, flush=True)
 
     try:
-        # Fear & Greed from alternative.me
         req = urllib.request.Request(
             "https://api.alternative.me/fng/?limit=1",
-            headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+            headers={"Accept": "application/json", "User-Agent": "CryptonaryBot/1.0"}
         )
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
@@ -8751,6 +8831,8 @@ def fetch_market_data():
         results["fng_label"] = "N/A"
         print("Fear & Greed fetch error:", e, flush=True)
 
+    _market_cache["data"] = results
+    _market_cache["fetched_at"] = now
     return results
 
 def get_last_week_performance(chat_id):
@@ -9100,6 +9182,14 @@ def generate_ie_concept(chat_id):
         if not user_state[chat_id].get("ie_source_label"):
             user_state[chat_id]["ie_source_label"] = label
 
+
+    # Track previously generated batches to force genuine variety on regen
+    prev_concepts = state.get("ie_all_prev_concepts", [])
+    current_concepts = state.get("ie_concepts", "")
+    if current_concepts:
+        prev_concepts.append(current_concepts)
+        state["ie_all_prev_concepts"] = prev_concepts[-3:]
+
     send(chat_id, "Generating concepts...")
 
     try:
@@ -9109,9 +9199,17 @@ def generate_ie_concept(chat_id):
             prompt += "\nINSPIRATION SOURCE (" + source_label + "):\n" + source_content[:2000] + "\n"
         prompt += "\nCRYPTONARY PROVEN POST PATTERNS (use as creative reference):\n" + BEST_POSTS[:1500] + "\n"
         prompt += ctx
+
+        if prev_concepts:
+            prompt += "\n\nPREVIOUSLY GENERATED - DO NOT REPEAT THESE ANGLES OR HOOKS:\n"
+            for _pi, _batch in enumerate(prev_concepts):
+                prompt += "\nBatch " + str(_pi+1) + ":\n" + _batch[:600] + "\n"
+            prompt += "\nNew concepts MUST use completely different angles and emotional triggers. If previous used fear, use aspiration or social proof. No overlap in hook style.\n"
+
         prompt += """
 
 Each concept is a distinct Instagram post idea — different angle, emotion, or narrative.
+Vary the emotional trigger across all 4: one fear-based, one aspiration, one social proof, one contrarian — no two should use the same emotional approach.
 Keep each entry SHORT. No fluff.
 
 Format EXACTLY:
@@ -9668,7 +9766,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
 
         url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             file_bytes = r.read()
 
         import base64
@@ -9708,23 +9806,29 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             }).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                 headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=180) as r:
                 extracted = json.loads(r.read())["content"][0]["text"]
 
         elif file_type == "doc":
-            # Try as docx first, fallback to plain text
+            # Extract docx using stdlib zipfile + XML — no python-docx needed
+            import io, zipfile, xml.etree.ElementTree as _ET
+            extracted = ""
             try:
-                import io
-                from docx import Document as _Document
-                doc = _Document(io.BytesIO(file_bytes))
-                extracted = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])[:8000]
-                if not extracted.strip():
-                    raise ValueError("Empty docx")
+                with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+                    with z.open("word/document.xml") as xml_file:
+                        tree = _ET.parse(xml_file)
+                        ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+                        paragraphs = []
+                        for para in tree.iter(ns + "p"):
+                            text = "".join(node.text or "" for node in para.iter(ns + "t"))
+                            if text.strip():
+                                paragraphs.append(text)
+                        extracted = "\n".join(paragraphs)[:8000]
             except Exception:
-                try:
-                    extracted = file_bytes.decode("utf-8")[:8000]
-                except:
-                    extracted = file_bytes.decode("latin-1")[:8000]
+                pass
+            if not extracted.strip():
+                send(chat_id, "Couldn't read that .docx file properly.\n\nPlease paste the text directly instead.")
+                return
         else:
             # Plain text / CSV
             try:
@@ -9736,9 +9840,24 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             send(chat_id, "Could not extract readable content from this file.\n\nSupported: PDF, image/screenshot, CSV, .docx, plain text.\n\nTry pasting the text directly instead.")
             return
 
-        # Show preview and proceed
-        preview = extracted[:300] + ("..." if len(extracted) > 300 else "")
-        send(chat_id, "Got it. Extracted " + str(len(extracted)) + " characters:\n\n_" + preview + "_")
+        # Sanity check — reject if extracted text looks like binary garbage
+        sample = extracted[:500]
+        non_ascii = sum(1 for c in sample if ord(c) > 127)
+        if non_ascii > len(sample) * 0.3:
+            send(chat_id, "The file content didn't extract cleanly — it may be a scanned PDF or protected document.\n\nPlease paste the text directly instead.")
+            return
+
+        # Generate a brief summary so Adam can confirm the right content was extracted
+        try:
+            summary = claude(
+                "Summarise this document in 3-4 sentences. Focus on: what it is, the main topic/thesis, key data points or insights, and anything particularly notable.\n\n" + extracted[:4000],
+                max_tokens=200,
+                system="You are a concise research assistant. Be specific and factual. No fluff."
+            )
+        except Exception:
+            summary = extracted[:300] + "..."
+
+        send_plain(chat_id, "*File received. Here\'s what I extracted:*\n\n" + summary)
 
         # Route based on current stage — same as if text was pasted
         if stage in ("awaiting_report", "buffering_report"):
@@ -9797,7 +9916,7 @@ def handle_ie_screenshot(chat_id, file_info, stage):
 
         url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             file_bytes = r.read()
 
         user_state[chat_id]["stage"] = "idea_engine_idle"
@@ -9821,20 +9940,36 @@ def handle_ie_screenshot(chat_id, file_info, stage):
             }).encode()
             req2 = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                 headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
-            with urllib.request.urlopen(req2, timeout=60) as r:
+            with urllib.request.urlopen(req2, timeout=180) as r:
                 text_content = json.loads(r.read())["content"][0]["text"]
             _process_ie_text_content(chat_id, stage, text_content, "PDF")
             return
 
         elif is_csv or is_doc:
             if is_doc:
+                import io, zipfile, xml.etree.ElementTree as _ET
+                text_content = ""
                 try:
-                    import io
-                    from docx import Document as _Doc
-                    doc = _Doc(io.BytesIO(file_bytes))
-                    text_content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])[:6000]
-                except:
-                    text_content = file_bytes.decode("utf-8", errors="ignore")[:6000]
+                    with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+                        with z.open("word/document.xml") as xml_file:
+                            tree = _ET.parse(xml_file)
+                            ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+                            paras = []
+                            for para in tree.iter(ns + "p"):
+                                t = "".join(node.text or "" for node in para.iter(ns + "t"))
+                                if t.strip():
+                                    paras.append(t)
+                            text_content = "\n".join(paras)[:6000]
+                except Exception:
+                    pass
+                if not text_content.strip():
+                    send(chat_id, "Couldn't read that .docx file.\n\nPlease paste the text directly instead.")
+                    return
+                # Garbage check
+                sample = text_content[:500]
+                if sum(1 for c in sample if ord(c) > 127) > len(sample) * 0.3:
+                    send(chat_id, "The file didn't extract cleanly.\n\nPlease paste the text directly instead.")
+                    return
             else:
                 text_content = file_bytes.decode("utf-8", errors="ignore")[:6000]
             _process_ie_text_content(chat_id, stage, text_content, "document")
@@ -10044,6 +10179,91 @@ def analyse_url(chat_id, url, mode="ideas"):
 
     _process_ie_text_content(chat_id, state.get("stage", "idea_engine_idle"), text_content,
                               label + " (" + url + ")", mode=mode)
+
+
+def handle_ie_file(chat_id, file_info, file_type="pdf"):
+    """Handle PDF/doc uploads in Idea Engine from any stage — extract, summarise, generate concepts."""
+    import base64, io, zipfile, xml.etree.ElementTree as _ET
+    state = user_state.setdefault(chat_id, {"stage": "idea_engine_idle"})
+    try:
+        file_id = file_info.get("file_id")
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            send(chat_id, "Could not download the file.")
+            return
+
+        send(chat_id, "Reading your file...")
+        url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=120) as r:
+            file_bytes = r.read()
+
+        text_content = ""
+
+        if file_type == "pdf":
+            encoded = base64.b64encode(file_bytes).decode()
+            payload = json.dumps({
+                "model": "claude-sonnet-4-20250514", "max_tokens": 3000,
+                "messages": [{"role": "user", "content": [
+                    {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
+                    {"type": "text", "text": "Extract the full content from this document. Return all key information, analysis, data, and structure as plain text."}
+                ]}]
+            }).encode()
+            req2 = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            with urllib.request.urlopen(req2, timeout=180) as r:
+                text_content = json.loads(r.read())["content"][0]["text"]
+
+        elif file_type == "doc":
+            try:
+                with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+                    with z.open("word/document.xml") as xml_file:
+                        tree = _ET.parse(xml_file)
+                        ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+                        paras = []
+                        for para in tree.iter(ns + "p"):
+                            t = "".join(node.text or "" for node in para.iter(ns + "t"))
+                            if t.strip():
+                                paras.append(t)
+                        text_content = "\n".join(paras)[:8000]
+            except Exception:
+                pass
+            if not text_content.strip():
+                send(chat_id, "Couldn\'t read that .docx file.\n\nPlease paste the text directly instead.")
+                return
+            sample = text_content[:500]
+            if sum(1 for c in sample if ord(c) > 127) > len(sample) * 0.3:
+                send(chat_id, "The file didn\'t extract cleanly.\n\nPlease paste the text directly instead.")
+                return
+
+        if not text_content or len(text_content.strip()) < 50:
+            send(chat_id, "Could not extract readable content from this file.\n\nTry pasting the text directly instead.")
+            return
+
+        # Generate a brief summary so Adam can confirm the right content was extracted
+        try:
+            summary = claude(
+                "Summarise this document in 3-4 sentences. Focus on: what it is, the main topic/thesis, key data points or insights, and anything particularly notable.\n\n" + text_content[:4000],
+                max_tokens=200,
+                system="You are a concise research assistant. Be specific and factual. No fluff."
+            )
+        except Exception:
+            summary = text_content[:300] + "..."
+
+        send_plain(chat_id, "*File received. Here\'s what I extracted:*\n\n" + summary)
+
+        # Store and generate concepts
+        state["ie_source_content"] = text_content
+        state["ie_source_label"] = file_info.get("file_name", file_type.upper())
+        state["ie_all_prev_concepts"] = []  # reset regen history for new source
+
+        keyboard = [[{"text": "Generate ideas from this", "callback_data": "ie_generate_all"}],
+                    [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]]
+        send(chat_id, "Happy with that? Tap to generate ideas.", keyboard)
+
+    except Exception as e:
+        send(chat_id, "Error reading file: " + str(e))
 
 def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=None):
     """Process extracted text content for ideas or critique."""
