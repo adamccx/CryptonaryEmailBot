@@ -2576,7 +2576,9 @@ def gen_enhance(chat_id, mode="email"):
             text = "*Choose improvements:*\n_(tap to select, then Apply)_\n\n"
             keyboard = []
             for s in suggestions:
-                keyboard.append([{"text": "[ ] " + str(s["id"]) + ". [" + s["principle"] + "] " + s["issue"], "callback_data": "enh_" + str(s["id"])}])
+                label = "[ ] " + str(s["id"]) + ". [" + s["principle"] + "] " + s["issue"][:30]
+                if s.get("fix"): label += " → " + s["fix"][:40]
+                keyboard.append([{"text": label, "callback_data": "enh_" + str(s["id"])}])
             keyboard.append([{"text": "Apply selected", "callback_data": "apply_enhancements"}])
             keyboard.append([{"text": "Skip", "callback_data": "skip_enhance"}])
             send(chat_id, text, keyboard)
@@ -2604,7 +2606,9 @@ def gen_enhance(chat_id, mode="email"):
             text = "*Choose improvements:*\n_(tap to select, then Apply)_\n\n"
             keyboard = []
             for s in suggestions:
-                keyboard.append([{"text": "[ ] " + str(s["id"]) + ". [" + s["principle"] + "] " + s["issue"], "callback_data": "enh_" + str(s["id"])}])
+                lbl = "[ ] " + str(s["id"]) + ". [" + s["principle"] + "] " + s["issue"][:30]
+                if s.get("fix"): lbl += " → " + s["fix"][:40]
+                keyboard.append([{"text": lbl, "callback_data": "enh_" + str(s["id"])}])
             keyboard.append([{"text": "Apply selected", "callback_data": "apply_enhancements"}])
             keyboard.append([{"text": "Skip", "callback_data": "skip_enhance"}])
             send(chat_id, text, keyboard)
@@ -3419,9 +3423,19 @@ def handle_message(msg):
             send(chat_id, "Fetching content from link...")
             fetched = fetch_url_content(url, detect_url_type(url))
             if fetched and len(fetched.strip()) > 50:
-                user_state[chat_id]["stage"] = "awaiting_context_choice"
                 user_state[chat_id]["report"] = fetched[:4000]
                 user_state[chat_id]["mode"] = "email"
+                # Show summary so Adam can confirm the right content was fetched
+                try:
+                    summary = claude(
+                        "Summarise this in 2-3 sentences — what it is, main topic, key points.\n\n" + fetched[:3000],
+                        max_tokens=150,
+                        system="You are a concise research assistant. Be specific. No fluff."
+                    )
+                    send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
+                except Exception:
+                    pass
+                user_state[chat_id]["stage"] = "awaiting_context_choice"
                 ask_context(chat_id)
             else:
                 send(chat_id, "Could not read content from that link. Paste the text directly instead.")
@@ -4113,12 +4127,32 @@ def handle_callback(cb):
         send(chat_id, "Paste your report:")
 
     elif data == "mode_ads":
-        user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
-        send(chat_id, "*Ad Creation*\n\nPaste your campaign theme, report, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash opportunity, weekly market update..._")
+        # If coming from a Data Studio analysis, pre-fill the theme with insights
+        prev_analysis = user_state.get(chat_id, {}).get("last_ds_analysis", "")
+        if prev_analysis and user_state.get(chat_id, {}).get("stage") == "ds_analysis_done":
+            # Extract the key patterns section as the ad theme
+            theme = "DATA INSIGHTS:\n" + prev_analysis[:1500]
+            user_state[chat_id] = {
+                "stage": "pick_ad_avatars",
+                "selected_avatars": [],
+                "selected_stages": [],
+                "ad_theme": theme
+            }
+            send(chat_id, "Using your data analysis as the campaign brief.\n\nNow pick your target avatars:")
+            show_avatar_menu(chat_id)
+        else:
+            user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
+            send(chat_id, "*Ad Creation*\n\nPaste your campaign theme, report, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash opportunity, weekly market update..._")
 
     elif data == "mode_social":
-        user_state[chat_id] = {"stage": "awaiting_social_report", "selected_social_formats": []}
-        send(chat_id, "Paste your report or content to base social posts on:")
+        prev_analysis = user_state.get(chat_id, {}).get("last_ds_analysis", "")
+        if prev_analysis and user_state.get(chat_id, {}).get("stage") == "ds_analysis_done":
+            user_state[chat_id] = {"stage": "pick_social_formats", "selected_social_formats": [], "report": prev_analysis[:3000], "social_origin": "ds"}
+            send(chat_id, "Using your data analysis as the content brief.")
+            show_standalone_social_menu(chat_id)
+        else:
+            user_state[chat_id] = {"stage": "awaiting_social_report", "selected_social_formats": []}
+            send(chat_id, "Paste your report or content to base social posts on:")
 
     elif data == "mode_landing":
         user_state[chat_id] = {"stage": "lp_idle", "selected_avatars": [], "lp_outline": {}, "lp_full_copy": {}}
@@ -4551,8 +4585,12 @@ def handle_callback(cb):
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
-        # If we already have report/context from a previous generation, skip source menu
-        if state.get("report") or state.get("current_social"):
+        # If coming from an approved post, preserve angle+hooks so we skip straight to format picker
+        if state.get("stage") == "social_approved" and state.get("social_angle"):
+            state["stage"] = "pick_social_formats"
+            # Keep existing hooks so gen_social_selected skips hook generation
+            show_standalone_social_menu(chat_id)
+        elif state.get("report") or state.get("current_social"):
             state["stage"] = "pick_social_formats"
             show_standalone_social_menu(chat_id)
         else:
@@ -5422,6 +5460,33 @@ def handle_callback(cb):
             generate_visual_brief(chat_id, "ad_static")
         else:
             show_visual_brief_menu(chat_id)
+
+    elif data.startswith("vb_gen_opt_"):
+        # User chose a specific thumbnail option — extract that option from brief and generate
+        opt_num = data.replace("vb_gen_opt_", "")
+        brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
+        if not brief:
+            send(chat_id, "Brief not found. Generate a visual brief first.")
+        else:
+            # Extract the chosen option from the brief text
+            import re as _re
+            pattern = r"THUMBNAIL OPTION " + opt_num + r"[: ]+(.*?)(?=THUMBNAIL OPTION [0-9]|$)"
+            match = _re.search(pattern, brief, _re.DOTALL | _re.IGNORECASE)
+            if match:
+                option_brief = match.group(1).strip()[:500]
+            else:
+                option_brief = brief[:500]
+            state["pending_img_concept"] = option_brief
+            state["last_img_prompt"] = build_image_prompt(option_brief, "", "email")
+            state["last_img_type"] = "email"
+            success = generate_and_send_image(chat_id, state["last_img_prompt"], "email")
+            img_kb = [
+                [{"text": "🔄 Regenerate", "callback_data": "img_regen"}],
+                [{"text": "✏️ Give feedback", "callback_data": "img_direction"}],
+                [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
+                [{"text": "✅ Done", "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Thumbnail ready." if success else "Generation failed — try again.", img_kb)
 
     elif data.startswith("vb_type_"):
         vb_type = data.replace("vb_type_", "")
@@ -8080,7 +8145,7 @@ def generate_claude_svg(brief, post_type, angle=""):
         "static":     "Create a STATIC POST SVG (1080x1080). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
         "carousel":   "Create a CAROUSEL SLIDE SVG (1080x1080) showing the cover slide design. Bold headline, dark background, clear typography hierarchy.",
         "story":      "Create a STORY FRAME SVG (1080x1920). Full screen vertical. Bold text, dark bg, designed for mobile.",
-        "thumbnail":  "Create an EMAIL THUMBNAIL SVG (600x300). Bold headline, relevant visual element, dark background. Optimised for email preview.",
+        "thumbnail":  "Create an EMAIL THUMBNAIL SVG (1200x628). Bold headline, relevant visual element, dark background. Optimised for email preview.",
         "data":       "Create a DATA VISUALISATION SVG. Charts, numbers, clean layout. Dark background, green/red for up/down, white text.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
@@ -8141,7 +8206,7 @@ def generate_claude_html(brief, post_type, angle=""):
         "static":     "An Instagram post mockup (1080x1080px equivalent). Bold headline, dark background, brand colours. Looks like a real post.",
         "carousel":   "A FULL Instagram carousel — ALL slides from the brief as separate scrollable sections. Each slide is 1080x1080px. USE THE EXACT HEADLINE TEXT AND SUPPORTING TEXT from each slide in the brief — do not paraphrase or invent new copy. Apply the colour specified per slide. Include slide numbers. Make every slide from the brief.",
         "story":      "A vertical story frame (9:16 ratio). Full-screen design, bold text, mobile-optimised.",
-        "thumbnail":  "An email header thumbnail (600x200px). Bold headline, clean layout.",
+        "thumbnail":  "An email header thumbnail (1200x628px — standard email/OG image size). Bold headline, brand colours, clean layout.",
         "data":       "A data visualisation with styled numbers, charts using CSS, clean layout.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
@@ -8364,6 +8429,21 @@ def show_image_style_menu(chat_id, engine):
     state = user_state[chat_id]
 
     if engine == "claude":
+        # Auto-detect from content type — only ask if genuinely ambiguous
+        vb_type = state.get("last_visual_type", "")
+        social_type = state.get("current_social_type", "")
+        auto_style = None
+        if "Carousel" in social_type or vb_type == "carousel": auto_style = "carousel"
+        elif "Reel" in social_type or vb_type == "reel": auto_style = "storyboard"
+        elif "Story" in social_type or vb_type == "story": auto_style = "story"
+        elif "Static" in social_type or vb_type == "static": auto_style = "static"
+        elif vb_type == "email": auto_style = "thumbnail"
+        
+        if auto_style:
+            # Skip the menu — go straight to generation
+            handle_image_callbacks(chat_id, "img_style_" + auto_style, state)
+            return
+        
         keyboard = [
             [{"text": "📋 Storyboard",       "callback_data": "img_style_storyboard"}],
             [{"text": "🖼️ Static post",      "callback_data": "img_style_static"}],
@@ -8516,7 +8596,7 @@ THUMBNAIL OPTION 2: [alternative angle]
 
 THUMBNAIL OPTION 3: [alternative — try a different style]
 
-Note: thumbnails are 600x300px, text must be readable at small size.""",
+Note: thumbnails are 1200x628px (standard email header size), text must be readable and high contrast.""",
 
         "ad_static": """Create a STATIC AD CREATIVE BRIEF.
 
@@ -8582,14 +8662,29 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
         _global_brief_store[chat_id] = result  # persist across state changes
         send_plain(chat_id, "*VISUAL BRIEF — " + content_type.upper().replace("_", " ") + "*\n\n" + result)
 
-        img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
-        keyboard = [
-            [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
-        ]
-        if img_row:
-            keyboard.insert(0, img_row)
-        keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
-        send(chat_id, "Brief ready. Use this to brief your designer, or generate an AI image draft.", keyboard)
+        # For email thumbnails, offer numbered option choice; otherwise standard keyboard
+        if content_type == "email":
+            keyboard = []
+            if OPENAI_KEY or GEMINI_KEY:
+                keyboard += [
+                    [{"text": "Generate Option 1", "callback_data": "vb_gen_opt_1"}],
+                    [{"text": "Generate Option 2", "callback_data": "vb_gen_opt_2"}],
+                    [{"text": "Generate Option 3", "callback_data": "vb_gen_opt_3"}],
+                ]
+            keyboard += [
+                [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
+                [{"text": "✅ Done", "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Which thumbnail option to generate?", keyboard)
+        else:
+            img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
+            keyboard = [
+                [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
+            ]
+            if img_row:
+                keyboard.insert(0, img_row)
+            keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
+            send(chat_id, "Brief ready. Use this to brief your designer, or generate an AI image draft.", keyboard)
     except Exception as e:
         send(chat_id, "Error generating brief: " + str(e))
 
@@ -8747,6 +8842,13 @@ def handle_image_callbacks(chat_id, data, state):
             send(chat_id, "No previous prompt found.")
             return
         post_type = state.get("last_img_type", "static")
+        # DALL-E safe: if prompt is too long (from a brief), rebuild a clean short prompt
+        engine = state.get("img_engine", "gemini")
+        if engine == "dalle" and len(prompt) > 900:
+            concept = state.get("pending_img_concept", prompt[:200])
+            angle = state.get("social_angle", "")
+            prompt = build_image_prompt(concept[:200], angle[:80], post_type.replace("claude_",""))
+            state["last_img_prompt"] = prompt
         img_kb = [
             [{"text": "🔄 Try again",           "callback_data": "img_regen"}],
             [{"text": "✏️ Give feedback",       "callback_data": "img_direction"}],
@@ -9164,8 +9266,6 @@ def show_idea_engine_menu(chat_id):
     keyboard = [
         [{"text": "💡 Generate ideas from scratch", "callback_data": "ie_from_scratch"}],
         [{"text": "🔗 Generate from inspiration", "callback_data": "ie_from_inspiration"}],
-        [{"text": "Critique a screenshot", "callback_data": "ie_screenshot_critique"}],
-        [{"text": "📡 News sources (" + str(feed_count) + " feeds)", "callback_data": "ie_manage_sources"}]
     ]
     send(chat_id, "*Creative Studio*\n\nHow do you want to generate ideas?", keyboard)
 
@@ -9888,7 +9988,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
         send_plain(chat_id, "*File received. Here\'s what I extracted:*\n\n" + summary)
 
         # Route based on current stage — same as if text was pasted
-        if stage in ("awaiting_report", "buffering_report"):
+        if stage in ("awaiting_report", "buffering_report", "awaiting_email_report"):
             user_state[chat_id]["report"] = sanitise(extracted)
             user_state[chat_id]["stage"] = "awaiting_context_choice"
             keyboard = [
@@ -10003,6 +10103,23 @@ def handle_ie_screenshot(chat_id, file_info, stage):
         if file_path.endswith(".png"): mime = "image/png"
         elif file_path.endswith(".webp"): mime = "image/webp"
         encoded = base64.b64encode(file_bytes).decode()
+
+        if stage in ("ie_awaiting_inspiration", "idea_engine_idle"):
+            # Image uploaded in inspiration flow — extract content and generate ideas
+            send(chat_id, "Reading image...")
+            result = anthropic_vision(
+                [{"role": "user", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
+                    {"type": "text", "text": "Look at this image. It could be an Instagram post, ad, carousel, or any content. Extract the text, identify the hook, topic, format, and what makes it effective. Return a clear summary as plain text."}
+                ]}],
+                max_tokens=600,
+                system="You are a creative strategist. Be specific and concise."
+            )
+            user_state[chat_id]["ie_source_content"] = result
+            user_state[chat_id]["ie_source_label"] = "uploaded image"
+            user_state[chat_id]["stage"] = "idea_engine_idle"
+            generate_ie_concept(chat_id)
+            return
 
         if stage == "ie_awaiting_screenshot_ideas":
             send(chat_id, "Analysing and generating ideas...")
