@@ -29,8 +29,11 @@ CRYPTONARY_LOGO_SVG_W = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97
 CRYPTONARY_LOGO_SVG_BLUE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#005FFF" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#005FFF" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
 CRYPTONARY_LOGO_SVG_B = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#000000" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#000000" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
 
-def get_logo_svg_tag(position="bottom-left", size=40, variant="white"):
-    """Return the Cryptonary logomark as an absolutely-positioned SVG tag."""
+def get_logo_svg_tag(position="bottom-right", size=40, variant="white"):
+    """Return the Cryptonary logomark as an absolutely-positioned SVG tag.
+    Instagram: bracket-C = bottom-RIGHT + @Cryptonary text = bottom-LEFT (both always present).
+    YouTube: bracket-C = bottom-LEFT only (no @handle text).
+    Email/Report: no logo."""
     logo = {"white": CRYPTONARY_LOGO_SVG_W, "blue": CRYPTONARY_LOGO_SVG_BLUE, "black": CRYPTONARY_LOGO_SVG_B}.get(variant, CRYPTONARY_LOGO_SVG_W)
     pos_css = "bottom:16px;left:16px;" if position == "bottom-left" else "bottom:16px;right:16px;"
     inner = logo.replace("<svg ", '<svg style="position:absolute;' + pos_css + 'width:' + str(size) + 'px;height:' + str(size) + 'px;" ')
@@ -2361,7 +2364,7 @@ def gen_angles(chat_id):
     prompt += "\n\nGenerate exactly 4 distinct content angles for this crypto update. Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). Different emotional lenses or hook strategies. Apply copywriting principles.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
     send(chat_id, "Finding angles...")
     try:
-        raw = claude(prompt)
+        raw = openai_gpt(prompt, max_tokens=600)  # GPT-4o for angles
         angles = parse_numbered_list(raw, 4)
         # Store under both keys for compatibility
         user_state[chat_id]["angles"] = angles
@@ -2394,10 +2397,10 @@ def gen_hooks(chat_id):
 
     send(chat_id, "Writing hooks...")
     try:
-        raw = claude(base + "\n\nANGLE: " + angle +
+        raw = openai_gpt(base + "\n\nANGLE: " + angle +
             "\n\nWrite 4 subject line + preview text combos for this crypto email.\n" +
             "Each hook should create a strong curiosity gap or bold data-led statement.\n\n" +
-            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
+            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)  # GPT-4o for hooks
         hooks = parse_hooks(raw)
         # Store under all keys for compatibility
         state["free_hooks"] = hooks
@@ -3931,10 +3934,20 @@ def handle_message(msg):
         user_state[chat_id]["stage"] = "ds_analysis_done"
         send(chat_id, "Working on it...")
         try:
+            totals = user_state[chat_id].get("ds_verified_totals", {})
+            totals_prefix = ""
+            if totals:
+                totals_prefix = (
+                    f"VERIFIED TOTALS (always use these exact numbers, do not re-calculate):\n"
+                    f"- Total ads: {totals['total_ads']}\n"
+                    f"- Total spend: £{totals['total_spend']:,.2f}\n"
+                    f"- Total checkouts initiated: {totals['total_checkouts']}\n\n"
+                )
             result = claude(
+                totals_prefix +
                 "Previous analysis:\n" + last_analysis[:3000] +
                 "\n\nFollow-up question: " + text +
-                "\n\nAnswer specifically based on the data already analysed. Be direct and actionable.",
+                "\n\nAnswer specifically based on the data. Use the VERIFIED TOTALS above for any aggregate numbers.",
                 max_tokens=1500,
                 system=DATA_STUDIO_SYSTEM
             )
@@ -4127,6 +4140,25 @@ def handle_message(msg):
         show_standalone_social_menu(chat_id)
         return
 
+    if stage == "yt_awaiting_content":
+        state["yt_content"] = text
+        state["yt_mode"] = state.get("yt_mode", "fresh")
+        if state.get("yt_existing"):
+            gen_yt_desc(chat_id)
+        else:
+            keyboard = [
+                [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
+                [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
+            ]
+            send(chat_id, "Got it. Do you also have an existing description you want me to work from?", keyboard)
+        return
+
+    if stage == "yt_awaiting_existing":
+        state["yt_existing"] = text
+        state["yt_mode"] = "edit"
+        gen_yt_desc(chat_id)
+        return
+
     if len(text) > 100:
         current_stage = user_state.get(chat_id, {}).get("stage", "idle")
 
@@ -4208,6 +4240,7 @@ def handle_callback(cb):
             [{"text": "Emails", "callback_data": "mode_email"}],
             [{"text": "Ad Copy", "callback_data": "mode_ads"}],
             [{"text": "Social Content", "callback_data": "mode_social"}],
+            [{"text": "YouTube Description", "callback_data": "mode_yt_desc"}],
             [{"text": "Landing Page", "callback_data": "mode_landing"}]
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
@@ -4250,6 +4283,31 @@ def handle_callback(cb):
     elif data == "mode_landing":
         user_state[chat_id] = {"stage": "lp_idle", "selected_avatars": [], "lp_outline": {}, "lp_full_copy": {}}
         start_landing_page_flow(chat_id)
+
+    elif data == "mode_yt_desc":
+        user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
+        keyboard = [
+            [{"text": "I have an existing description to edit", "callback_data": "yt_mode_edit"}],
+        ]
+        send(chat_id, "*YouTube Description*\n\nPaste your video content — transcript, script, report, or a brief summary of what the video covers.\n\nI'll write the full description from that.\n\n_Optional: tap below if you already have a description and just want the packaging tightened._", keyboard)
+
+    elif data == "yt_mode_edit":
+        state["yt_mode"] = "edit"
+        state["stage"] = "yt_awaiting_existing"
+        send(chat_id, "Paste your existing description. I'll keep all timestamps exactly as-is and repackage the rest.")
+
+    elif data == "yt_regen":
+        gen_yt_desc(chat_id)
+
+    elif data == "yt_switch_edit":
+        state["yt_mode"] = "edit"
+        state["stage"] = "yt_awaiting_existing"
+        send(chat_id, "Paste the existing description to edit:")
+
+    elif data == "yt_switch_fresh":
+        state["yt_mode"] = "fresh"
+        state["stage"] = "yt_awaiting_content"
+        send(chat_id, "Paste your content, transcript, or brief:")
 
     elif data.startswith("adavatar_"):
         avatar_key = data.replace("adavatar_", "")
@@ -4656,10 +4714,30 @@ def handle_callback(cb):
         send(chat_id, "*Manual Edit*\n\nReply with your final version. Paste the complete edited content and I\'ll store it as approved.\n\n_For emails: paste Free and Pro separated by a blank line, or just paste one._")
 
     elif data == "approve_emails":
+        # Ask which to approve first
+        emails = state.get("current_emails", {})
+        has_free = bool(emails.get("free", ""))
+        has_pro = bool(emails.get("pro", ""))
+        if has_free and has_pro:
+            keyboard = [
+                [{"text": "✅ Approve both", "callback_data": "approve_emails_both"}],
+                [{"text": "✅ Approve Free only", "callback_data": "approve_emails_free"}],
+                [{"text": "✅ Approve Pro only", "callback_data": "approve_emails_pro"}],
+            ]
+            send(chat_id, "Which email(s) do you want to approve?", keyboard)
+            return
+        # Only one exists — fall through to approve both
+        state["_approve_which"] = "both"
+
+    elif data in ("approve_emails_both", "approve_emails_free", "approve_emails_pro"):
+        state["_approve_which"] = data.replace("approve_emails_", "")
+
+    if data in ("approve_emails_both", "approve_emails_free", "approve_emails_pro") or (data == "approve_emails" and state.get("_approve_which")):
+        which = state.get("_approve_which", "both")
         state["stage"] = "emails_approved"
         # Save content metadata + actual approved copy for voice learning
-        free_body = state.get("current_emails", {}).get("free", "")
-        pro_body = state.get("current_emails", {}).get("pro", "")
+        free_body = state.get("current_emails", {}).get("free", "") if which in ("both", "free") else ""
+        pro_body = state.get("current_emails", {}).get("pro", "") if which in ("both", "pro") else ""
         save_content_metadata(chat_id, "email", {
             "angle": state.get("angle", state.get("selected_angle", "")),
             "hook_subject": state.get("selected_hook", {}).get("subject", ""),
@@ -4680,30 +4758,8 @@ def handle_callback(cb):
             [{"text": "🎨 Email thumbnail brief",     "callback_data": "vb_type_email"}],
             [{"text": "✅ Mark complete",             "callback_data": "mark_complete"}],
         ]
-        # Auto-push both Free and Pro to Brevo as separate drafts with smart list selection
-        if BREVO_API_KEY and (free_body or pro_body):
-            subject = state.get('selected_hook', {}).get('subject', 'Cryptonary Update')
-            preview = state.get('selected_hook', {}).get('preview', '')
-            pushed = []
-            failed = []
-            if free_body:
-                free_list_id = get_brevo_list_for_type("free")
-                html_free = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + free_body.replace('\n', '<br>') + "</body></html>"
-                fid, ferr = create_brevo_draft('[FREE] ' + subject, preview, html_free, [free_list_id] if free_list_id else None)
-                if fid: pushed.append('Free (ID: ' + str(fid) + ')')
-                else: failed.append('Free: ' + str(ferr))
-            if pro_body:
-                pro_list_id = get_brevo_list_for_type("pro")
-                html_pro = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + pro_body.replace('\n', '<br>') + "</body></html>"
-                pid, perr = create_brevo_draft('[PRO] ' + subject, preview, html_pro, [pro_list_id] if pro_list_id else None)
-                if pid: pushed.append('Pro (ID: ' + str(pid) + ')')
-                else: failed.append('Pro: ' + str(perr))
-            msg = 'Emails approved.'
-            if pushed: msg += ' ✅ Pushed to Brevo: ' + ', '.join(pushed)
-            if failed: msg += ' ⚠️ Failed: ' + ', '.join(failed)
-            send(chat_id, msg, keyboard)
-        else:
-            send(chat_id, 'Emails approved.', keyboard)
+        which_label = {"both": "both emails", "free": "Free email", "pro": "Pro email"}.get(which, "emails")
+        send(chat_id, which_label.capitalize() + " approved.", keyboard)
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
@@ -5545,13 +5601,48 @@ def handle_callback(cb):
         if not analysis:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("Based on this ad performance data, generate 5 specific new ad ideas. Each must be directly inspired by what the data shows is working. Include: avatar, angle, hook, funnel stage, and why the data supports it.\n\n" + analysis[:3000], max_tokens=1200)
+        result = claude(
+            "Based on this ad performance data, generate exactly 5 specific new ad ideas. "
+            "Number them 1-5. Each must be directly inspired by what the data shows is working. "
+            "For each include: avatar, funnel stage, angle, hook line, and why the data supports it.\n\n" + analysis[:3000],
+            max_tokens=1200
+        )
+        state["ds_ad_ideas"] = result
         send_plain(chat_id, "*IDEAS FROM DATA*\n\n" + result)
+        # Show concept selection — not avatar picker (avatars are already in the ideas)
         keyboard = [
-            [{"text": "Create these ads", "callback_data": "mode_ads"}],
+            [{"text": "Build Concept 1", "callback_data": "ds_build_concept_1"}],
+            [{"text": "Build Concept 2", "callback_data": "ds_build_concept_2"}],
+            [{"text": "Build Concept 3", "callback_data": "ds_build_concept_3"}],
+            [{"text": "Build Concept 4", "callback_data": "ds_build_concept_4"}],
+            [{"text": "Build Concept 5", "callback_data": "ds_build_concept_5"}],
+            [{"text": "Build all 5", "callback_data": "ds_build_concept_all"}],
             [{"text": "Back to analysis", "callback_data": "ds_adverts"}],
         ]
-        send(chat_id, "Want to build these?", keyboard)
+        send(chat_id, "Which concept do you want to build into ads?", keyboard)
+
+    elif data.startswith("ds_build_concept_"):
+        ideas_text = state.get("ds_ad_ideas", "")
+        concept_num = data.replace("ds_build_concept_", "")
+        if not ideas_text:
+            send(chat_id, "Ideas not found. Tap Share Ideas first.")
+            return
+        if concept_num == "all":
+            theme = "Build all of these ad concepts into copy:\n\n" + ideas_text[:2000]
+        else:
+            # Extract the specific numbered concept
+            import re as _re
+            pattern = r"(?:^|\n)\s*" + concept_num + r"[.):].+?(?=\n\s*[0-9][.):)\s]|$)"
+            match = _re.search(pattern, ideas_text, _re.DOTALL)
+            concept_text = match.group(0).strip() if match else ideas_text[:500]
+            theme = "Build this ad concept into copy:\n\n" + concept_text
+        # Pre-fill the ad theme and skip to stage selection
+        state["ad_theme"] = "DATA-BACKED BRIEF:\n" + theme
+        state["stage"] = "pick_ad_avatars"
+        state["selected_avatars"] = []
+        state["selected_stages"] = []
+        send(chat_id, "Got it — building from your data insights.\n\nPick your target avatars:")
+        show_avatar_menu(chat_id)
 
     elif data == "ds_followup":
         state["stage"] = "ds_awaiting_followup"
@@ -5661,7 +5752,33 @@ def handle_callback(cb):
         send(chat_id, "Critique dismissed.", kb_fn())
 
     elif data == "mark_complete":
-        send(chat_id, "Set complete. What would you like to do next?", mark_complete_keyboard())
+        # If emails were approved this session, offer Brevo push now
+        if BREVO_API_KEY and state.get("stage") == "emails_approved" and state.get("current_emails"):
+            emails = state.get("current_emails", {})
+            which = state.get("_approve_which", "both")
+            free_body = emails.get("free", "") if which in ("both", "free") else ""
+            pro_body = emails.get("pro", "") if which in ("both", "pro") else ""
+            subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
+            preview = state.get("selected_hook", {}).get("preview", "")
+            pushed = []
+            failed = []
+            if free_body:
+                free_list_id = get_brevo_list_for_type("free")
+                html_free = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + free_body.replace("\n", "<br>") + "</body></html>"
+                fid, ferr = create_brevo_draft("[FREE] " + subject, preview, html_free, [free_list_id] if free_list_id else None)
+                if fid: pushed.append("Free (ID: " + str(fid) + ")")
+                else: failed.append("Free: " + str(ferr))
+            if pro_body:
+                pro_list_id = get_brevo_list_for_type("pro")
+                html_pro = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + pro_body.replace("\n", "<br>") + "</body></html>"
+                pid, perr = create_brevo_draft("[PRO] " + subject, preview, html_pro, [pro_list_id] if pro_list_id else None)
+                if pid: pushed.append("Pro (ID: " + str(pid) + ")")
+                else: failed.append("Pro: " + str(perr))
+            if pushed:
+                send(chat_id, "✅ Pushed to Brevo: " + ", ".join(pushed))
+            if failed:
+                send(chat_id, "⚠️ Brevo push failed: " + " | ".join(failed))
+        send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
 
     elif data == "img_from_brief":
         # Must be BEFORE img_ startswith catch below
@@ -5879,7 +5996,8 @@ def poll():
                             content_stages = ["awaiting_report","buffering_report",
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
-                                "awaiting_lp_context_text","awaiting_ad_existing_upload"]
+                                "awaiting_lp_context_text","awaiting_ad_existing_upload",
+                                "yt_awaiting_content","yt_awaiting_existing"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -5898,7 +6016,8 @@ def poll():
                             content_stages = ["awaiting_report","buffering_report",
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
-                                "awaiting_lp_context_text","awaiting_ad_existing_upload"]
+                                "awaiting_lp_context_text","awaiting_ad_existing_upload",
+                                "yt_awaiting_content","yt_awaiting_existing"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6214,6 +6333,84 @@ def generate_all_ads(chat_id):
     send(chat_id, "All " + str(total) + " ad set(s) generated.", ad_action_keyboard())
 
 
+# ── YOUTUBE DESCRIPTION FLOW ──────────────────────────────────────
+
+YT_DESC_PROMPT = """You are writing a YouTube video description for Cryptonary — a crypto research and education platform with 7+ years, 3 full market cycles, and a documented track record (BTC under $1K, ETH under $70, SOL at $10, WIF at $0.004, POPCAT at $0.05, HYPE before launch).
+
+VOICE RULES:
+- British-casual. Direct. No corporate speak.
+- Short punchy sentences. No em dashes.
+- First person ("I" / "we" — Adam is the presenter, Cryptonary is the team).
+- No "In this video..." or "Today we're going to...". Start with the hook line.
+- Specificity over vague claims. Use real numbers.
+- Never hype without substance behind it.
+
+STRUCTURE (always follow this order):
+1. HOOK PARAGRAPH (2-4 sentences): Lead with the insight, the story, the number, or the provocative claim. The thing that makes someone click. No preamble.
+2. CONTEXT PARAGRAPH (1-3 sentences, optional): Why this matters now. What the situation is. Skip if the hook already covers it.
+3. YOU'LL LEARN SECTION: Bulleted list of what viewers will get. Each bullet starts with an action verb or the specific thing they gain. 8-14 bullets. Real specifics — no fluff.
+4. CLOSING LINE (1-2 sentences): Stakes framing. Why watching this matters. Don't use "so make sure to watch to the end."
+5. [TIMESTAMPS PLACEHOLDER — leave this exact line]: Chapters:
+6. CTA BLOCK (always identical — copy exactly):
+Join Cryptonary Pro here: https://cryptonary.com/home11/
+
+For Personalised support, direct access, hands-on work. Email us: support@cryptonary.com
+
+(this service is exclusively for people with $200,000+)
+
+TONE: Authority through specifics, not hype. Educational but not dry. Make them feel like they're about to learn something most people don't know.
+
+IMPORTANT: Return only the finished description text. No commentary, no section headers (except "Chapters:"), no markdown fences."""
+
+def gen_yt_desc(chat_id):
+    """Generate a YouTube description from content/transcript, or repackage an existing one."""
+    state = user_state.setdefault(chat_id, {"stage": "idle"})
+    content = sanitise(state.get("yt_content", ""))
+    existing = sanitise(state.get("yt_existing", ""))
+    mode = state.get("yt_mode", "fresh")
+
+    send(chat_id, "Writing description...")
+
+    if mode == "edit" and existing:
+        # Extract timestamps block from existing description to preserve it
+        import re as _re
+        ts_match = _re.search(r'((?:Chapters?|Timestamps?):?\s*\n[\s\S]*?)(?:\n\n|\Z)', existing, _re.IGNORECASE)
+        timestamps_block = ts_match.group(1).strip() if ts_match else ""
+        prompt = (
+            YT_DESC_PROMPT +
+            "\n\nMODE: EDIT. The user has provided an existing description. "
+            "Repackage the hook, context, and bullets to be sharper — but keep ALL timestamps/chapters exactly as they appear. "
+            "Do not change any timestamp content. Do not change the CTA block.\n\n"
+            "EXISTING DESCRIPTION:\n" + existing[:3000] +
+            ("\n\nEXTRACTED TIMESTAMPS (preserve these verbatim in output):\n" + timestamps_block if timestamps_block else "") +
+            ("\n\nEXTRA CONTEXT / BRIEF:\n" + content[:1000] if content else "")
+        )
+    else:
+        prompt = (
+            YT_DESC_PROMPT +
+            "\n\nMODE: FRESH. Write a new YouTube description based on the content below.\n\n"
+            "CONTENT / TRANSCRIPT / BRIEF:\n" + content[:4000] +
+            ("\n\nEXISTING DESCRIPTION TO DRAW FROM (optional):\n" + existing[:1000] if existing else "")
+        )
+
+    try:
+        result = claude(prompt, max_tokens=1800)
+        state["yt_output"] = result
+        state["stage"] = "yt_desc_ready"
+
+        keyboard = [
+            [{"text": "Regenerate", "callback_data": "yt_regen"}],
+            [{"text": "Edit existing description instead", "callback_data": "yt_switch_edit"}],
+            [{"text": "Fresh from content", "callback_data": "yt_switch_fresh"}],
+            [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+        ]
+        send_plain(chat_id, "*YouTube Description*\n\n" + result)
+        send(chat_id, "Description ready. Add your timestamps where marked.", keyboard)
+
+    except Exception as e:
+        send(chat_id, "Error generating description: " + str(e))
+
+
 # ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
 
 def gen_social_angles(chat_id):
@@ -6225,7 +6422,8 @@ def gen_social_angles(chat_id):
     formats_str = ", ".join([format_labels.get(f, f) for f in selected_formats]) if selected_formats else "social content"
     send(chat_id, "Finding angles...")
     try:
-        raw = claude(
+        raw = openai_gpt(  # GPT-4o for social angles
+            
             "REPORT:\n" + report +
             "\n\nFORMAT(S) SELECTED: " + formats_str +
             "\n\nGenerate exactly 4 distinct content angles for this crypto market update.\n" +
@@ -6283,7 +6481,8 @@ def gen_social_hooks(chat_id):
         instruction = format_hook_instructions[fmt]
         label = format_labels.get(fmt, fmt)
         try:
-            raw = claude(
+            raw = openai_gpt(  # GPT-4o for social hooks
+            
                 "REPORT:\n" + report[:500] +
                 "\nANGLE: " + angle +
                 "\n\n" + instruction +
@@ -7205,6 +7404,68 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     with urllib.request.urlopen(synth_req, timeout=timeout) as r:
         return json.loads(r.read())["content"][0]["text"]
 
+
+def parse_ads_csv(csv_text):
+    """Pre-compute all ad metrics from CSV so Claude gets accurate numbers, not raw text."""
+    import io, csv as _csv
+    try:
+        reader = _csv.DictReader(io.StringIO(csv_text.strip()))
+        rows = list(reader)
+        if not rows:
+            return None, csv_text  # fall back to raw
+
+        ads = []
+        for r in rows:
+            name = r.get("Ad name", r.get("Ad Name", "")).strip()
+            if not name:
+                continue
+            spend = float(r.get("Amount spent (GBP)", r.get("Amount spent", 0)) or 0)
+            checkouts = float(r.get("Checkouts initiated", 0) or 0)
+            cpc = float(r.get("CPC (cost per link click) (GBP)", r.get("CPC (GBP)", 0)) or 0)
+            ctr = float(r.get("Outbound CTR (click-through rate)", r.get("Outbound CTR", 0)) or 0)
+            purchases = float(r.get("Purchases", 0) or 0)
+            cost_per_checkout = float(r.get("Cost per checkout initiated (GBP)", 0) or 0)
+            if cost_per_checkout == 0 and checkouts > 0:
+                cost_per_checkout = round(spend / checkouts, 2)
+            ads.append({
+                "name": name, "spend": spend, "checkouts": checkouts,
+                "purchases": purchases, "cpc": cpc, "ctr": ctr,
+                "cost_per_checkout": cost_per_checkout
+            })
+
+        total_ads = len(ads)
+        total_spend = round(sum(a["spend"] for a in ads), 2)
+        total_checkouts = int(sum(a["checkouts"] for a in ads))
+        total_purchases = int(sum(a["purchases"] for a in ads))
+        ads_with_checkouts = [a for a in ads if a["checkouts"] > 0]
+        avg_cost_per_checkout = round(total_spend / total_checkouts, 2) if total_checkouts > 0 else 0
+
+        # Build verified data table for Claude
+        lines = [
+            "VERIFIED AD DATA — computed by Python (do not re-calculate, use these numbers exactly)",
+            f"Total ads: {total_ads}",
+            f"Total spend: £{total_spend:,.2f}",
+            f"Total checkouts initiated: {total_checkouts}",
+            f"Total purchases: {total_purchases}",
+            f"Ads with checkouts: {len(ads_with_checkouts)}",
+            f"Avg cost per checkout: £{avg_cost_per_checkout}",
+            "",
+            "ALL ADS (sorted by checkouts desc, then spend desc):",
+            "Ad Name | Spend | Checkouts | Cost/Checkout | CTR | CPC",
+        ]
+        for a in sorted(ads, key=lambda x: (-x["checkouts"], -x["spend"])):
+            cpc_str = f"£{a['cpc']:.2f}" if a["cpc"] > 0 else "—"
+            ctr_str = f"{a['ctr']:.2f}%" if a["ctr"] > 0 else "—"
+            cpco_str = f"£{a['cost_per_checkout']:.2f}" if a["cost_per_checkout"] > 0 else "£0"
+            ch_str = str(int(a["checkouts"])) if a["checkouts"] > 0 else "0"
+            lines.append(f"{a['name']} | £{a['spend']:.2f} | {ch_str} | {cpco_str} | {ctr_str} | {cpc_str}")
+
+        return {"total_ads": total_ads, "total_spend": total_spend,
+                "total_checkouts": total_checkouts, "ads": ads}, "\n".join(lines)
+    except Exception as e:
+        print("CSV parse error:", e, flush=True)
+        return None, csv_text  # fall back to raw CSV
+
 def analyse_ads(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
@@ -7231,9 +7492,18 @@ def analyse_ads(chat_id):
         if images:
             result = batched_vision_call(chat_id, images, ads_prompt, extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
+            # Pre-compute all numbers in Python so Claude gets verified data
+            parsed, verified_data = parse_ads_csv(csv_text)
+            if parsed:
+                # Store verified totals for accurate follow-up answers
+                state["ds_verified_totals"] = {
+                    "total_ads": parsed["total_ads"],
+                    "total_spend": parsed["total_spend"],
+                    "total_checkouts": parsed["total_checkouts"],
+                }
             pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
-                "Analyse this Meta Ads Manager CSV:\n\n" + csv_text + "\n\n" + ads_prompt}]}).encode()
+                "Analyse this Meta Ads Manager data:\n\n" + verified_data + "\n\n" + ads_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
                 headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
             with urllib.request.urlopen(req, timeout=90) as r:
@@ -7242,13 +7512,23 @@ def analyse_ads(chat_id):
         state["stage"] = "ds_analysis_done"
         state["ds_full_ads_analysis"] = result
         extract_and_save_insights(chat_id, result, "ads")
-        # Show summary first, not the full dump
+        # Show summary first — use verified Python totals if available
         try:
+            totals = state.get("ds_verified_totals", {})
+            totals_line = ""
+            if totals:
+                totals_line = (
+                    f"VERIFIED TOTALS (use these exact numbers):\n"
+                    f"- Ads: {totals['total_ads']}\n"
+                    f"- Total spend: £{totals['total_spend']:,.2f}\n"
+                    f"- Total checkouts: {totals['total_checkouts']}\n\n"
+                )
             summary = claude(
-                "From this ad analysis, write a 4-6 line overview ONLY. Include: total ads analysed, "
-                "total spend if visible, key conversion metrics (purchases/checkouts/leads), cost per result, "
-                "and one sentence on overall performance. Numbers only, no recommendations.\n\n" + result[:3000],
-                max_tokens=300, system="You are a concise data analyst. Numbers only, no fluff."
+                totals_line +
+                "From this ad analysis, write a 4-6 line overview. Include the verified totals above exactly, "
+                "plus: cost per checkout, top 3 performers by cost per checkout, and one sentence on overall performance. "
+                "Numbers only, no recommendations.\n\n" + result[:3000],
+                max_tokens=300, system="You are a concise data analyst. Use the VERIFIED TOTALS exactly as given."
             )
         except Exception:
             summary = result[:500]
@@ -8115,6 +8395,8 @@ def handle_voice_message(chat_id, voice):
         # Active content stages — voice = quick edit instruction
         "social_ready", "social_approved",
         "emails_ready", "emails_approved",
+        # YouTube description flow
+        "yt_awaiting_content", "yt_awaiting_existing",
     }
 
     if current_stage in input_stages:
@@ -8320,40 +8602,67 @@ def format_x_context(tweets):
 # ══════════════════════════════════════════════════════════════════
 
 # Post type → style instruction mapping
-# Cryptonary Brand Guidelines
-# Colours: #000000 black, #FFFFFF white, #005EFF blue, #FF0000 red, #0DA500 green, #F7931A bitcoin orange
-# Fonts: Tungsten (titles/headlines), Inter or Proxima Nova (body), Inter (Instagram)
-# Logo: Small 'C' circle logomark — bottom-left on Instagram/YouTube, none on email banners/report thumbnails
+# Cryptonary Brand Guidelines — derived from actual Instagram post analysis
+# LOGO PLACEMENT (INSTAGRAM): bracket-C logomark = bottom-RIGHT. @Cryptonary text handle = bottom-LEFT. Both on every post.
+# LOGO PLACEMENT (YOUTUBE): bracket-C logomark = bottom-LEFT only. No @Cryptonary text handle.
+# LOGO PLACEMENT (EMAIL/REPORT): No logo at all.
+# TYPOGRAPHY: Tungsten (ultra-bold, uppercase, tight) for headlines. Inter for data/body. No middle weights.
+# COLOUR LOGIC: Green (#0DA500) = gains/positive. Red (#FF0000) = losses/news/urgency. Orange (#F7931A) = BTC specifically. Blue (#005EFF) = accent/tech.
+# POST STYLE: Either pure graphic (data, typography) or photo/illustration with text overlay. Never generic stock photo.
+# TEXT DENSITY: Headlines are 2-4 words per line maximum. Data tables replace paragraphs.
+# CARDS: Data rows use dark grey (#1A1A1A) rounded rectangle cards (border-radius: 12px). Comparison panels use rounded corners on black bg.
 
 CRYPTONARY_BRAND = {
-    "colours": {"black": "#000000", "white": "#FFFFFF", "blue": "#005EFF", "red": "#FF0000", "green": "#0DA500", "orange": "#F7931A"},
-    "fonts": {"title": "Tungsten", "body": "Inter, Proxima Nova", "instagram": "Inter"},
+    "colours": {"black": "#000000", "white": "#FFFFFF", "blue": "#005EFF", "red": "#FF0000", "green": "#0DA500", "orange": "#F7931A", "dark_card": "#1A1A1A", "grey_text": "#888888"},
+    "fonts": {"headline": "Tungsten, Impact, Arial Black", "body": "Inter, Proxima Nova, Arial"},
+    "logo": {"mark_position": "bottom-right", "handle_position": "bottom-left", "handle_text": "@Cryptonary"},
     "sizes": {
-        "report_thumbnail": {"w": 1920, "h": 1080, "logo": "none"},
-        "email_banner":     {"w": 600,  "h": 200,  "logo": "none"},
-        "youtube_cover":    {"w": 1920, "h": 1080, "logo": "bottom-left"},
-        "instagram_static": {"w": 1080, "h": 1350, "logo": "bottom-left", "font": "Inter"},
-        "carousel_slide":   {"w": 1080, "h": 1350, "logo": "bottom-left", "title_font": "Tungsten", "body_font": "Inter"},
+        "instagram_static":  {"w": 1080, "h": 1350},
+        "carousel_slide":    {"w": 1080, "h": 1350},
+        "email_banner":      {"w": 600,  "h": 200},
+        "report_thumbnail":  {"w": 1920, "h": 1080},
+        "youtube_cover":     {"w": 1920, "h": 1080},
+    },
+    "templates": {
+        "data_table":    "Pure black bg. Massive Tungsten headline top (white + ONE accent colour word). Dark grey rounded cards for data rows. Coin logo + ticker + price + % change columns. Zero decoration — data IS the design.",
+        "news":          "Visual/chart fills top 55-60%. Pure black bottom 40%. Red rounded pill badge ('NEWS'/'BREAKING') above headline. White Tungsten headline 3-4 words per line, left-aligned, very large. Hashtag grey top-left.",
+        "quote_photo":   "Subject photo full bleed or B&W with colour accents. Large white Inter quote left side. Key phrase in orange. Attribution in spaced small caps below. Coin logo accent top-right if relevant.",
+        "comparison":    "Two panels in one rounded card on black. Each panel has photo/visual. Bold white label on each. The juxtaposition does all the work — minimal extra text.",
+        "cultural_meme": "Full illustration, warm or dramatic palette. Message in the scene itself. Minimal text overlay. High quality art style, not clipart.",
+        "data_card":     "Dark gradient bg with dramatic 3D coin visual centred. Stats in clean rows below. 'Cryptonary\'s Take' box at bottom. Slide number top-left corner. Premium app-like feel.",
     }
 }
 
 IMAGE_STYLE_MAP = {
-    "breaking_news":  "Breaking news style. 1080x1350px. Black background. Bold red NEWS or BREAKING badge top-left. Dramatic relevant photo or dark overlay. Bold white Tungsten headline. Small blue C circle logo bottom-left.",
-    "price_data":     "Data post. 1080x1350px. Black background. Large bold price figure centre. Coin logo prominent. Percentage change in green (gains) or red (losses). Minimalist, numbers-first. Inter font. Cryptonary bracket-C logo bottom-left.",
-    "engagement":     "Engagement post. 1080x1350px. Black or white background. Single punchy question in large Inter font. Clean, high contrast. Cryptonary bracket-C logo bottom-left.",
-    "educational":    "Educational post. 1080x1350px. Dark background. Tungsten title, Inter body. Numbered layout or data. Blue #005EFF section headers. Cryptonary bracket-C logo bottom-left.",
-    "meme_cultural":  "Cultural post. 1080x1350px. Dark background with overlay. Bold white Tungsten text. Shareable feel. Cryptonary bracket-C logo bottom-left.",
-    "macro_geo":      "Geopolitical news. 1080x1350px. Real-world photo, dark gradient overlay. White Tungsten headline. Small NEWS badge. Cryptonary bracket-C logo bottom-left.",
-    "background":     "Background image for compositing. No text overlays. Dark cinematic mood. Relevant to crypto or finance. High quality, editorial. No logo.",
-    "email_banner":   "Email banner. 600x200px. Clean dark design. Bold short headline, Inter font. No logo. Minimal, professional.",
-    "report_thumb":   "Report thumbnail. 1920x1080px. Dark background. Bold title, data or chart element. No logo. Clean editorial layout.",
-    "youtube_cover":  "YouTube cover. 1920x1080px. Bold Tungsten title. Dark background. Dramatic visual. Small C logo bottom-left corner.",
-    "carousel":       "Carousel slide. 1080x1350px. Tungsten title (large, bold). Inter body text. Dark background. Blue, red or white accents. Cryptonary bracket-C logo bottom-left.",
-    "static":         "Instagram static. 1080x1350px. Inter font. Dark background. Bold headline. Cryptonary bracket-C logo bottom-left.",
+    "breaking_news":  "NEWS template. Visual/chart top 55%. Pure black bottom. Red rounded 'NEWS' pill badge. White Tungsten headline 3-4 words/line left-aligned. Hashtag grey top-left. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "price_data":     "DATA TABLE template. Pure black bg. Massive Tungsten headline top — white with green or red accent word. Dark grey rounded cards (#1A1A1A) for each asset row: coin logo | ticker | price | % change (green=up, red=down). Zero decoration. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "engagement":     "TYPOGRAPHY template. Pure black bg. Ultra-bold Tungsten statement, 2-4 words per line, full width. One key word or phrase in accent colour. Nothing else. Maximum negative space. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "educational":    "DATA CARD template. Dark gradient bg. Dramatic centred coin/topic visual. Clean stat rows below. 'Cryptonary\'s Take' summary box. Inter body font. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "meme_cultural":  "CULTURAL template. Full warm-palette illustration. Message embedded in scene. Minimal text overlay. High craft. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "macro_geo":      "NEWS template with map/flag/landmark visual. Dark overlay on photo. White Tungsten headline bottom-left area. Red NEWS badge. Hashtag grey top-left. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "comparison":     "COMPARISON template. Two rounded panels on pure black. Each panel: relevant photo/visual + bold white label. Clean card container with border-radius. Let the contrast speak. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "quote":          "QUOTE template. Subject photo full-bleed or B&W with colour. Large Inter quote text left side. Key words in orange (#F7931A). Attribution spaced caps. Orange BTC logo accent if crypto figure. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "background":     "Cinematic dark background for compositing. No text. No logos. Dark mood relevant to crypto/finance.",
+    "email_banner":   "600x200px. Dark bg. Short bold Inter headline centre-left. Clean, professional. No logo.",
+    "report_thumb":   "1920x1080px. Pure black. Bold Tungsten title. Data element. No logo. Editorial.",
+    "youtube_cover":  "YouTube thumbnail 1920x1080px landscape, full bleed. Three templates — SPLIT/POINTING: solid textured colour bg (blue/red/green/yellow), key visual element left, bold yellow or red pill badge top-left (black Tungsten text, rounded corners); CHART_OVERLAY: real chart fills full bg, Adam cut-out over it, minimal text, red circle annotation on key data; DRAMATIC: dark moody full-bleed bg (red/dark tones, coin logos), massive white Tungsten headline full-width at top, serious. All: bracket-C logomark bottom-LEFT white only. NO @Cryptonary text handle on YouTube.",
+    "static":         "INSTAGRAM STATIC. 1080x1350px. Choose appropriate template from: data_table / news / quote / comparison / cultural / data_card based on brief content. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "carousel":       "CAROUSEL. 1080x1350px. TWO main carousel types:\n"
+"TYPE 1 — DATA REPORT: Cover=cinematic image lower 60% + black top + massive Tungsten headline centre + red pill badge + no slide number. Data slides=dramatic 3D neon coin visual upper 55% in coin brand colours, coin ticker TL + price TR Inter, Statistics label + 5 rows, Cryptonary's Take box. CTA=blurred bg + subscribe message + blue pill button.\n"
+"TYPE 2 — EDITORIAL/NARRATIVE: Cover=dark photo bg + slide number 01 TL + massive left-aligned Tungsten headline (ultra-compressed tight leading) + Inter subtitle + red pill SWIPE CTA left-aligned. Content slides=cinematic photo full bg with dark overlay + left-aligned text: bold Tungsten/Inter headline + thin RED UNDERLINE RULE under key phrase + Inter body with inline bold. Accent colour sets per topic (red=sell/risk, blue=stake/commitment). Data slides=textured bg (charcoal or dark blue newspaper) + accent-coloured rounded cards matching bg. CTA=engagement question + bold options list + full-width blue LINK IN BIO button (no blur).\n"
+"BOTH types: @Cryptonary bottom-left, bracket-C bottom-right every slide. Slide numbers top-left grey on all non-cover slides.",
+    "ad_static":      "AD STATIC CREATIVE. 1080x1350px. THREE funnel-stage templates — pick by stage in brief:\n"
+"AWARENESS (TOF): Editorial news-article aesthetic — looks like content, not an ad. Dark photo or chart fills top 55-60%, pure black lower 40%. Small red rounded pill badge top-left: 'BREAKING' / 'JUST DROPPED' / bold category label. White Tungsten headline 3-4 words/line, tight leading, left-aligned — reads like a news headline not an ad. Small track-record proof line in grey Inter below headline (e.g. 'SOL at $23. ETH at $1,200.'). Bracket-C logomark bottom-right. NO taglines, NO CTAs, NO prices on image — this is awareness not conversion.\n"
+"CONSIDERATION (MOF): Social proof template — dark bg (#0A0A0A). Upper 40%: bold white Tungsten headline (the key insight or promise, max 6 words). Middle: dark grey rounded card (#1A1A1A) with 3 specific proof bullets (Inter 15px, bullet •, white body, green accent on numbers). Lower: avatar identifier line in grey Inter 13px (e.g. 'For investors managing $50K+') + thin blue divider rule. Bracket-C bottom-right + @Cryptonary bottom-left. Feels premium, data-driven, editorial.\n"
+"CONVERSION (BOF): Direct response offer template — pure black bg. Top: red rounded 'LIMITED' / 'TODAY ONLY' pill badge (if applicable). Massive Tungsten headline centre-top (the offer, max 5 words, white + ONE red or blue accent word). Sub-headline Inter 16px grey (the qualifier/'For investors who...'). Visual middle: dark gradient card with key offer details in clean rows (what they get, Inter 14px). Bottom: full-width blue rounded CTA pill button with white Tungsten text ('JOIN PRO NOW' / 'APPLY NOW'). @Cryptonary bottom-left. Bracket-C bottom-right.\n"
+"ALL: No 'AD' label. Editorial over advertising. Specific numbers outperform vague claims. Loss-framed headlines preferred over gain-framed.",
+    "ad_video":       "AD VIDEO STORYBOARD. Three-act structure for 15-30s Meta/YouTube video ads. HOOK [0-3s]: Full-bleed dark dramatic frame — coin visual or chart animation or bold text wipe. Single white Tungsten headline slams in (3-5 words max). No logo in hook. BODY [3-15s]: Two or three scene cuts. Each scene: dark bg, single claim or proof point (specific number/date), Inter text overlay left-aligned. Accent colour matches claim sentiment (green=bullish call, red=risk/missed, blue=platform/edge). Track record frames preferred (SOL $23 / ETH $1,200 / HYPE pre-launch). CLOSE/CTA [final 5s]: Pure black bg. Offer statement Tungsten centre. Full-width blue rounded pill button. Bracket-C logomark appears bottom-right on close only. Music: building tension in body, resolves on CTA. Caption burn-in throughout — all speech must be readable without audio.",
 }
 
 def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
-    """Build image prompt with correct Cryptonary brand specs per type."""
+    """Build image prompt based on real Cryptonary Instagram post analysis.
+    6 templates: data_table, news, quote_photo, comparison, cultural_meme, data_card.
+    Logo: bracket-C bottom-RIGHT. @Cryptonary text bottom-LEFT. Both on every post."""
     style = IMAGE_STYLE_MAP.get(post_type, IMAGE_STYLE_MAP["background"])
     angle_short = angle[:80].strip() if angle else ""
     # Logo instruction per type
@@ -8478,10 +8787,12 @@ def generate_claude_svg(brief, post_type, angle=""):
     type_instructions = {
         "storyboard": "Create a STORYBOARD SVG showing scene frames in a grid layout. Each frame is a labelled rectangle with scene description inside. Clean, minimal, black background, white text, blue accent borders.",
         "static":     "Create a STATIC POST SVG (1080x1080). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
-        "carousel":   "Create a CAROUSEL SLIDE SVG (1080x1080) showing the cover slide design. Bold headline, dark background, clear typography hierarchy.",
+        "carousel":   "Create a CAROUSEL COVER SLIDE SVG (1080x1350px portrait). Full-bleed dramatic cinematic image lower 60%, pure black top. Massive white Tungsten headline centre. Red rounded pill badge with white text. @Cryptonary white bottom-left, bracket-C logomark bottom-right.",
         "story":      "Create a STORY FRAME SVG (1080x1920). Full screen vertical. Bold text, dark bg, designed for mobile.",
         "thumbnail":  "Create an EMAIL THUMBNAIL SVG (1200x628). Bold headline, relevant visual element, dark background. Optimised for email preview.",
         "data":       "Create a DATA VISUALISATION SVG. Charts, numbers, clean layout. Dark background, green/red for up/down, white text.",
+        "ad_static":  "Create an AD STATIC CREATIVE SVG (1080x1350px portrait). Editorial news-article aesthetic — must NOT look like an ad. Determine funnel stage from brief: AWARENESS=dark photo/chart upper 55%+pure black lower 40%+small red rounded pill badge top-left+white bold headline 3-4 words/line left-aligned+grey proof line below headline; CONSIDERATION=dark #0A0A0A bg+bold white headline top+dark #1A1A1A rounded card centre with 3 proof bullets (green accent on numbers)+avatar identifier grey line+blue divider rule; CONVERSION=pure black bg+massive centred Tungsten headline (white+ONE red/blue accent word)+grey sub-headline+offer detail rows+full-width blue rounded CTA pill bottom. All: bracket-C logomark bottom-right, @Cryptonary bottom-left. No AD label. Specific numbers over vague claims.",
+        "ad_video":   "Create a VIDEO AD STORYBOARD SVG. CSS grid of labelled frames showing each act: HOOK frame (0-3s) | BODY frames (3-15s, 2-3 scenes) | CTA frame (final 5s). Each frame: dark bg rectangle with scene label top, text overlay description inside, colour bar at bottom showing dominant accent (blue/green/red). Clean minimal layout, black background, white text, blue accent borders on frame containers.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
 
@@ -8537,14 +8848,23 @@ RULES:
 def generate_claude_html(brief, post_type, angle=""):
     """Ask Claude to generate a styled HTML visual from a visual brief."""
     type_instructions = {
-        "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame numbered. Dark theme. Tungsten-style bold titles, Inter body text.",
-        "static":     "An Instagram static post. Exact size: 1080x1350px (4:5 portrait). Bold headline in Inter font. Dark background. Brand colours. Cryptonary bracket-C logo bottom-left.",
-        "carousel":   "A FULL Instagram carousel — ALL slides as separate scrollable 1080x1350px sections. Tungsten for titles (large, bold), Inter for body. USE THE EXACT HEADLINE AND SUPPORTING TEXT from the brief. Apply colour per slide. Small C logo bottom-left each slide. Include slide numbers.",
-        "story":      "Vertical story frame. 1080x1920px (9:16). Full-screen. Bold Inter text. Dark background. Mobile-optimised.",
-        "thumbnail":  "Email banner. Exact size: 600x200px. Clean dark design. Short bold headline, Inter font. No logo. Professional.",
-        "report":     "Report thumbnail. 1920x1080px (16:9). Dark background. Bold Tungsten title. Data or chart element. No logo. Editorial.",
-        "youtube":    "YouTube cover. 1920x1080px (16:9). Bold Tungsten title. Dramatic dark background. Cryptonary bracket-C logo bottom-left.",
-        "data":       "Data visualisation. Dark background. Styled numbers and CSS charts. Inter font. Blue #005EFF accents. Clean layout.",
+        "storyboard": "Storyboard layout. CSS grid of numbered scene frames. Dark #000. Tungsten titles, Inter body.",
+        "static":     "Instagram static 1080x1350px. Pick template by content: DATA TABLE=pure black bg, huge Tungsten headline (white+green/red accent word), #1A1A1A rounded cards for data rows; NEWS=visual top 55%, black bottom, red NEWS pill, Tungsten headline 3-4 words/line; QUOTE=subject photo full-bleed, large Inter quote, orange key words; COMPARISON=two rounded panels on black each with photo+label. Always: @Cryptonary white Inter 13px bottom-left + bracket-C SVG bottom-right.",
+        "carousel":   "Full carousel HTML. ALL slides 1080x1350px portrait scrollable. Two carousel types — choose based on brief:\n"
+"DATA REPORT TYPE: Cover=cinematic image lower 60%+black top+Tungsten headline centre+red pill badge+no slide number. Data slides=3D neon coin visual upper 55% in coin colours+Statistics rows+Cryptonary's Take box. CTA=blurred bg+blue pill subscribe button.\n"
+"EDITORIAL TYPE: Cover=dark photo bg+slide number 01+massive LEFT-ALIGNED Tungsten headline (tight leading)+red SWIPE pill. Content slides=full-bleed dark photo+left-aligned text+THIN RED UNDERLINE under key phrase+Inter body bold inline. Textured bg slides use accent-coloured cards matching bg tone. CTA=engagement question+bold option list+full-width blue LINK IN BIO button.\n"
+"All slides: @Cryptonary white Inter 13px bottom-left + bracket-C SVG bottom-right. USE EXACT TEXT from brief.",
+        "story":      "Story frame 1080x1920px. Full-screen dark bg. Bold Inter. @Cryptonary bottom-left.",
+        "thumbnail":  "Email banner 600x200px EXACTLY. Dark bg. Short bold Inter headline. NO logo. NO @handle.",
+        "report":     "Report thumbnail 1920x1080px. Pure black. Bold Tungsten title. Data element. NO logo. NO @handle.",
+        "youtube":    "YouTube thumbnail 1920x1080px landscape full bleed. SPLIT/POINTING: solid/textured colour bg, bold yellow or red pill badge top-left (black Tungsten rounded corners), key visual left side; CHART_OVERLAY: chart fills bg, minimal text, red annotation circle; DRAMATIC: dark moody bg, massive Tungsten headline full-width top. All: bracket-C logomark bottom-LEFT white only. NO @Cryptonary text on YouTube.",
+        "data":       "Data card. Dark gradient bg. Dramatic centred 3D/neon coin visual. Clean Inter stat rows (label left, value right). Rounded Cryptonary's Take box at bottom. @Cryptonary white 13px bottom-left + bracket-C SVG bottom-right.",
+        "ad_static":  "AD STATIC CREATIVE. 1080x1350px. Determine funnel stage from brief then apply:\n"
+"AWARENESS (TOF): editorial news look — dark photo or gradient top 55%, pure black lower 45%. Small red rounded pill badge top-left (8px radius, 11px Tungsten white text: 'BREAKING' or category). White Tungsten headline left-aligned, 3-4 words per line, font-size 72-80px, font-weight 900, letter-spacing -0.02em, line-height 1.0. Grey (#666) Inter 14px proof line below headline (track record stat). NO price/offer/CTA visible on image. @Cryptonary white Inter 13px bottom-left. Bracket-C SVG bottom-right.\n"
+"CONSIDERATION (MOF): dark #0A0A0A bg full height. Bold white Tungsten headline 68px top-centre (max 6 words). Dark #1A1A1A rounded-16px card centre: 3 bullet rows (• Inter 15px white body + green #0DA500 number/stat). Grey Inter 13px avatar line below card ('For investors managing $50K+'). 2px blue #005EFF horizontal rule dividing card from bottom. @Cryptonary white 13px bottom-left. Bracket-C SVG bottom-right.\n"
+"CONVERSION (BOF): pure black bg. Optional red pill 'LIMITED' badge top-centre. Massive white Tungsten headline 80-90px centre (white + ONE accent word in red or blue). Grey Inter 16px sub-headline below ('For investors who...'). Dark #111 rounded-12px offer card: 3-4 rows of offer details, Inter 14px white. Full-width blue #005EFF rounded-100px CTA pill bottom (white Tungsten 'JOIN PRO NOW' or 'APPLY NOW'). @Cryptonary white 13px bottom-left. Bracket-C SVG bottom-right.\n"
+"ALL: NO 'AD' label. Editorial > advertising. Specific numbers > vague claims. Loss framing > gain framing.",
+        "ad_video":   "VIDEO AD STORYBOARD. Full-page HTML showing 4 storyboard frames in a 2x2 CSS grid. Each frame 540x960px (scaled 50% for display), dark #0A0A0A bg, 2px #333 border, border-radius 8px. Frame 1 — HOOK [0-3s]: label top-left grey Inter 11px. Dramatic near-full-bleed dark gradient. Single Tungsten headline 3-5 words slams centre, font-size 56px white, weight 900. Frame 2 — BODY SCENE 1 [3-10s]: single proof claim, specific stat in green/red accent, dark bg, Inter text overlay left-aligned. Frame 3 — BODY SCENE 2 [10-15s]: second scene — track record visual description or avatar pain-point text. Frame 4 — CTA [15-30s]: pure black bg. Tungsten offer statement centre. Full-width blue rounded CTA pill. Bracket-C logomark bottom-right appears here only. Caption burn-in bar at bottom of each frame (white text on #000000 30% opacity strip). Title row above grid: 'VIDEO AD STORYBOARD — [STAGE]' white Tungsten 24px. Background page colour #000.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
 
@@ -8552,7 +8872,7 @@ def generate_claude_html(brief, post_type, angle=""):
     no_logo = post_type in {"thumbnail", "report"}
     logo_svg = get_logo_svg_tag(position="bottom-left", size=40, variant="white")
     logo_instruction = ("NO logo on this type." if no_logo else
-                        "Place this EXACT logo SVG bottom-left, inside a position:relative container:\n" + logo_svg)
+                        "Place this EXACT bracket-C logomark SVG bottom-RIGHT corner AND add '@Cryptonary' text bottom-LEFT in white Inter 14px. Both on every post:\n" + logo_svg)
 
     prompt = ("""Generate a complete, self-contained HTML file for a Cryptonary visual.
 
@@ -8590,7 +8910,8 @@ RULES:
                 logo_svg = get_logo_svg_tag(position="bottom-left", size=40, variant="white")
                 # Only inject if not already present
                 if 'points="94.87,21.96' not in html_out:
-                    inject = '<div style="position:fixed;bottom:16px;left:16px;width:40px;height:40px;z-index:999;">' + logo_svg + '</div>'
+                    inject = ('<div style="position:fixed;bottom:16px;right:16px;width:40px;height:40px;z-index:999;">' + logo_svg + '</div>'
+                        + '<div style="position:fixed;bottom:18px;left:16px;font-family:Inter,Arial,sans-serif;font-size:13px;color:white;z-index:999;opacity:0.9;">@Cryptonary</div>')
                     html_out = html_out.replace('</body>', inject + '</body>')
             return html_out, None
         return None, "Claude did not return valid HTML"
@@ -8806,6 +9127,8 @@ def show_image_style_menu(chat_id, engine):
             [{"text": "📱 Story frame",      "callback_data": "img_style_story"}],
             [{"text": "📊 Data visual",      "callback_data": "img_style_data"}],
             [{"text": "📧 Email thumbnail",  "callback_data": "img_style_thumbnail"}],
+            [{"text": "🎯 Ad static (TOF/MOF/BOF)", "callback_data": "img_style_ad_static"}],
+            [{"text": "🎬 Ad video storyboard",     "callback_data": "img_style_ad_video"}],
         ]
         send(chat_id, "*What type of Claude visual?*", keyboard)
     else:
@@ -8816,6 +9139,7 @@ def show_image_style_menu(chat_id, engine):
             [{"text": "🌍 Macro / geopolitical",     "callback_data": "img_style_macro_geo"}],
             [{"text": "🎭 Meme / cultural",          "callback_data": "img_style_meme_cultural"}],
             [{"text": "📈 Chart / technical",        "callback_data": "img_style_educational"}],
+            [{"text": "🎯 Ad static (TOF/MOF/BOF)", "callback_data": "img_style_ad_static"}],
             [{"text": "🖼️ Background only",          "callback_data": "img_style_background"}],
         ]
         send(chat_id, "What style?", keyboard)
@@ -9395,7 +9719,7 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
             "subject": subject,
             "previewText": preview_text or "",
             "htmlContent": html_content,
-            "sender": {"name": "Adam | Cryptonary", "email": "adam@cryptonary.com"},
+            "sender": {"name": "Adam | Cryptonary", "email": "support@cryptonary.com"},
             "type": "classic"
         }
         if list_ids:
@@ -9411,7 +9735,9 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
         return result.get("id"), None
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
-        return None, "Brevo create error: " + body[:200]
+        if "unauthorized" in body.lower() or "key not found" in body.lower():
+            return None, "Brevo API key rejected. Check BREVO_API_KEY in Render — make sure it has campaign read/write permissions."
+        return None, "Brevo create error: " + body[:300]
     except Exception as e:
         return None, "Brevo draft failed: " + str(e)
 
@@ -9503,6 +9829,33 @@ def format_contact_list_message(data):
         lines.append("_Rename your Brevo lists to match the keywords above._")
     return "\n".join(lines)
 
+
+def openai_gpt(prompt, system="", max_tokens=800):
+    """Call OpenAI GPT-4o for hooks, angles, and ideation tasks."""
+    if not OPENAI_KEY:
+        # Fall back to Claude if OpenAI not configured
+        return claude(prompt, max_tokens=max_tokens, system=system)
+    try:
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        body = json.dumps({
+            "model": "gpt-4o",
+            "max_tokens": max_tokens,
+            "messages": messages
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=body,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + OPENAI_KEY}
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            result = json.loads(r.read())
+        return result["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print("OpenAI error:", e, flush=True)
+        return claude(prompt, max_tokens=max_tokens, system=system)  # fallback
 
 # Cache for market data — keyed by timestamp bucket (5 min intervals)
 _market_cache = {"data": {}, "fetched_at": 0}
@@ -10603,6 +10956,23 @@ def handle_content_file(chat_id, file_info, file_type="image"):
         elif stage == "awaiting_lp_context_text":
             user_state[chat_id]["lp_context"] = sanitise(extracted[:500])
             generate_lp_outline(chat_id)
+
+        elif stage == "yt_awaiting_content":
+            user_state[chat_id]["yt_content"] = sanitise(extracted)
+            user_state[chat_id]["yt_mode"] = user_state[chat_id].get("yt_mode", "fresh")
+            if user_state[chat_id].get("yt_existing"):
+                gen_yt_desc(chat_id)
+            else:
+                keyboard = [
+                    [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
+                    [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
+                ]
+                send(chat_id, "Got it. Do you also have an existing description you want me to work from?", keyboard)
+
+        elif stage == "yt_awaiting_existing":
+            user_state[chat_id]["yt_existing"] = sanitise(extracted)
+            user_state[chat_id]["yt_mode"] = "edit"
+            gen_yt_desc(chat_id)
 
         else:
             send(chat_id, "File received but not sure where to use it. Try again from the right step.")
