@@ -30,14 +30,27 @@ CRYPTONARY_LOGO_SVG_BLUE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
 CRYPTONARY_LOGO_SVG_B = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#000000" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#000000" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
 
 def get_logo_svg_tag(position="bottom-right", size=40, variant="white"):
-    """Return the Cryptonary logomark as an absolutely-positioned SVG tag.
+    """Return the Cryptonary bracket-C logomark as an absolutely-positioned <div> containing the SVG.
     Instagram: bracket-C = bottom-RIGHT + @Cryptonary text = bottom-LEFT (both always present).
     YouTube: bracket-C = bottom-LEFT only (no @handle text).
     Email/Report: no logo."""
     logo = {"white": CRYPTONARY_LOGO_SVG_W, "blue": CRYPTONARY_LOGO_SVG_BLUE, "black": CRYPTONARY_LOGO_SVG_B}.get(variant, CRYPTONARY_LOGO_SVG_W)
-    pos_css = "bottom:16px;left:16px;" if position == "bottom-left" else "bottom:16px;right:16px;"
-    inner = logo.replace("<svg ", '<svg style="position:absolute;' + pos_css + 'width:' + str(size) + 'px;height:' + str(size) + 'px;" ')
-    return inner
+    if position == "bottom-left":
+        pos_css = "bottom:16px;left:16px;"
+    elif position == "bottom-right":
+        pos_css = "bottom:16px;right:16px;"
+    elif position == "top-right":
+        pos_css = "top:16px;right:16px;"
+    else:
+        pos_css = "bottom:16px;right:16px;"
+    # Wrap in a div — keeps SVG contained and absolutely positioned reliably
+    wrapper = (
+        '<div style="position:absolute;' + pos_css +
+        'width:' + str(size) + 'px;height:' + str(size) + 'px;z-index:10;">' +
+        logo +
+        '</div>'
+    )
+    return wrapper
 
 
 
@@ -2838,6 +2851,7 @@ def gen_social_selected(chat_id):
     angle = state.get("selected_angle", "")
     source_email = get_social_source_text(chat_id)[:600]
     source_label = state.get("social_source", "free")
+    source_url_label = state.get("social_source_label", "")
     fmt_map = {
         "fmt_reel": ("Reel Script", gen_reel),
         "fmt_carousel": ("Carousel", gen_carousel),
@@ -2845,14 +2859,15 @@ def gen_social_selected(chat_id):
         "fmt_story_single": ("Story (single)", lambda c: gen_story(c, multi=False)),
         "fmt_story_multi": ("Story (multi)", lambda c: gen_story(c, multi=True)),
     }
-    # Only say "email" in the status if we're actually coming from the email flow
-    origin = state.get("social_origin", "email")
-    if origin == "idea_engine":
-        status_msg = "Generating " + str(len(selected)) + " format(s)..."
-    elif origin == "voice":
+    origin = state.get("social_origin", "")
+    if source_label == "url" and source_url_label:
+        status_msg = "Generating " + str(len(selected)) + " format(s) from " + source_url_label + "..."
+    elif origin == "idea_engine" or origin == "voice":
         status_msg = "Generating " + str(len(selected)) + " format(s)..."
     elif origin == "email" and state.get("report"):
-        status_msg = "Generating " + str(len(selected)) + " format(s) based on " + source_label + " email..."
+        status_msg = "Generating " + str(len(selected)) + " format(s) from " + source_label + " email..."
+    elif state.get("report"):
+        status_msg = "Generating " + str(len(selected)) + " format(s) from report..."
     else:
         status_msg = "Generating " + str(len(selected)) + " format(s)..."
     send(chat_id, status_msg)
@@ -3473,6 +3488,17 @@ def handle_message(msg):
             fetched = fetch_url_content(url, detect_url_type(url))
             if fetched and len(fetched.strip()) > 50:
                 user_state[chat_id]["report"] = fetched[:4000]
+                user_state[chat_id]["social_source"] = "url"
+                user_state[chat_id]["social_source_label"] = url.split("/")[2] if "/" in url else url[:40]
+                try:
+                    summary = claude(
+                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        max_tokens=150,
+                        system="You are a concise research assistant. Be specific. No fluff."
+                    )
+                    send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
+                except Exception:
+                    pass
                 show_standalone_social_menu(chat_id)
             else:
                 send(chat_id, "Could not read content from that link. Paste the text directly instead.")
@@ -3481,6 +3507,51 @@ def handle_message(msg):
         # IDEA ENGINE INSPIRATION FLOW — awaiting_inspiration handles URL directly
         if current_stage == "ie_awaiting_inspiration":
             analyse_url(chat_id, url, mode="ideas")
+            return
+
+        # AD FLOW — fetch URL as ad theme
+        if current_stage == "awaiting_ad_theme":
+            send(chat_id, "Fetching content from link...")
+            fetched = fetch_url_content(url, detect_url_type(url))
+            if fetched and len(fetched.strip()) > 50:
+                try:
+                    summary = claude(
+                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        max_tokens=150,
+                        system="You are a concise research assistant. Be specific. No fluff."
+                    )
+                    send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
+                except Exception:
+                    pass
+                user_state[chat_id]["ad_theme"] = fetched[:2000]
+                user_state[chat_id]["stage"] = "pick_ad_avatars"
+                show_avatar_menu(chat_id)
+            else:
+                send(chat_id, "Could not read that link. Paste the content directly instead.")
+            return
+
+        # YT DESC FLOW — fetch URL as video content
+        if current_stage == "yt_awaiting_content":
+            send(chat_id, "Fetching content from link...")
+            fetched = fetch_url_content(url, detect_url_type(url))
+            if fetched and len(fetched.strip()) > 50:
+                try:
+                    summary = claude(
+                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        max_tokens=150,
+                        system="You are a concise research assistant. Be specific. No fluff."
+                    )
+                    send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
+                except Exception:
+                    pass
+                user_state[chat_id]["yt_content"] = fetched[:4000]
+                keyboard = [
+                    [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
+                    [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
+                ]
+                send(chat_id, "Do you also have an existing description to work from?", keyboard)
+            else:
+                send(chat_id, "Could not read that link. Paste the content directly instead.")
             return
 
         # DEFAULT — route to ideas
@@ -5033,6 +5104,21 @@ def handle_callback(cb):
         state.pop("ds_csv_text", None)
         start_ds_adverts(chat_id)
 
+    elif data == "ds_adverts_upload":
+        # After choosing upload — ask which ad type filter then accept files
+        keyboard = [
+            [{"text": "All ads", "callback_data": "ad_filter_all"}],
+            [{"text": "Video ads only", "callback_data": "ad_filter_video"}],
+            [{"text": "Static ads only", "callback_data": "ad_filter_static"}],
+        ]
+        send(chat_id, "Which ads to analyse?", keyboard)
+
+    elif data == "ds_adverts_manual":
+        state["ds_ad_filter"] = "all"
+        state["stage"] = "ds_awaiting_ad_data"
+        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
+        send(chat_id, "*Ad Data*\n\nPaste your numbers directly — any format works.\n\n_e.g. Ad name | Spend | Clicks | CTR | Checkouts_", keyboard)
+
     elif data.startswith("ad_filter_"):
         ad_filter = data.replace("ad_filter_", "")
         state["ds_ad_filter"] = ad_filter
@@ -5040,7 +5126,7 @@ def handle_callback(cb):
         state["ds_images"] = []
         filter_label = {"all": "All ads", "video": "Video ads only", "static": "Static ads only"}.get(ad_filter, "All ads")
         keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
-        send(chat_id, "*" + filter_label + "*\n\nUpload your Meta Ads Manager screenshots or CSV. Send all then tap Done.", keyboard)
+        send(chat_id, "*" + filter_label + "*\n\nUpload your Meta Ads Manager screenshots or CSV. Send all files then tap Done.", keyboard)
 
     elif data == "ds_social":
         state["ds_images"] = []
@@ -5566,27 +5652,112 @@ def handle_callback(cb):
 
     elif data == "ds_ads_best":
         analysis = state.get("ds_full_ads_analysis", "")
-        if not analysis:
+        verified = state.get("ds_verified_ads", [])
+        if not analysis and not verified:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("From this ad analysis, list the TOP 5 best performing ads. For each: ad name/type, key metric that makes it best, and one sentence on why it works.\n\n" + analysis[:3000], max_tokens=800)
+        # Build verified ranked table from Python-computed data first
+        if verified:
+            with_co = [a for a in verified if a["checkouts"] > 0]
+            ranked = sorted(with_co, key=lambda x: x["cost_per_checkout"])[:5]
+            table = "VERIFIED TOP 5 BY COST PER CHECKOUT (Python-computed — use these exact names and numbers):\n"
+            for i, a in enumerate(ranked, 1):
+                table += f"{i}. {a['name']} | Spend: £{a['spend']:.2f} | Checkouts: {int(a['checkouts'])} | CPCo: £{a['cost_per_checkout']:.2f} | CTR: {a['ctr']:.2f}%\n"
+            prompt = (table + "\nFor each of these 5 ads: confirm the exact ad name as listed above, state the key metric, "
+                      "and write one sentence on why it likely works based on the avatar/stage/angle in the name. "
+                      "Do NOT invent or substitute any ad names. Only use the 5 listed above.")
+        else:
+            prompt = ("From this ad analysis, list the TOP 5 best performing ads ranked by cost per checkout (lowest first). "
+                      "ONLY cite ad names that appear verbatim in the data. Do not invent names. "
+                      "For each: exact ad name, CPCo, checkout count, one sentence on why it works.\n\n" + analysis[:3000])
+        result = claude(prompt, max_tokens=800)
         send_plain(chat_id, "*TOP 5 PERFORMERS*\n\n" + result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Back to analysis", "callback_data": "ds_adverts"}],
+        ]
+        send(chat_id, "What next?", keyboard)
 
     elif data == "ds_ads_worst":
         analysis = state.get("ds_full_ads_analysis", "")
-        if not analysis:
+        verified = state.get("ds_verified_ads", [])
+        if not analysis and not verified:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("From this ad analysis, list the BOTTOM 5 worst performing ads. For each: ad name/type, the metric that's dragging it down, and one sentence on what's likely causing underperformance.\n\n" + analysis[:3000], max_tokens=800)
+        if verified:
+            # Worst = highest CPCo with meaningful spend (≥£5), then zero-checkout with high spend
+            with_co = [a for a in verified if a["checkouts"] > 0 and a["spend"] >= 5]
+            worst_cpco = sorted(with_co, key=lambda x: -x["cost_per_checkout"])[:3]
+            zero_co = sorted([a for a in verified if a["checkouts"] == 0 and a["spend"] >= 10],
+                             key=lambda x: -x["spend"])[:2]
+            table = "VERIFIED WORST PERFORMERS (Python-computed — use these exact names and numbers):\n\nHIGHEST COST PER CHECKOUT:\n"
+            for i, a in enumerate(worst_cpco, 1):
+                table += f"{i}. {a['name']} | Spend: £{a['spend']:.2f} | Checkouts: {int(a['checkouts'])} | CPCo: £{a['cost_per_checkout']:.2f}\n"
+            table += "\nHIGHEST SPEND WITH ZERO CHECKOUTS:\n"
+            for i, a in enumerate(zero_co, 1):
+                table += f"{i}. {a['name']} | Spend: £{a['spend']:.2f} | Checkouts: 0 | CTR: {a['ctr']:.2f}%\n"
+            prompt = (table + "\nFor each ad listed: confirm the exact name, the specific dragging metric, "
+                      "and one sentence diagnosis of what's likely causing underperformance based on the avatar/stage/angle. "
+                      "Do NOT invent or substitute any ad names. Only reference the ads listed above.")
+        else:
+            prompt = ("From this ad analysis, list the BOTTOM 5 worst performing ads. "
+                      "Rank by: (1) highest CPCo among ads with checkouts, (2) highest spend with zero checkouts. "
+                      "ONLY cite ad names that appear verbatim in the data. Do not invent names. "
+                      "For each: exact ad name, the dragging metric, one sentence diagnosis.\n\n" + analysis[:3000])
+        result = claude(prompt, max_tokens=800)
         send_plain(chat_id, "*BOTTOM 5 PERFORMERS*\n\n" + result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Back to analysis", "callback_data": "ds_adverts"}],
+        ]
+        send(chat_id, "What next?", keyboard)
 
     elif data == "ds_ads_patterns":
         analysis = state.get("ds_full_ads_analysis", "")
-        if not analysis:
+        verified = state.get("ds_verified_ads", [])
+        if not analysis and not verified:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("From this ad analysis, identify 5 clear patterns. For each pattern: what it is, which ads evidence it, and what to do about it. Be specific — no generic advice.\n\n" + analysis[:3000], max_tokens=1200)
+        # Build avatar and stage aggregates in Python for accuracy
+        avatar_table = ""
+        if verified:
+            import re as _re
+            def get_seg(name, pos): parts = name.split("_"); return parts[pos] if len(parts) > pos else "unknown"
+            from collections import defaultdict
+            avatar_agg = defaultdict(lambda: {"spend": 0, "checkouts": 0})
+            stage_agg  = defaultdict(lambda: {"spend": 0, "checkouts": 0})
+            for a in verified:
+                parts = a["name"].split("_")
+                stage  = parts[1].upper() if len(parts) > 1 else "UNK"
+                avatar = parts[2].upper() if len(parts) > 2 else "UNK"
+                avatar_agg[avatar]["spend"]     += a["spend"]
+                avatar_agg[avatar]["checkouts"] += a["checkouts"]
+                stage_agg[stage]["spend"]       += a["spend"]
+                stage_agg[stage]["checkouts"]   += a["checkouts"]
+            avatar_table = "AVATAR AGGREGATES (Python-computed):\nAvatar | Spend | Checkouts | CPCo\n"
+            for av, d in sorted(avatar_agg.items(), key=lambda x: (x[1]["spend"]/max(x[1]["checkouts"],0.01))):
+                cpco = d["spend"]/d["checkouts"] if d["checkouts"] > 0 else None
+                avatar_table += f"{av} | £{d['spend']:.2f} | {int(d['checkouts'])} | {'£'+str(round(cpco,2)) if cpco else 'no checkouts'}\n"
+            avatar_table += "\nSTAGE AGGREGATES:\nStage | Spend | Checkouts | CPCo\n"
+            for st, d in sorted(stage_agg.items(), key=lambda x: (x[1]["spend"]/max(x[1]["checkouts"],0.01))):
+                cpco = d["spend"]/d["checkouts"] if d["checkouts"] > 0 else None
+                avatar_table += f"{st} | £{d['spend']:.2f} | {int(d['checkouts'])} | {'£'+str(round(cpco,2)) if cpco else 'no checkouts'}\n"
+
+        prompt = (avatar_table + "\n\n" if avatar_table else "") + (
+            "From this ad analysis, identify 5 clear patterns. Rules:\n"
+            "- ONLY cite ad names that appear verbatim in the data — never invent or paraphrase names\n"
+            "- Use the exact CPCo ratios from the verified data — do not compress ranges (e.g. if range is 2x-16x, say 2x-16x)\n"
+            "- Avatar conclusions must use the aggregate CPCo table above, not individual ad cherry-picks\n"
+            "- For each pattern: what it is, which specific real ads evidence it (exact names), what to do\n\n"
+            + analysis[:3000]
+        )
+        result = claude(prompt, max_tokens=1200)
         send_plain(chat_id, "*PATTERNS FOUND*\n\n" + result)
+        keyboard = [
+            [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
+            [{"text": "Back to analysis", "callback_data": "ds_adverts"}],
+        ]
+        send(chat_id, "What next?", keyboard)
 
     elif data == "ds_ads_rank":
         analysis = state.get("ds_full_ads_analysis", "")
@@ -5784,35 +5955,41 @@ def handle_callback(cb):
         # Must be BEFORE img_ startswith catch below
         brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
         vb_type = state.get("last_visual_type", "static")
-        print(f"img_from_brief fired. chat_id={chat_id}, brief_len={len(brief)}", flush=True)
+        print(f"img_from_brief fired. chat_id={chat_id}, brief_len={len(brief)}, vb_type={vb_type}", flush=True)
         if not brief:
             tg("sendMessage", {"chat_id": chat_id, "text": "No brief found. Generate a visual brief first."})
             return
         state["pending_img_concept"] = brief[:600]
         state["last_visual_brief"] = brief
         _global_brief_store[chat_id] = brief
-        # Auto-route structured content to Claude, photographic to Gemini
+        # Style is already determined by the brief — skip style menu, go straight to engine picker
+        # Map vb_type to img_style
+        style_map = {
+            "static": "static", "carousel": "carousel", "story": "story",
+            "email": "thumbnail", "report": "report", "youtube": "youtube",
+            "reel": "storyboard", "ad_static": "ad_static", "ad_video": "ad_video",
+        }
+        img_style = style_map.get(vb_type, "static")
+        state["pending_img_style"] = img_style
+        # Auto-route engine by content type
         social_type = state.get("current_social_type", "")
-        auto_engine = None
-        if any(t in social_type for t in ["Carousel", "Reel", "Story"]):
-            auto_engine = "claude"
-        elif any(t in social_type for t in ["Static"]):
-            auto_engine = "gemini"
-        if auto_engine:
-            state["img_engine"] = auto_engine
-            show_image_style_menu(chat_id, auto_engine)
+        if any(t in social_type for t in ["Carousel", "Reel", "Story"]) or vb_type in {"carousel", "reel", "story", "ad_video"}:
+            state["img_engine"] = "claude"
+            handle_image_callbacks(chat_id, "img_style_" + img_style, state)
+        elif any(t in social_type for t in ["Static"]) or vb_type in {"static", "email", "youtube", "ad_static"}:
+            state["img_engine"] = "gemini"
+            handle_image_callbacks(chat_id, "img_style_" + img_style, state)
         else:
             keyboard = [
                 [{"text": "Claude (SVG + HTML file)",  "callback_data": "img_engine_claude"}],
                 [{"text": "Gemini (graphic/thumbnail)", "callback_data": "img_engine_gemini"}],
                 [{"text": "DALL-E (photo/cinematic)",   "callback_data": "img_engine_dalle"}],
             ]
-            result = tg("sendMessage", {
+            tg("sendMessage", {
                 "chat_id": chat_id,
                 "text": "Which AI for image generation?",
                 "reply_markup": {"inline_keyboard": keyboard}
             })
-            print(f"Engine picker result: ok={result.get('ok') if result else 'None'}", flush=True)
 
     elif data.startswith("img_"):
         handle_image_callbacks(chat_id, data, state)
@@ -6553,7 +6730,11 @@ def show_standalone_social_menu_confirm(chat_id):
         hook = selected_hooks.get(fmt, "")
         summary += format_labels.get(fmt, fmt) + "\n"
         if hook:
-            summary += "_Hook: " + hook[:60] + "_\n"
+            # Fix spacing: collapse multiple spaces and ensure single space after punctuation
+            import re as _re
+            hook_clean = _re.sub(r'(\w)([A-Z])', r'\1 \2', hook)  # camelCase split e.g. "MillionRipped"
+            hook_clean = _re.sub(r' {2,}', ' ', hook_clean).strip()
+            summary += "_Hook: " + hook_clean[:60] + "_\n"
         summary += "\n"
     keyboard = [[{"text": "Generate all", "callback_data": "gen_social_confirmed"}]]
     send(chat_id, summary, keyboard)
@@ -7340,11 +7521,6 @@ def show_data_studio_menu(chat_id):
         [{"text": "Emails", "callback_data": "ds_emails"}],
         [{"text": "Landing Pages", "callback_data": "ds_landing"}],
     ]
-    # Show Meta + Brevo options only if configured
-    if META_TOKEN and META_AD_ACCOUNT:
-        keyboard.append([{"text": "📊 Pull Meta Ad Data", "callback_data": "ds_meta_pull"}])
-    else:
-        keyboard.append([{"text": "📊 Connect Meta Ads", "callback_data": "ds_meta_setup"}])
     send(chat_id, "*Data Studio*\n\nWhich data would you like to analyse?", keyboard)
 
 # ── AD ANALYSIS ───────────────────────────────────────────────────
@@ -7353,13 +7529,16 @@ def start_ds_adverts(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_ad_format_filter"
-    keyboard = [
-        [{"text": "Start Analysis — All Ads", "callback_data": "ad_filter_all"}],
-        [{"text": "Start Analysis — Video Ads", "callback_data": "ad_filter_video"}],
-        [{"text": "Start Analysis — Static Ads", "callback_data": "ad_filter_static"}]
+    keyboard = []
+    if META_TOKEN and META_AD_ACCOUNT:
+        keyboard.append([{"text": "📊 Import from Meta Ads", "callback_data": "ds_meta_pull"}])
+    else:
+        keyboard.append([{"text": "📊 Import from Meta Ads", "callback_data": "ds_meta_setup"}])
+    keyboard += [
+        [{"text": "📁 Upload file (CSV / screenshot)", "callback_data": "ds_adverts_upload"}],
+        [{"text": "✏️ Paste numbers manually", "callback_data": "ds_adverts_manual"}],
     ]
-    msg = "*Ad Performance Analysis*\n\nData sources: Meta Ads Manager, Mixpanel, or any format showing ad metrics.\n\nSelect which ads to analyse:"
-    send(chat_id, msg, keyboard)
+    send(chat_id, "*Ad Performance Analysis*\n\nHow would you like to bring your data in?", keyboard)
 
 def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, system_prompt, max_tokens=3000, timeout=90):
     """Send images to Claude in batches of 5 to avoid context window limits. Returns combined result."""
@@ -7501,6 +7680,8 @@ def analyse_ads(chat_id):
                     "total_spend": parsed["total_spend"],
                     "total_checkouts": parsed["total_checkouts"],
                 }
+                # Store full ads list for data-grounded best/worst/patterns
+                state["ds_verified_ads"] = parsed["ads"]
             pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this Meta Ads Manager data:\n\n" + verified_data + "\n\n" + ads_prompt}]}).encode()
@@ -7712,16 +7893,16 @@ def start_ds_emails(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["ds_images"] = []
-    # Offer Brevo pull if configured
+    keyboard = []
     if BREVO_API_KEY:
-        keyboard = [
-            [{"text": "Upload screenshots / CSV", "callback_data": "ds_email_manual"}],
-            [{"text": "📧 Pull from Brevo", "callback_data": "ds_brevo_pull"}],
-        ]
-        send(chat_id, "*Email Analysis*\n\nWhere is your data?", keyboard)
+        keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_pull"}])
     else:
-        state["stage"] = "ds_awaiting_email_splitvar"
-        send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
+        keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_setup"}])
+    keyboard += [
+        [{"text": "📁 Upload file (CSV / screenshot)", "callback_data": "ds_email_manual"}],
+        [{"text": "✏️ Paste numbers manually", "callback_data": "ds_email_type_numbers"}],
+    ]
+    send(chat_id, "*Email Analysis*\n\nHow would you like to bring your data in?", keyboard)
 
 def start_ds_email_splittest(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
@@ -7742,42 +7923,40 @@ def analyse_emails(chat_id, split_var=None):
     split_instruction = ""
     if split_var:
         split_instruction = """YOU ARE RUNNING A SPLIT TEST CALCULATION. DO NOT DO A FULL EMAIL ANALYSIS.
-IF THE USER HAS TYPED RAW NUMBERS directly (e.g. "Variant A: 5000 sent, 1200 opens" or a table of numbers), use those directly — do not try to read screenshots.
-DO NOT grade emails. DO NOT identify top/bottom performers. DO NOT generate ideas.
-ONLY do the following steps and nothing else.
 
 VARIABLE TESTED: """ + split_var + """
-Content A = Image version | Content B = No Image version
 
-THESE ARE BREVO A/B TEST SCREENSHOTS. Each screenshot is one campaign.
-The TIMELINE section at the bottom of each screenshot contains the real test data.
+CRITICAL RULES ON OPEN RATES:
+- ALWAYS use the platform's own reported open rate % directly from the screenshot — do NOT recalculate
+- "Total Opens" and "Total delivered" are DIFFERENT columns — never divide opens by opens
+- If delivered count is not visible, use the platform's reported rate and flag that delivered was not available
+- For Brevo screenshots: the open rate % shown on the Opens tab IS the correct figure — use it directly
 
-STEP 1 — FROM EACH CAMPAIGN TIMELINE, EXTRACT:
-- Campaign name and audience segment
-- Total A/B sample: the number X from "have been sent to X random subscribers"
-- Winner: which version (A or B) won and how many openers it had
-- Format: | Campaign | Segment | Total A/B Sample | Winner | Winner Openers |
+STEP 1 — FROM EACH CAMPAIGN, EXTRACT:
+- Campaign name and audience segment  
+- Brevo's reported open rate for Version A (%) and Version B (%)
+- Raw openers for Version A and Version B (the actual open counts, not delivered)
+- Winner: whichever version has the higher open rate %
+- Format: | Campaign | Segment | Version A rate | Version A opens | Version B rate | Version B opens | Winner |
 
-STEP 2 — WEIGHTED AGGREGATION:
-For Content A wins: sum their total A/B sample sizes = A weighted sample
-For Content B wins: sum their total A/B sample sizes = B weighted sample
-Content A evidence % = A weighted / (A + B weighted) × 100
-Content B evidence % = B weighted / (A + B weighted) × 100
+STEP 2 — HEAD-TO-HEAD COMPARISON:
+For each campaign independently: A rate vs B rate, margin in percentage points, which won
+Do NOT weight by recipient volume or count "winner campaigns" — compare rates directly
 
-STEP 3 — POOLED TOTALS ACROSS ALL CAMPAIGNS:
-Sum all delivered numbers. Sum all raw opens (delivered × open_rate / 100). Sum all raw clicks.
-Combined open rate = total opens / total delivered × 100
-Combined CTR = total clicks / total delivered × 100
-Show as a TOTALS row.
+STEP 3 — OVERALL VERDICT:
+- How many campaigns did A win vs B win?
+- What was the average margin across all campaigns?
+- Did the pattern hold consistently or only in certain segments?
+- Flag any campaign where sample was too small to be meaningful (under 200 recipients per variant)
 
-STEP 4 — VERDICT (5 lines maximum):
-WINNER: [A or B] — won campaigns representing [X]% of total test recipients
-SEGMENT PATTERN: [one line — did winner hold across all segments?]
-POOLED RATE: [combined open rate across all campaigns]
-CONFIDENCE: [INCONCLUSIVE <5,000 / DIRECTIONAL 5,000-20,000 / SIGNIFICANT 20,000+]
+STEP 4 — VERDICT (5 lines):
+WINNER: [A or B] — won [X of Y] campaigns on open rate
+CONSISTENCY: [did it hold across all segments or just some?]
+AVERAGE MARGIN: [mean percentage point difference across campaigns]
+CONFIDENCE: [INCONCLUSIVE <5,000 / DIRECTIONAL 5,000-20,000 / SIGNIFICANT 20,000+ total delivered]
 RECOMMENDATION: [one sentence]
 
-NOTHING ELSE. No performance grades. No insights sections. No suggestions. Just the table, the maths, and the verdict.
+NOTHING ELSE. No performance grades. No insights. No suggestions beyond the recommendation line.
 """
     try:
         if split_var:
@@ -7786,36 +7965,41 @@ NOTHING ELSE. No performance grades. No insights sections. No suggestions. Just 
         else:
             analysis_prompt = """Extract and analyse all email performance data.
 
+CRITICAL RULES ON OPEN RATES:
+- Use the platform's own reported open rate % DIRECTLY — do NOT recalculate from raw numbers
+- "Total Opens" is NOT the same as "Total Delivered/Recipients" — never divide opens by opens
+- If you see a reported open rate % on screen, that IS the correct figure — use it as-is
+- Only calculate a pooled rate if you have BOTH delivered count AND opens for every campaign
+
 METRICS TO EXTRACT per email:
 - Subject line
-- Send date
-- Recipients
-- Open rate (%) — convert to raw opens = recipients × open_rate / 100
-- CTR (%) — convert to raw clicks = recipients × ctr / 100
-- Email type if identifiable (Free/Pro)
+- Send date  
+- Reported open rate % (from platform — use directly)
+- Reported CTR % (from platform — use directly)
+- Recipients/delivered count (only if explicitly shown as a delivered/sent figure)
+- Email type if identifiable (Free/Pro/Segment name)
 
 STEP 1 — DATA EXTRACTION:
-List every email with all metrics including calculated raw opens and clicks.
+List every email with the platform-reported rates. Flag any where you cannot confirm the denominator.
 
 STEP 2 — GRADING (A/B/C/D quartiles):
-Grade each email on open rate and CTR.
+Grade each email on open rate and CTR within the same list/segment type.
 A = top 25%, B = 26-50%, C = 51-75%, D = bottom 25%.
 
 STEP 3 — TOP AND BOTTOM PERFORMERS:
-Top 3 emails — what made them work? (subject style, topic, length, hook type)
+Top 3 emails by open rate — what made them work? (subject style, topic, hook type)
 Bottom 3 — what likely caused underperformance?
 
 STEP 4 — PATTERN RECOGNITION:
-Look for patterns in subject lines:
+Which subject line patterns correlate with higher open rates?
 - Curiosity gap vs data-led vs fear-based vs contrarian
 - With name vs without name
 - Short vs long subjects
 - Question vs statement
 - Specific numbers vs general claims
-Which patterns correlate with higher open rates and CTR?
 
 STEP 5 — IDEAS:
-Generate 5 specific subject line and angle ideas based on what the patterns suggest.
+5 specific subject line and angle ideas based on what patterns the data shows.
 """ + split_instruction
 
         if split_var:
@@ -8786,7 +8970,7 @@ def generate_claude_svg(brief, post_type, angle=""):
     """Ask Claude to generate an SVG graphic from a visual brief."""
     type_instructions = {
         "storyboard": "Create a STORYBOARD SVG showing scene frames in a grid layout. Each frame is a labelled rectangle with scene description inside. Clean, minimal, black background, white text, blue accent borders.",
-        "static":     "Create a STATIC POST SVG (1080x1080). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
+        "static":     "Create a STATIC POST SVG (1080x1350px portrait — MUST be portrait, not square). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
         "carousel":   "Create a CAROUSEL COVER SLIDE SVG (1080x1350px portrait). Full-bleed dramatic cinematic image lower 60%, pure black top. Massive white Tungsten headline centre. Red rounded pill badge with white text. @Cryptonary white bottom-left, bracket-C logomark bottom-right.",
         "story":      "Create a STORY FRAME SVG (1080x1920). Full screen vertical. Bold text, dark bg, designed for mobile.",
         "thumbnail":  "Create an EMAIL THUMBNAIL SVG (1200x628). Bold headline, relevant visual element, dark background. Optimised for email preview.",
@@ -8819,6 +9003,7 @@ RULES:
 - Must be valid, renderable SVG
 - Keep text concise — max 8 words per headline
 - Use viewBox for proper scaling
+- CRITICAL — NO PROMPT BLEED: Only render actual content from the brief as visible text. Never render layout instructions, font names, dimension specs, or any directive text as visible content on the graphic. Apply all instructions silently.
 - Make it look professional and on-brand""")
 
     try:
@@ -8885,7 +9070,8 @@ CRYPTONARY BRAND GUIDELINES:
 Colours: #000000 black | #FFFFFF white | #005EFF blue | #FF0000 red | #0DA500 green | #F7931A bitcoin orange
 Title font: Tungsten (font-weight:900, uppercase, letter-spacing:-0.02em) — fallback: Impact, Arial Black
 Body font: Inter, Proxima Nova, Arial, sans-serif
-Canvas sizes: Instagram static/carousel = 1080x1350px | Email banner = 600x200px | Report/YouTube = 1920x1080px
+Canvas sizes: Instagram static/carousel = 1080x1350px PORTRAIT | Email banner = 600x200px | Report/YouTube = 1920x1080px
+CRITICAL CANVAS RULE: Instagram static and carousel MUST be exactly width:1080px height:1350px portrait orientation. Landscape output is wrong. Set this on the root canvas element explicitly.
 Logo: """ + logo_instruction + """
 
 RULES:
@@ -8893,6 +9079,7 @@ RULES:
 - Fully self-contained — all CSS inline in <style> tags
 - No external resources or CDN links
 - Professional, on-brand, clean design
+- CRITICAL — NO PROMPT BLEED: Every text element rendered on the canvas must be actual content from the brief. NEVER render layout directives, font instructions, dimension specs, or any text from these instructions as visible content. If an instruction says "3-4 words per line" — apply it silently, never print those words. If an instruction mentions "Tungsten headline" — use that style, never write "Tungsten headline" on the canvas.
 - Include a print/screenshot note: <!-- Open in browser and screenshot for best results -->""")
 
     try:
@@ -8907,12 +9094,11 @@ RULES:
         if html_out:
             # Safety net: if logo should be there but isn't, inject it before </body>
             if post_type not in {"thumbnail", "report"}:
-                logo_svg = get_logo_svg_tag(position="bottom-left", size=40, variant="white")
-                # Only inject if not already present
+                # Only inject if the bracket-C polygon points aren't already present
                 if 'points="94.87,21.96' not in html_out:
-                    inject = ('<div style="position:fixed;bottom:16px;right:16px;width:40px;height:40px;z-index:999;">' + logo_svg + '</div>'
-                        + '<div style="position:fixed;bottom:18px;left:16px;font-family:Inter,Arial,sans-serif;font-size:13px;color:white;z-index:999;opacity:0.9;">@Cryptonary</div>')
-                    html_out = html_out.replace('</body>', inject + '</body>')
+                    logo_div = get_logo_svg_tag(position="bottom-right", size=40, variant="white")
+                    handle_div = '<div style="position:fixed;bottom:18px;left:16px;font-family:Inter,Arial,sans-serif;font-size:13px;color:white;z-index:999;opacity:0.9;">@Cryptonary</div>'
+                    html_out = html_out.replace('</body>', logo_div + handle_div + '</body>')
             return html_out, None
         return None, "Claude did not return valid HTML"
     except Exception as e:
@@ -9355,15 +9541,15 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
                 [{"text": "✅ Done", "callback_data": "mark_complete"}],
             ]
             send(chat_id, "Which thumbnail option to generate?", keyboard)
-        else:
-            img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
-            keyboard = [
-                [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
-            ]
-            if img_row:
-                keyboard.insert(0, img_row)
-            keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
-            send(chat_id, "Brief ready. Use this to brief your designer, or generate an AI image draft.", keyboard)
+        # Brief ready — generate image directly, no style prompt needed (brief already contains style)
+        img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
+        keyboard = [
+            [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
+        ]
+        if img_row:
+            keyboard.insert(0, img_row)
+        keyboard.append([{"text": "✅ Done", "callback_data": "mark_complete"}])
+        send(chat_id, "Brief ready. Use this to brief your designer, or generate an AI image draft.", keyboard)
     except Exception as e:
         send(chat_id, "Error generating brief: " + str(e))
 
