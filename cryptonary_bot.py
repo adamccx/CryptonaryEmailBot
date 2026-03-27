@@ -5529,7 +5529,7 @@ def handle_callback(cb):
         if not analysis:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("From this ad analysis, identify 5 clear patterns. For each pattern: what it is, which ads evidence it, and what to do about it. Be specific — no generic advice.\n\n" + analysis[:3000], max_tokens=900)
+        result = claude("From this ad analysis, identify 5 clear patterns. For each pattern: what it is, which ads evidence it, and what to do about it. Be specific — no generic advice.\n\n" + analysis[:3000], max_tokens=1200)
         send_plain(chat_id, "*PATTERNS FOUND*\n\n" + result)
 
     elif data == "ds_ads_rank":
@@ -5545,7 +5545,7 @@ def handle_callback(cb):
         if not analysis:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("Based on this ad performance data, generate 5 specific new ad ideas. Each must be directly inspired by what the data shows is working. Include: avatar, angle, hook, funnel stage, and why the data supports it.\n\n" + analysis[:3000], max_tokens=900)
+        result = claude("Based on this ad performance data, generate 5 specific new ad ideas. Each must be directly inspired by what the data shows is working. Include: avatar, angle, hook, funnel stage, and why the data supports it.\n\n" + analysis[:3000], max_tokens=1200)
         send_plain(chat_id, "*IDEAS FROM DATA*\n\n" + result)
         keyboard = [
             [{"text": "Create these ads", "callback_data": "mode_ads"}],
@@ -7742,6 +7742,15 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             except:
                 text = file_bytes.decode("latin-1")
             state["ds_csv_text"] = text[:15000]  # limit to 15k chars
+            ds_stage_map = {
+                "ds_awaiting_ad_data": "ds_analyse_ads",
+                "ds_awaiting_social_data": "ds_analyse_social",
+                "ds_awaiting_email_data": "ds_analyse_emails",
+                "ds_awaiting_email_split_data": "ds_analyse_emails_split",
+                "ds_awaiting_landing_data": "ds_analyse_landing",
+                "ds_awaiting_landing_split_data": "ds_analyse_landing_split"
+            }
+            analyse_cb = ds_stage_map.get(stage, "ds_analyse_ads")
             keyboard = [[{"text": "Done — analyse now", "callback_data": analyse_cb}]]
             send(chat_id, "File received (" + str(len(text)) + " characters). Tap to analyse.", keyboard)
         return True
