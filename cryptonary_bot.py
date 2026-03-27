@@ -13,12 +13,30 @@ Writing Studio | Data Studio | Creative Studio
 
 import os, json, ssl, urllib.request, time, re, traceback
 
-TELEGRAM_TOKEN = "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y"
-ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_KEY",  "YOUR_ANTHROPIC_KEY_HERE")
-OPENAI_KEY     = os.environ.get("OPENAI_KEY",     "")
-X_BEARER_TOKEN = os.environ.get("X_BEARER_TOKEN", "")
-GEMINI_KEY     = os.environ.get("GEMINI_KEY",     "")
+TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_TOKEN", "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y")
+ANTHROPIC_KEY   = os.environ.get("ANTHROPIC_KEY",  "YOUR_ANTHROPIC_KEY_HERE")
+OPENAI_KEY      = os.environ.get("OPENAI_KEY",     "")
+X_BEARER_TOKEN  = os.environ.get("X_BEARER_TOKEN", "")
+GEMINI_KEY      = os.environ.get("GEMINI_KEY",     "")
+META_TOKEN      = os.environ.get("META_TOKEN",     "")   # Meta Business API token
+META_AD_ACCOUNT = os.environ.get("META_AD_ACCOUNT","")   # e.g. act_123456789
+BREVO_API_KEY   = os.environ.get("BREVO_API_KEY",  "")   # Brevo (Sendinblue) API key
 ssl._create_default_https_context = ssl._create_unverified_context
+
+# ── CRYPTONARY LOGOMARK SVGs (exact brand assets) ─────────────────
+# Two-polygon bracket C mark — white for dark backgrounds, blue/black for light
+CRYPTONARY_LOGO_SVG_W = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#FFFFFF" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#FFFFFF" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
+CRYPTONARY_LOGO_SVG_BLUE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#005FFF" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#005FFF" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
+CRYPTONARY_LOGO_SVG_B = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#000000" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#000000" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
+
+def get_logo_svg_tag(position="bottom-left", size=40, variant="white"):
+    """Return the Cryptonary logomark as an absolutely-positioned SVG tag."""
+    logo = {"white": CRYPTONARY_LOGO_SVG_W, "blue": CRYPTONARY_LOGO_SVG_BLUE, "black": CRYPTONARY_LOGO_SVG_B}.get(variant, CRYPTONARY_LOGO_SVG_W)
+    pos_css = "bottom:16px;left:16px;" if position == "bottom-left" else "bottom:16px;right:16px;"
+    inner = logo.replace("<svg ", '<svg style="position:absolute;' + pos_css + 'width:' + str(size) + 'px;height:' + str(size) + 'px;" ')
+    return inner
+
+
 
 BOOK_KNOWLEDGE = """
 
@@ -2261,7 +2279,8 @@ def email_action_keyboard():
          {"text": "Segments", "callback_data": "segments"}],
         [{"text": "Length", "callback_data": "length_email"},
          {"text": "Add Context", "callback_data": "add_context_email"},
-         {"text": "Critique", "callback_data": "critique_email"}]
+         {"text": "Critique", "callback_data": "critique_email"}],
+        [{"text": "✏️ Manual Edit", "callback_data": "manual_edit_email"}]
     ]
 
 def ad_action_keyboard():
@@ -2272,7 +2291,8 @@ def ad_action_keyboard():
         [{"text": "Critique",             "callback_data": "critique_ad"},
          {"text": "Generate another set", "callback_data": "ads_again"}],
         [{"text": "🎨 Visual brief",      "callback_data": "vb_type_ad_static"},
-         {"text": "Mark Complete",        "callback_data": "mark_complete"}]
+         {"text": "Mark Complete",        "callback_data": "mark_complete"}],
+        [{"text": "✏️ Manual Edit",       "callback_data": "manual_edit_ad"}]
     ]
 
 def format_action_keyboard(fmt_key, fmt_label):
@@ -2284,6 +2304,7 @@ def format_action_keyboard(fmt_key, fmt_label):
         [{"text": "Critique",   "callback_data": "critique_social_" + fmt_key},
          {"text": "Length",     "callback_data": "length_social"}],
         [{"text": "🎨 Visual brief", "callback_data": "vb_auto"}],
+        [{"text": "✏️ Manual Edit",  "callback_data": "manual_edit_social"}],
     ]
     return kb
 
@@ -2293,7 +2314,8 @@ def social_action_keyboard():
          {"text": "Enhance", "callback_data": "social_enhance"},
          {"text": "Approve", "callback_data": "approve_social"}],
         [{"text": "Length", "callback_data": "length_social"},
-         {"text": "Critique", "callback_data": "critique_social"}]
+         {"text": "Critique", "callback_data": "critique_social"}],
+        [{"text": "✏️ Manual Edit", "callback_data": "manual_edit_social"}]
     ]
 
 def mark_complete_keyboard():
@@ -3504,6 +3526,53 @@ def handle_message(msg):
             send(chat_id, "*Image Prompt Generator*\n\nDescribe what you need.\n\n_e.g. Hero image for Inner Circle landing page, premium dark crypto wealth theme_\n_e.g. Static ad for Passive Income avatar, warm lifestyle feel_\n_e.g. Carousel cover slide, Bitcoin price breakout energy_")
         return
 
+    if text in ("/lists", "/contactlist", "/cohorts"):
+        if not BREVO_API_KEY:
+            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
+            return
+        send(chat_id, "Pulling contact list sizes from Brevo...")
+        data, err = fetch_contact_list_sizes()
+        if err:
+            send(chat_id, "Error: " + err)
+            return
+        msg = format_contact_list_message(data)
+        send_plain(chat_id, msg)
+        keyboard = [[{"text": "🔄 Refresh", "callback_data": "refresh_contact_lists"}]]
+        send(chat_id, "Last updated: " + data["date"], keyboard)
+        return
+
+    if text == "/memory":
+        examples = voice_corpus.get(chat_id, [])
+        if not examples:
+            send(chat_id, "*Voice Memory*\n\nNo approved content stored yet.\n\nApprove content using the Approve button to build your voice corpus.")
+            return
+        lines = ["*Voice Memory — " + str(len(examples)) + " approved examples*\n"]
+        by_type = {}
+        for ex in examples:
+            t = ex.get("source_type", "unknown")
+            by_type[t] = by_type.get(t, 0) + 1
+        for t, count in sorted(by_type.items()):
+            lines.append("• " + t.replace("approved_", "").replace("_", " ").title() + ": " + str(count))
+        lines.append("\n_Type /memory add [text] to add an example_")
+        lines.append("_Type /memory clear to reset all_")
+        send(chat_id, "\n".join(lines))
+        return
+
+    if text.startswith("/memory add "):
+        new_example = text[len("/memory add "):].strip()
+        if len(new_example) < 20:
+            send(chat_id, "Example too short. Paste a full piece of content after /memory add")
+            return
+        save_voice_example(chat_id, new_example, "manually_added")
+        send(chat_id, "Added to voice memory. Total: " + str(len(voice_corpus.get(chat_id, []))) + " examples.")
+        return
+
+    if text == "/memory clear":
+        voice_corpus[chat_id] = []
+        save_content_stores()
+        send(chat_id, "Voice memory cleared.")
+        return
+
     if text == "/help":
         send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
         return
@@ -3519,6 +3588,30 @@ def handle_message(msg):
         user_state[chat_id]["stage"] = "pick_angle"
         send(chat_id, "Context added.")
         gen_angles(chat_id)
+        return
+
+    if stage == "awaiting_manual_edit":
+        content_type = user_state[chat_id].get("manual_edit_type", "email")
+        edited = text.strip()
+        if len(edited) < 30:
+            send(chat_id, "That seems too short. Paste the full edited content.")
+            return
+        if content_type == "email":
+            # Store as approved email voice example
+            save_voice_example(chat_id, edited[:600], "manually_edited_email")
+            user_state[chat_id]["current_emails"] = {"free": edited, "pro": edited}
+            user_state[chat_id]["stage"] = "emails_approved"
+            send(chat_id, "Manual edit saved and approved. Voice memory updated.", email_action_keyboard())
+        elif content_type == "social":
+            save_voice_example(chat_id, edited[:600], "manually_edited_social")
+            user_state[chat_id]["current_social"] = edited
+            user_state[chat_id]["stage"] = "social_approved"
+            send(chat_id, "Manual edit saved and approved. Voice memory updated.", social_action_keyboard())
+        elif content_type == "ad":
+            save_voice_example(chat_id, edited[:600], "manually_edited_ad")
+            user_state[chat_id]["current_ad_output"] = edited
+            user_state[chat_id]["stage"] = "ads_ready"
+            send(chat_id, "Manual edit saved and approved. Voice memory updated.", ad_action_keyboard())
         return
 
     if stage in ("awaiting_quick_edit", "social_quick_edit",
@@ -4556,6 +4649,12 @@ def handle_callback(cb):
         state.pop("pre_edit_emails", None)
         send(chat_id, "Changes accepted.", email_action_keyboard())
 
+    elif data in ("manual_edit_email", "manual_edit_social", "manual_edit_ad"):
+        content_type = data.replace("manual_edit_", "")
+        state["manual_edit_type"] = content_type
+        state["stage"] = "awaiting_manual_edit"
+        send(chat_id, "*Manual Edit*\n\nReply with your final version. Paste the complete edited content and I\'ll store it as approved.\n\n_For emails: paste Free and Pro separated by a blank line, or just paste one._")
+
     elif data == "approve_emails":
         state["stage"] = "emails_approved"
         # Save content metadata + actual approved copy for voice learning
@@ -4581,7 +4680,30 @@ def handle_callback(cb):
             [{"text": "🎨 Email thumbnail brief",     "callback_data": "vb_type_email"}],
             [{"text": "✅ Mark complete",             "callback_data": "mark_complete"}],
         ]
-        send(chat_id, "Emails approved.", keyboard)
+        # Auto-push both Free and Pro to Brevo as separate drafts with smart list selection
+        if BREVO_API_KEY and (free_body or pro_body):
+            subject = state.get('selected_hook', {}).get('subject', 'Cryptonary Update')
+            preview = state.get('selected_hook', {}).get('preview', '')
+            pushed = []
+            failed = []
+            if free_body:
+                free_list_id = get_brevo_list_for_type("free")
+                html_free = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + free_body.replace('\n', '<br>') + "</body></html>"
+                fid, ferr = create_brevo_draft('[FREE] ' + subject, preview, html_free, [free_list_id] if free_list_id else None)
+                if fid: pushed.append('Free (ID: ' + str(fid) + ')')
+                else: failed.append('Free: ' + str(ferr))
+            if pro_body:
+                pro_list_id = get_brevo_list_for_type("pro")
+                html_pro = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + pro_body.replace('\n', '<br>') + "</body></html>"
+                pid, perr = create_brevo_draft('[PRO] ' + subject, preview, html_pro, [pro_list_id] if pro_list_id else None)
+                if pid: pushed.append('Pro (ID: ' + str(pid) + ')')
+                else: failed.append('Pro: ' + str(perr))
+            msg = 'Emails approved.'
+            if pushed: msg += ' ✅ Pushed to Brevo: ' + ', '.join(pushed)
+            if failed: msg += ' ⚠️ Failed: ' + ', '.join(failed)
+            send(chat_id, msg, keyboard)
+        else:
+            send(chat_id, 'Emails approved.', keyboard)
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
@@ -4882,6 +5004,98 @@ def handle_callback(cb):
         state["ds_images"] = []
         state.pop("ds_csv_text", None)
         start_ds_emails(chat_id)
+
+    elif data == "ds_meta_setup":
+        send(chat_id, "*Connect Meta Ads*\n\nAdd these to your Render environment variables:\n\n`META_TOKEN` — your Meta Business API token\n`META_AD_ACCOUNT` — your ad account ID (e.g. act_123456789)\n\nGet your token at: business.facebook.com → Settings → API → Generate token")
+
+    elif data == "ds_meta_pull":
+        send(chat_id, "Pulling Meta ad data (last 30 days)...")
+        ads, err = fetch_meta_ad_insights(30)
+        if err:
+            send(chat_id, "Error: " + err)
+        elif not ads:
+            send(chat_id, "No ad data found. Check your ad account ID and token permissions.")
+        else:
+            # Format as text for analysis
+            lines = ["META ADS — Last 30 Days\n"]
+            for ad in ads[:50]:
+                spend = ad.get("spend", "0")
+                clicks = ad.get("clicks", "0")
+                impr = ad.get("impressions", "0")
+                ctr = ad.get("ctr", "0")
+                name = ad.get("ad_name", ad.get("campaign_name", "Unknown"))
+                lines.append(f"{name}: Spend ${spend} | Clicks {clicks} | Impressions {impr} | CTR {ctr}%")
+            report = "\n".join(lines)
+            state["ds_csv_text"] = report
+            state["stage"] = "ds_awaiting_ad_data"
+            state["ds_ad_filter"] = "all"
+            send(chat_id, "Pulled " + str(len(ads)) + " ads from Meta. Tap below to analyse.", [[{"text": "Analyse now", "callback_data": "ds_analyse_ads"}]])
+
+    elif data == "refresh_contact_lists":
+        if not BREVO_API_KEY:
+            send(chat_id, "Brevo not connected.")
+            return
+        send(chat_id, "Refreshing...")
+        data, err = fetch_contact_list_sizes()
+        if err:
+            send(chat_id, "Error: " + err)
+            return
+        msg = format_contact_list_message(data)
+        send_plain(chat_id, msg)
+        keyboard = [[{"text": "🔄 Refresh", "callback_data": "refresh_contact_lists"}]]
+        send(chat_id, "Updated: " + data["date"], keyboard)
+
+    elif data == "ds_email_manual":
+        state["stage"] = "ds_awaiting_email_splitvar"
+        send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
+
+    elif data == "ds_brevo_setup":
+        send(chat_id, "*Connect Brevo*\n\nAdd this to your Render environment variables:\n\n`BREVO_API_KEY` — your Brevo API key\n\nGet it at: app.brevo.com → Settings → API Keys")
+
+    elif data == "ds_brevo_pull":
+        send(chat_id, "Pulling Brevo campaign data...")
+        campaigns, err = fetch_brevo_campaigns(30)
+        if err:
+            send(chat_id, "Error: " + err)
+        elif not campaigns:
+            send(chat_id, "No campaigns found.")
+        else:
+            lines = ["BREVO EMAIL CAMPAIGNS — Last 30 sent\n"]
+            lines.append("Name | Subject | Sent | Open Rate | CTR | Unsub Rate")
+            lines.append("-" * 80)
+            for c in campaigns:
+                name = c.get("name", "Unknown")[:40]
+                subject = c.get("subject", "")[:50]
+                sent = c.get("_sent", 0)
+                open_rate = c.get("_open_rate", 0)
+                ctr = c.get("_ctr", 0)
+                unsub = c.get("_unsub_rate", 0)
+                lines.append(f"{name} | {subject} | {sent:,} sent | {open_rate}% opens | {ctr}% CTR | {unsub}% unsub")
+            report = "\n".join(lines)
+            state["ds_csv_text"] = report
+            state["stage"] = "ds_awaiting_email_data"
+            send_plain(chat_id, "*Pulled " + str(len(campaigns)) + " campaigns from Brevo.*\n\nHere\'s a preview:\n\n" + "\n".join(lines[2:7]))
+            send(chat_id, "Ready to analyse.", [[{"text": "Analyse all " + str(len(campaigns)) + " campaigns", "callback_data": "ds_analyse_emails"}]])
+
+    elif data == "ds_brevo_draft":
+        emails = state.get("current_emails", {})
+        free_email = emails.get("free", "")
+        if not free_email:
+            send(chat_id, "No email generated yet. Generate an email first, then push to Brevo.")
+            return
+        subject = state.get("email_record", {}).get("subject", "Cryptonary Update")
+        preview = ""
+        # Extract preview line if present
+        for line in free_email.split("\n")[:5]:
+            if line.lower().startswith("preview:"):
+                preview = line.split(":", 1)[1].strip()
+                break
+        html = "<html><body style=\'font-family:Arial,sans-serif;max-width:600px;margin:0 auto\'>" + free_email.replace("\n", "<br>") + "</body></html>"
+        draft_id, err = create_brevo_draft(subject, preview, html)
+        if err:
+            send(chat_id, "Brevo draft failed: " + err)
+        else:
+            send(chat_id, "Draft created in Brevo. Campaign ID: " + str(draft_id) + "\n\nOpen Brevo to review and schedule.")
 
     elif data == "ds_landing":
         state["ds_images"] = []
@@ -5293,6 +5507,51 @@ def handle_callback(cb):
             "reddit": "Enter subreddit name (without r/):"
         }
         send(chat_id, prompts.get(source_type, "Enter the source name:"))
+
+    elif data == "ds_ads_best":
+        analysis = state.get("ds_full_ads_analysis", "")
+        if not analysis:
+            send(chat_id, "No analysis found. Run an analysis first.")
+            return
+        result = claude("From this ad analysis, list the TOP 5 best performing ads. For each: ad name/type, key metric that makes it best, and one sentence on why it works.\n\n" + analysis[:3000], max_tokens=800)
+        send_plain(chat_id, "*TOP 5 PERFORMERS*\n\n" + result)
+
+    elif data == "ds_ads_worst":
+        analysis = state.get("ds_full_ads_analysis", "")
+        if not analysis:
+            send(chat_id, "No analysis found. Run an analysis first.")
+            return
+        result = claude("From this ad analysis, list the BOTTOM 5 worst performing ads. For each: ad name/type, the metric that's dragging it down, and one sentence on what's likely causing underperformance.\n\n" + analysis[:3000], max_tokens=800)
+        send_plain(chat_id, "*BOTTOM 5 PERFORMERS*\n\n" + result)
+
+    elif data == "ds_ads_patterns":
+        analysis = state.get("ds_full_ads_analysis", "")
+        if not analysis:
+            send(chat_id, "No analysis found. Run an analysis first.")
+            return
+        result = claude("From this ad analysis, identify 5 clear patterns. For each pattern: what it is, which ads evidence it, and what to do about it. Be specific — no generic advice.\n\n" + analysis[:3000], max_tokens=900)
+        send_plain(chat_id, "*PATTERNS FOUND*\n\n" + result)
+
+    elif data == "ds_ads_rank":
+        analysis = state.get("ds_full_ads_analysis", "")
+        if not analysis:
+            send(chat_id, "No analysis found. Run an analysis first.")
+            return
+        result = claude("From this ad analysis, rank ALL ads from best to worst. Format as a numbered list: [Rank]. [Ad name/type] — [primary metric] — [SCALE/KEEP/TEST/KILL]\n\n" + analysis[:3000], max_tokens=1000)
+        send_plain(chat_id, "*ALL ADS RANKED*\n\n" + result)
+
+    elif data == "ds_ads_ideas":
+        analysis = state.get("ds_full_ads_analysis", "")
+        if not analysis:
+            send(chat_id, "No analysis found. Run an analysis first.")
+            return
+        result = claude("Based on this ad performance data, generate 5 specific new ad ideas. Each must be directly inspired by what the data shows is working. Include: avatar, angle, hook, funnel stage, and why the data supports it.\n\n" + analysis[:3000], max_tokens=900)
+        send_plain(chat_id, "*IDEAS FROM DATA*\n\n" + result)
+        keyboard = [
+            [{"text": "Create these ads", "callback_data": "mode_ads"}],
+            [{"text": "Back to analysis", "callback_data": "ds_adverts"}],
+        ]
+        send(chat_id, "Want to build these?", keyboard)
 
     elif data == "ds_followup":
         state["stage"] = "ds_awaiting_followup"
@@ -6875,8 +7134,13 @@ def show_data_studio_menu(chat_id):
         [{"text": "Adverts", "callback_data": "ds_adverts"}],
         [{"text": "Social (Instagram)", "callback_data": "ds_social"}],
         [{"text": "Emails", "callback_data": "ds_emails"}],
-        [{"text": "Landing Pages", "callback_data": "ds_landing"}]
+        [{"text": "Landing Pages", "callback_data": "ds_landing"}],
     ]
+    # Show Meta + Brevo options only if configured
+    if META_TOKEN and META_AD_ACCOUNT:
+        keyboard.append([{"text": "📊 Pull Meta Ad Data", "callback_data": "ds_meta_pull"}])
+    else:
+        keyboard.append([{"text": "📊 Connect Meta Ads", "callback_data": "ds_meta_setup"}])
     send(chat_id, "*Data Studio*\n\nWhich data would you like to analyse?", keyboard)
 
 # ── AD ANALYSIS ───────────────────────────────────────────────────
@@ -6971,16 +7235,30 @@ def analyse_ads(chat_id):
                 result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
         state["stage"] = "ds_analysis_done"
-        send_plain(chat_id, result)
-        # Extract and save patterns for future sessions
+        state["ds_full_ads_analysis"] = result
         extract_and_save_insights(chat_id, result, "ads")
+        # Show summary first, not the full dump
+        try:
+            summary = claude(
+                "From this ad analysis, write a 4-6 line overview ONLY. Include: total ads analysed, "
+                "total spend if visible, key conversion metrics (purchases/checkouts/leads), cost per result, "
+                "and one sentence on overall performance. Numbers only, no recommendations.\n\n" + result[:3000],
+                max_tokens=300, system="You are a concise data analyst. Numbers only, no fluff."
+            )
+        except Exception:
+            summary = result[:500]
+        send_plain(chat_id, "*AD DATA SUMMARY*\n\n" + summary)
         keyboard = [
-            [{"text": "Create ads from insights", "callback_data": "mode_ads"}],
+            [{"text": "Show best performers (top 5)", "callback_data": "ds_ads_best"}],
+            [{"text": "Show worst performers (bottom 5)", "callback_data": "ds_ads_worst"}],
+            [{"text": "Find patterns", "callback_data": "ds_ads_patterns"}],
+            [{"text": "Rank all ads", "callback_data": "ds_ads_rank"}],
+            [{"text": "Share ideas for new ads", "callback_data": "ds_ads_ideas"}],
             [{"text": "Ask a follow-up", "callback_data": "ds_followup"}],
             [{"text": "Upload more data", "callback_data": "ds_adverts"}],
             [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
         ]
-        send(chat_id, "Analysis complete. Create new ads based on what\'s working?", keyboard)
+        send(chat_id, "What would you like to dig into?", keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e), flush=True)
         state["stage"] = "ds_awaiting_ad_data"
@@ -7148,9 +7426,17 @@ Format clearly with headers."""
 def start_ds_emails(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
-    state["stage"] = "ds_awaiting_email_splitvar"
     state["ds_images"] = []
-    send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
+    # Offer Brevo pull if configured
+    if BREVO_API_KEY:
+        keyboard = [
+            [{"text": "Upload screenshots / CSV", "callback_data": "ds_email_manual"}],
+            [{"text": "📧 Pull from Brevo", "callback_data": "ds_brevo_pull"}],
+        ]
+        send(chat_id, "*Email Analysis*\n\nWhere is your data?", keyboard)
+    else:
+        state["stage"] = "ds_awaiting_email_splitvar"
+        send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
 
 def start_ds_email_splittest(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
@@ -7456,7 +7742,8 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             except:
                 text = file_bytes.decode("latin-1")
             state["ds_csv_text"] = text[:15000]  # limit to 15k chars
-            send(chat_id, "File received (" + str(len(text)) + " characters). Tap Done to analyse.")
+            keyboard = [[{"text": "Done — analyse now", "callback_data": analyse_cb}]]
+            send(chat_id, "File received (" + str(len(text)) + " characters). Tap to analyse.", keyboard)
         return True
     except Exception as e:
         send(chat_id, "Error reading file: " + str(e))
@@ -8011,29 +8298,55 @@ def format_x_context(tweets):
 # ══════════════════════════════════════════════════════════════════
 
 # Post type → style instruction mapping
+# Cryptonary Brand Guidelines
+# Colours: #000000 black, #FFFFFF white, #005EFF blue, #FF0000 red, #0DA500 green, #F7931A bitcoin orange
+# Fonts: Tungsten (titles/headlines), Inter or Proxima Nova (body), Inter (Instagram)
+# Logo: Small 'C' circle logomark — bottom-left on Instagram/YouTube, none on email banners/report thumbnails
+
+CRYPTONARY_BRAND = {
+    "colours": {"black": "#000000", "white": "#FFFFFF", "blue": "#005EFF", "red": "#FF0000", "green": "#0DA500", "orange": "#F7931A"},
+    "fonts": {"title": "Tungsten", "body": "Inter, Proxima Nova", "instagram": "Inter"},
+    "sizes": {
+        "report_thumbnail": {"w": 1920, "h": 1080, "logo": "none"},
+        "email_banner":     {"w": 600,  "h": 200,  "logo": "none"},
+        "youtube_cover":    {"w": 1920, "h": 1080, "logo": "bottom-left"},
+        "instagram_static": {"w": 1080, "h": 1350, "logo": "bottom-left", "font": "Inter"},
+        "carousel_slide":   {"w": 1080, "h": 1350, "logo": "bottom-left", "title_font": "Tungsten", "body_font": "Inter"},
+    }
+}
+
 IMAGE_STYLE_MAP = {
-    "breaking_news":  "Breaking news style. Black background. Bold red 'NEWS' or 'BREAKING' badge top-left. Dramatic relevant photo or flag. Bold white Tungsten-style headline overlay. @Cryptonary wordmark bottom-right.",
-    "price_data":     "Clean data post. Black background. Large bold price figure in centre. Coin logo prominent. Percentage change in green (gains) or red (losses). Minimalist, numbers-first layout. @Cryptonary mark bottom-right.",
-    "engagement":     "Bold engagement post. Pure black or white background. Single punchy question or statement in large Inter-style font. Simple coin grid or choice visual if relevant. Clean and high contrast.",
-    "educational":    "Educational carousel style. Dark background. Structured numbered layout or data table. Clear typographic hierarchy. Blue accent (#005EFF) for section headers. @Cryptonary mark bottom-right.",
-    "meme_cultural":  "Cinematic dark tone. Dramatic background image with dark overlay. Bold white text overlay. Minimal Cryptonary C mark bottom corner. Feels shareable and culturally relevant.",
-    "macro_geo":      "Geopolitical news style. Real-world photo with dark gradient overlay. White bold headline. Small NEWS badge. Serious, editorial tone. @Cryptonary bottom-right.",
-    "background":     "Clean background image for compositing. No text overlays. Dark cinematic mood. Relevant to crypto, finance, technology or the specific topic provided. High quality, editorial.",
+    "breaking_news":  "Breaking news style. 1080x1350px. Black background. Bold red NEWS or BREAKING badge top-left. Dramatic relevant photo or dark overlay. Bold white Tungsten headline. Small blue C circle logo bottom-left.",
+    "price_data":     "Data post. 1080x1350px. Black background. Large bold price figure centre. Coin logo prominent. Percentage change in green (gains) or red (losses). Minimalist, numbers-first. Inter font. Cryptonary bracket-C logo bottom-left.",
+    "engagement":     "Engagement post. 1080x1350px. Black or white background. Single punchy question in large Inter font. Clean, high contrast. Cryptonary bracket-C logo bottom-left.",
+    "educational":    "Educational post. 1080x1350px. Dark background. Tungsten title, Inter body. Numbered layout or data. Blue #005EFF section headers. Cryptonary bracket-C logo bottom-left.",
+    "meme_cultural":  "Cultural post. 1080x1350px. Dark background with overlay. Bold white Tungsten text. Shareable feel. Cryptonary bracket-C logo bottom-left.",
+    "macro_geo":      "Geopolitical news. 1080x1350px. Real-world photo, dark gradient overlay. White Tungsten headline. Small NEWS badge. Cryptonary bracket-C logo bottom-left.",
+    "background":     "Background image for compositing. No text overlays. Dark cinematic mood. Relevant to crypto or finance. High quality, editorial. No logo.",
+    "email_banner":   "Email banner. 600x200px. Clean dark design. Bold short headline, Inter font. No logo. Minimal, professional.",
+    "report_thumb":   "Report thumbnail. 1920x1080px. Dark background. Bold title, data or chart element. No logo. Clean editorial layout.",
+    "youtube_cover":  "YouTube cover. 1920x1080px. Bold Tungsten title. Dark background. Dramatic visual. Small C logo bottom-left corner.",
+    "carousel":       "Carousel slide. 1080x1350px. Tungsten title (large, bold). Inter body text. Dark background. Blue, red or white accents. Cryptonary bracket-C logo bottom-left.",
+    "static":         "Instagram static. 1080x1350px. Inter font. Dark background. Bold headline. Cryptonary bracket-C logo bottom-left.",
 }
 
 def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
-    """Build image prompt. For Gemini pass full brief. For DALL-E keep under 900 chars."""
+    """Build image prompt with correct Cryptonary brand specs per type."""
     style = IMAGE_STYLE_MAP.get(post_type, IMAGE_STYLE_MAP["background"])
     angle_short = angle[:80].strip() if angle else ""
-    # Use full concept for Gemini (handles long context well)
-    # DALL-E gets truncated version to avoid content policy issues
+    # Logo instruction per type
+    no_logo_types = {"background", "email_banner", "report_thumb"}
+    if post_type in no_logo_types:
+        logo_instruction = "No logo or watermark."
+    else:
+        logo_instruction = "Small blue circle with bold white C lettermark in bottom-left corner. Do NOT use @Cryptonary text."
     prompt = (
         "Professional digital graphic design for Cryptonary crypto research brand. " +
         style + " " +
         "VISUAL BRIEF: " + concept + " " +
         ("Tone: " + angle_short + ". " if angle_short else "") +
-        "Colour palette: black background, white text, blue #005EFF and red #FF0000 accents. " +
-        "Square 1:1 format. High contrast. No external logos."
+        "Colours: black #000000 background, white #FFFFFF text, blue #005EFF, red #FF0000, green #0DA500. " +
+        "High contrast. " + logo_instruction
     )
     if extra_direction:
         prompt += " Additional: " + extra_direction[:150]
@@ -8202,14 +8515,22 @@ RULES:
 def generate_claude_html(brief, post_type, angle=""):
     """Ask Claude to generate a styled HTML visual from a visual brief."""
     type_instructions = {
-        "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame has a number, title, and description. Dark theme, professional.",
-        "static":     "An Instagram post mockup (1080x1080px equivalent). Bold headline, dark background, brand colours. Looks like a real post.",
-        "carousel":   "A FULL Instagram carousel — ALL slides from the brief as separate scrollable sections. Each slide is 1080x1080px. USE THE EXACT HEADLINE TEXT AND SUPPORTING TEXT from each slide in the brief — do not paraphrase or invent new copy. Apply the colour specified per slide. Include slide numbers. Make every slide from the brief.",
-        "story":      "A vertical story frame (9:16 ratio). Full-screen design, bold text, mobile-optimised.",
-        "thumbnail":  "An email header thumbnail (1200x628px — standard email/OG image size). Bold headline, brand colours, clean layout.",
-        "data":       "A data visualisation with styled numbers, charts using CSS, clean layout.",
+        "storyboard": "A storyboard layout with scene frames in a CSS grid. Each frame numbered. Dark theme. Tungsten-style bold titles, Inter body text.",
+        "static":     "An Instagram static post. Exact size: 1080x1350px (4:5 portrait). Bold headline in Inter font. Dark background. Brand colours. Cryptonary bracket-C logo bottom-left.",
+        "carousel":   "A FULL Instagram carousel — ALL slides as separate scrollable 1080x1350px sections. Tungsten for titles (large, bold), Inter for body. USE THE EXACT HEADLINE AND SUPPORTING TEXT from the brief. Apply colour per slide. Small C logo bottom-left each slide. Include slide numbers.",
+        "story":      "Vertical story frame. 1080x1920px (9:16). Full-screen. Bold Inter text. Dark background. Mobile-optimised.",
+        "thumbnail":  "Email banner. Exact size: 600x200px. Clean dark design. Short bold headline, Inter font. No logo. Professional.",
+        "report":     "Report thumbnail. 1920x1080px (16:9). Dark background. Bold Tungsten title. Data or chart element. No logo. Editorial.",
+        "youtube":    "YouTube cover. 1920x1080px (16:9). Bold Tungsten title. Dramatic dark background. Cryptonary bracket-C logo bottom-left.",
+        "data":       "Data visualisation. Dark background. Styled numbers and CSS charts. Inter font. Blue #005EFF accents. Clean layout.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
+
+    # Determine if this type gets a logo
+    no_logo = post_type in {"thumbnail", "report"}
+    logo_svg = get_logo_svg_tag(position="bottom-left", size=40, variant="white")
+    logo_instruction = ("NO logo on this type." if no_logo else
+                        "Place this EXACT logo SVG bottom-left, inside a position:relative container:\n" + logo_svg)
 
     prompt = ("""Generate a complete, self-contained HTML file for a Cryptonary visual.
 
@@ -8218,9 +8539,12 @@ BRIEF:
 
 TYPE: """ + instruction + """
 
-BRAND COLOURS: #000000 bg, #FFFFFF text, #005EFF blue accent, #0DA500 green, #FF0000 red, #F7931A bitcoin orange
-FONTS: system-ui, Arial, sans-serif — bold for headlines
-LOGO: Place the Cryptonary wordmark SVG in the bottom-right corner. Use this exact SVG inline: <svg style="position:absolute;bottom:16px;right:16px;width:120px;opacity:0.9" viewBox="0 0 500 100"><text x="0" y="80" font-family="Arial,sans-serif" font-weight="bold" font-size="80" fill="white">cryptonary</text></svg>
+CRYPTONARY BRAND GUIDELINES:
+Colours: #000000 black | #FFFFFF white | #005EFF blue | #FF0000 red | #0DA500 green | #F7931A bitcoin orange
+Title font: Tungsten (font-weight:900, uppercase, letter-spacing:-0.02em) — fallback: Impact, Arial Black
+Body font: Inter, Proxima Nova, Arial, sans-serif
+Canvas sizes: Instagram static/carousel = 1080x1350px | Email banner = 600x200px | Report/YouTube = 1920x1080px
+Logo: """ + logo_instruction + """
 
 RULES:
 - Return ONLY the complete HTML starting with <!DOCTYPE html>
@@ -8233,12 +8557,21 @@ RULES:
         result = claude(prompt, max_tokens=3000)
         import re as _re
         html_match = _re.search(r'(<!DOCTYPE[\s\S]*?</html>)', result, _re.IGNORECASE)
+        html_out = None
         if html_match:
-            return html_match.group(1), None
+            html_out = html_match.group(1)
         elif result.strip().lower().startswith('<!doctype') or result.strip().startswith('<html'):
-            return result.strip(), None
-        else:
-            return None, "Claude did not return valid HTML"
+            html_out = result.strip()
+        if html_out:
+            # Safety net: if logo should be there but isn't, inject it before </body>
+            if post_type not in {"thumbnail", "report"}:
+                logo_svg = get_logo_svg_tag(position="bottom-left", size=40, variant="white")
+                # Only inject if not already present
+                if 'points="94.87,21.96' not in html_out:
+                    inject = '<div style="position:fixed;bottom:16px;left:16px;width:40px;height:40px;z-index:999;">' + logo_svg + '</div>'
+                    html_out = html_out.replace('</body>', inject + '</body>')
+            return html_out, None
+        return None, "Claude did not return valid HTML"
     except Exception as e:
         return None, str(e)
 
@@ -8918,6 +9251,235 @@ def handle_image_direction(chat_id, text):
             [{"text": "✅ Done",             "callback_data": "mark_complete"}],
         ]
         send(chat_id, "Updated.", keyboard)
+
+
+# ══════════════════════════════════════════════════════════════════
+# META & BREVO INTEGRATIONS
+# ══════════════════════════════════════════════════════════════════
+
+def fetch_meta_ad_insights(days=30):
+    """Pull ad performance from Meta Marketing API."""
+    if not META_TOKEN or not META_AD_ACCOUNT:
+        return None, "Meta API not configured. Add META_TOKEN and META_AD_ACCOUNT to Render environment."
+    try:
+        fields = "campaign_name,adset_name,ad_name,spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type"
+        url = (
+            "https://graph.facebook.com/v19.0/" + META_AD_ACCOUNT + "/insights"
+            "?fields=" + fields +
+            "&date_preset=last_" + str(days) + "_days"
+            "&level=ad"
+            "&access_token=" + META_TOKEN
+        )
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+        return data.get("data", []), None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        print("Meta API error:", body, flush=True)
+        return None, "Meta API error: " + body[:200]
+    except Exception as e:
+        return None, "Meta fetch failed: " + str(e)
+
+# Brevo list memory — persists last used list IDs per email type
+_brevo_list_cache = {"free": None, "pro": None}
+
+def fetch_brevo_lists():
+    """Fetch all contact lists from Brevo to find the right ones."""
+    if not BREVO_API_KEY:
+        return [], None
+    try:
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/contacts/lists?limit=50&sort=desc",
+            headers={"Accept": "application/json", "api-key": BREVO_API_KEY}
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        return data.get("lists", []), None
+    except Exception as e:
+        return [], str(e)
+
+def find_brevo_list_id(keyword):
+    """Find a Brevo list ID by searching for a keyword in the list name."""
+    lists, _ = fetch_brevo_lists()
+    keyword_lower = keyword.lower()
+    for lst in lists:
+        if keyword_lower in lst.get("name", "").lower():
+            return lst.get("id")
+    return None
+
+def get_brevo_list_for_type(email_type):
+    """Return the best list ID for free or pro emails.
+    Free = last 30 days list (looks for '30' or 'last 30' or 'free' in name).
+    Pro = pro subscribers list (looks for 'pro' in name).
+    Falls back to cached ID if already found, then None if not found."""
+    global _brevo_list_cache
+    if _brevo_list_cache.get(email_type):
+        return _brevo_list_cache[email_type]
+    if email_type == "free":
+        # Try to find a "last 30 days" or "free" list
+        for keyword in ["last 30", "30 day", "free subscriber", "newsletter", "free"]:
+            list_id = find_brevo_list_id(keyword)
+            if list_id:
+                _brevo_list_cache["free"] = list_id
+                return list_id
+    elif email_type == "pro":
+        for keyword in ["pro", "premium", "paid", "member"]:
+            list_id = find_brevo_list_id(keyword)
+            if list_id:
+                _brevo_list_cache["pro"] = list_id
+                return list_id
+    return None
+
+def fetch_brevo_campaigns(limit=30):
+    """Pull recent sent campaigns from Brevo with full stats and subject lines."""
+    if not BREVO_API_KEY:
+        return None, "Brevo API not configured. Add BREVO_API_KEY to Render environment."
+    try:
+        # Request all useful fields including subject, stats, recipient lists
+        url = "https://api.brevo.com/v3/emailCampaigns?limit=" + str(limit) + "&status=sent&sort=desc"
+        req = urllib.request.Request(url, headers={
+            "Accept": "application/json",
+            "api-key": BREVO_API_KEY
+        })
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+        campaigns = data.get("campaigns", [])
+        # Enrich each campaign with calculated rates
+        for c in campaigns:
+            stats = c.get("statistics", {}).get("globalStats", {})
+            sent = stats.get("sent", 0) or 0
+            opens = stats.get("uniqueOpens", 0) or 0
+            clicks = stats.get("uniqueClicks", 0) or 0
+            unsubs = stats.get("unsubscriptions", 0) or 0
+            c["_sent"] = sent
+            c["_open_rate"] = round(opens / sent * 100, 1) if sent > 0 else 0
+            c["_ctr"] = round(clicks / sent * 100, 2) if sent > 0 else 0
+            c["_unsub_rate"] = round(unsubs / sent * 100, 3) if sent > 0 else 0
+        return campaigns, None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return None, "Brevo API error: " + body[:200]
+    except Exception as e:
+        return None, "Brevo fetch failed: " + str(e)
+
+def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
+    """Create a draft email campaign in Brevo with optional recipient lists."""
+    if not BREVO_API_KEY:
+        return None, "Brevo API not configured."
+    try:
+        payload = {
+            "name": "Draft: " + subject[:80],
+            "subject": subject,
+            "previewText": preview_text or "",
+            "htmlContent": html_content,
+            "sender": {"name": "Adam | Cryptonary", "email": "adam@cryptonary.com"},
+            "type": "classic"
+        }
+        if list_ids:
+            payload["recipients"] = {"listIds": list_ids if isinstance(list_ids, list) else [list_ids]}
+        body = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/emailCampaigns",
+            data=body,
+            headers={"Content-Type": "application/json", "api-key": BREVO_API_KEY}
+        )
+        with urllib.request.urlopen(req, timeout=30) as r:
+            result = json.loads(r.read())
+        return result.get("id"), None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return None, "Brevo create error: " + body[:200]
+    except Exception as e:
+        return None, "Brevo draft failed: " + str(e)
+
+
+# ── CONTACT LIST DASHBOARD ────────────────────────────────────────
+
+# Map of display name → search keywords to find in Brevo list names
+CONTACT_LIST_MAP = [
+    ("Blocklisted",                    ["blocklist", "blocked"]),
+    ("Cancellers",                     ["cancel"]),
+    ("Pro Members",                    ["pro member", "pro subscriber", "pro"]),
+    ("Last 0-30 days Opened",          ["0-30", "0_30", "last 30", "30 day open"]),
+    ("31-60 days Opened",              ["31-60", "31_60", "60 day open"]),
+    ("61-90 days Opened",              ["61-90", "61_90", "90 day open"]),
+    ("91-120 Days Opened",             ["91-120", "91_120", "120 day"]),
+    ("121-150 Days Opened",            ["121-150", "121_150", "150 day"]),
+    ("151-180 Days Opened",            ["151-180", "151_180", "180 day"]),
+    ("181-365 Days Opened",            ["181-365", "181_365", "365 day open"]),
+    ("366 Day+ Opened",                ["366", "366+", "over 365", "inactive"]),
+    ("Last 30 Day Joined (No opens)",  ["30 day joined no", "30 join no", "new no open"]),
+    ("Last 31-60 Day Joined (No opens)", ["31-60 join", "31_60 join no"]),
+    ("Last 61-90 Day Joined (No Opens)", ["61-90 join", "61_90 join no"]),
+    ("Last 91+ Day Joined (No Opens)", ["91+ join", "91 join no", "old join no"]),
+]
+
+def fetch_contact_list_sizes():
+    """Pull all Brevo lists and match them to Cryptonary contact list dashboard."""
+    if not BREVO_API_KEY:
+        return None, "Brevo API not configured."
+    lists, err = fetch_brevo_lists()
+    if err or not lists:
+        return None, err or "No lists returned."
+
+    # Build a lookup: lowercase name -> (id, size)
+    brevo_lookup = {}
+    for lst in lists:
+        name_lower = lst.get("name", "").lower()
+        brevo_lookup[name_lower] = {
+            "id": lst.get("id"),
+            "size": lst.get("totalSubscribers", lst.get("uniqueSubscribers", 0))
+        }
+
+    today = time.strftime("%d/%m/%Y")
+    next_check = time.strftime("%d/%m/%Y", time.localtime(time.time() + 7 * 86400))
+
+    rows = []
+    total = 0
+    unmatched = []
+
+    for display_name, keywords in CONTACT_LIST_MAP:
+        matched = None
+        for kw in keywords:
+            for brevo_name, info in brevo_lookup.items():
+                if kw in brevo_name:
+                    matched = info
+                    break
+            if matched:
+                break
+        if matched:
+            size = matched["size"] or 0
+            total += size
+            rows.append((display_name, size, today))
+        else:
+            rows.append((display_name, "—", today))
+            unmatched.append(display_name)
+
+    return {"rows": rows, "total": total, "date": today, "next_check": next_check, "unmatched": unmatched}, None
+
+def format_contact_list_message(data):
+    """Format contact list data as a readable Telegram message."""
+    lines = ["*CONTACT LIST — " + data["date"] + "*", ""]
+    lines.append("List                              | Size")
+    lines.append("—" * 42)
+
+    section_headers = {"Last 0-30 days Opened": "FREE LIST COHORTS"}
+    for display_name, size, _ in data["rows"]:
+        if display_name in section_headers:
+            lines.append("")
+            lines.append("_" + section_headers[display_name] + "_")
+        size_str = "{:,}".format(size) if isinstance(size, int) else size
+        lines.append("{:<33} {}".format(display_name[:33], size_str))
+
+    lines.append("")
+    lines.append("—" * 42)
+    lines.append("*TOTAL: {:,}*".format(data["total"]))
+    if data["unmatched"]:
+        lines.append("")
+        lines.append("_⚠️ Not matched in Brevo: " + ", ".join(data["unmatched"][:3]) + ("..." if len(data["unmatched"]) > 3 else "") + "_")
+        lines.append("_Rename your Brevo lists to match the keywords above._")
+    return "\n".join(lines)
 
 
 # Cache for market data — keyed by timestamp bucket (5 min intervals)
@@ -10243,23 +10805,50 @@ def detect_url_type(url):
         return "webpage"
 
 def fetch_url_content(url, url_type):
-    """Fetch content from a URL and return text + any screenshot data."""
-    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+    """Fetch content from a URL and return clean article text."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            # Check we actually got the right URL (detect redirects)
+            final_url = r.url if hasattr(r, "url") else url
             raw = r.read()
             encoding = r.headers.get_content_charset() or "utf-8"
             html = raw.decode(encoding, errors="ignore")
 
         import re as _re
-        # Strip HTML tags for readable text
-        text = _re.sub(r'<script[^>]*>.*?</script>', '', html, flags=_re.DOTALL)
-        text = _re.sub(r'<style[^>]*>.*?</style>', '', text, flags=_re.DOTALL)
-        text = _re.sub(r'<[^>]+>', ' ', text)
+
+        # Extract <title> for verification
+        title_match = _re.search(r'<title[^>]*>(.*?)</title>', html, _re.IGNORECASE | _re.DOTALL)
+        page_title = title_match.group(1).strip() if title_match else ""
+
+        # Try to find main article content — prefer article/main tags over full page
+        article_match = _re.search(
+            r'<(?:article|main)[^>]*>(.*?)</(?:article|main)>',
+            html, _re.DOTALL | _re.IGNORECASE
+        )
+        if article_match:
+            html = article_match.group(1)
+
+        # Strip scripts, styles, nav, footer, header
+        for tag in ['script', 'style', 'nav', 'footer', 'header', 'aside']:
+            html = _re.sub(r'<' + tag + r'[^>]*>.*?</' + tag + r'>', ' ', html, flags=_re.DOTALL | _re.IGNORECASE)
+
+        # Strip remaining tags
+        text = _re.sub(r'<[^>]+>', ' ', html)
         text = _re.sub(r'\s+', ' ', text).strip()
+
+        # Prepend title so Claude knows what page was actually fetched
+        if page_title:
+            text = "PAGE TITLE: " + page_title + "\n\n" + text
+
         return text[:6000]
     except Exception as e:
+        print("URL fetch error:", e, flush=True)
         return ""
 
 def analyse_url(chat_id, url, mode="ideas"):
