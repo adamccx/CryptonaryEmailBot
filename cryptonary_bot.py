@@ -5923,8 +5923,13 @@ def poll():
                                     ftype = "doc"
                                 handle_ie_file(chat_id, doc, ftype)
                             else:
-                                ftype = "image" if mime.startswith("image/") else "csv"
-                                handle_ds_file(chat_id, doc, ftype)
+                                fname = doc.get("file_name", "").lower()
+                                # .numbers files can't be read — ask for CSV export
+                                if fname.endswith(".numbers") or fname.endswith(".xlsx") or fname.endswith(".xls"):
+                                    send(chat_id, "📊 *" + doc.get("file_name", "File") + "* can\'t be read directly.\n\nPlease export as CSV first:\n• Numbers: File → Export To → CSV\n• Excel: File → Save As → CSV\n\nThen upload the CSV.")
+                                else:
+                                    ftype = "image" if mime.startswith("image/") else "csv"
+                                    handle_ds_file(chat_id, doc, ftype)
                         else:
                             handle_message(msg)
                     elif "callback_query" in update:
@@ -7737,10 +7742,18 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             send(chat_id, msg, keyboard)
         else:
             # CSV or document — decode as text
+            # Reject binary formats that can't be decoded
+            if file_path.endswith(".numbers") or file_path.endswith(".xlsx") or file_path.endswith(".xls"):
+                send(chat_id, "📊 This file format can\'t be read directly.\n\nExport as CSV first:\n• Numbers: File → Export To → CSV\n• Excel: File → Save As → CSV")
+                return False
             try:
                 text = file_bytes.decode("utf-8")
             except:
                 text = file_bytes.decode("latin-1")
+            # Sanity check — if mostly binary garbage, reject
+            if sum(1 for c in text[:200] if ord(c) < 32 and c not in "\n\t\r") > 20:
+                send(chat_id, "📊 This file appears to be in a binary format.\n\nPlease export as CSV and upload that instead.")
+                return False
             state["ds_csv_text"] = text[:15000]  # limit to 15k chars
             ds_stage_map = {
                 "ds_awaiting_ad_data": "ds_analyse_ads",
