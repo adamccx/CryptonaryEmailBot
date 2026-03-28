@@ -9285,50 +9285,39 @@ def show_image_type_menu(chat_id):
 
 
 def show_image_style_menu(chat_id, engine):
-    """After engine selected, ask what style/type."""
+    """After engine selected, route directly to generation using known style — never ask for style."""
     user_state.setdefault(chat_id, {})
     user_state[chat_id]["img_engine"] = engine
     state = user_state[chat_id]
 
-    if engine == "claude":
-        # Auto-detect from content type — only ask if genuinely ambiguous
-        vb_type = state.get("last_visual_type", "")
-        social_type = state.get("current_social_type", "")
-        auto_style = None
-        if "Carousel" in social_type or vb_type == "carousel": auto_style = "carousel"
-        elif "Reel" in social_type or vb_type == "reel": auto_style = "storyboard"
-        elif "Story" in social_type or vb_type == "story": auto_style = "story"
-        elif "Static" in social_type or vb_type == "static": auto_style = "static"
-        elif vb_type == "email": auto_style = "thumbnail"
-        
-        if auto_style:
-            # Skip the menu — go straight to generation
-            handle_image_callbacks(chat_id, "img_style_" + auto_style, state)
-            return
-        
-        keyboard = [
-            [{"text": "📋 Storyboard",       "callback_data": "img_style_storyboard"}],
-            [{"text": "🖼️ Static post",      "callback_data": "img_style_static"}],
-            [{"text": "📖 Carousel slide",   "callback_data": "img_style_carousel"}],
-            [{"text": "📱 Story frame",      "callback_data": "img_style_story"}],
-            [{"text": "📊 Data visual",      "callback_data": "img_style_data"}],
-            [{"text": "📧 Email thumbnail",  "callback_data": "img_style_thumbnail"}],
-            [{"text": "🎯 Ad static (TOF/MOF/BOF)", "callback_data": "img_style_ad_static"}],
-            [{"text": "🎬 Ad video storyboard",     "callback_data": "img_style_ad_video"}],
-        ]
-        send(chat_id, "*What type of Claude visual?*", keyboard)
+    # Resolve style from context — never prompt the user
+    vb_type = state.get("last_visual_type", "")
+    social_type = state.get("current_social_type", "")
+    pending_style = state.get("pending_img_style", "")
+
+    if pending_style:
+        img_style = pending_style
+    elif "Carousel" in social_type or vb_type == "carousel":
+        img_style = "carousel"
+    elif "Reel" in social_type or vb_type == "reel":
+        img_style = "storyboard"
+    elif "Story" in social_type or vb_type == "story":
+        img_style = "story"
+    elif "Static" in social_type or vb_type == "static":
+        img_style = "static"
+    elif vb_type == "email":
+        img_style = "thumbnail"
+    elif vb_type == "youtube":
+        img_style = "youtube"
+    elif vb_type in ("ad_static", "ad_video"):
+        img_style = vb_type
+    elif state.get("last_img_type"):
+        img_style = state["last_img_type"].replace("claude_", "")
     else:
-        keyboard = [
-            [{"text": "📰 Breaking news / WARNING",  "callback_data": "img_style_breaking_news"}],
-            [{"text": "📊 Price / data post",        "callback_data": "img_style_price_data"}],
-            [{"text": "🗳️ Engagement / debate",      "callback_data": "img_style_engagement"}],
-            [{"text": "🌍 Macro / geopolitical",     "callback_data": "img_style_macro_geo"}],
-            [{"text": "🎭 Meme / cultural",          "callback_data": "img_style_meme_cultural"}],
-            [{"text": "📈 Chart / technical",        "callback_data": "img_style_educational"}],
-            [{"text": "🎯 Ad static (TOF/MOF/BOF)", "callback_data": "img_style_ad_static"}],
-            [{"text": "🖼️ Background only",          "callback_data": "img_style_background"}],
-        ]
-        send(chat_id, "What style?", keyboard)
+        img_style = "static"  # sensible default
+
+    state["pending_img_style"] = img_style
+    handle_image_callbacks(chat_id, "img_style_" + img_style, state)
 
 
 def handle_image_generation(chat_id, post_type=None):
@@ -9737,9 +9726,33 @@ def handle_image_callbacks(chat_id, data, state):
         show_image_type_menu(chat_id)
 
     elif data == "img_diff_format":
-        # Show format picker for Claude visuals
-        state["img_engine"] = state.get("img_engine", "claude")
-        show_image_style_menu(chat_id, state.get("img_engine", "claude"))
+        # Show a format picker so user chooses what to switch TO
+        keyboard = [
+            [{"text": "🖼️ Static post",        "callback_data": "imgfmt_static"}],
+            [{"text": "📖 Carousel",           "callback_data": "imgfmt_carousel"}],
+            [{"text": "📱 Story frame",        "callback_data": "imgfmt_story"}],
+            [{"text": "📊 Data visual",        "callback_data": "imgfmt_data"}],
+            [{"text": "📋 Storyboard",         "callback_data": "imgfmt_storyboard"}],
+            [{"text": "📧 Email thumbnail",    "callback_data": "imgfmt_thumbnail"}],
+            [{"text": "🎬 YouTube thumbnail",  "callback_data": "imgfmt_youtube"}],
+            [{"text": "🎯 Ad static",          "callback_data": "imgfmt_ad_static"}],
+        ]
+        send(chat_id, "Which format?", keyboard)
+
+    elif data.startswith("imgfmt_"):
+        # User picked a new format — update style and regenerate with current engine
+        new_style = data.replace("imgfmt_", "")
+        state["pending_img_style"] = new_style
+        state["last_visual_type"] = new_style
+        engine = state.get("img_engine", "gemini")
+        # Re-route engine sensibly for the new format
+        if new_style in {"carousel", "storyboard", "ad_video"}:
+            engine = "claude"
+            state["img_engine"] = engine
+        elif new_style in {"static", "story", "thumbnail", "ad_static", "youtube"}:
+            engine = "gemini" if state.get("img_engine") != "dalle" else "dalle"
+            state["img_engine"] = engine
+        handle_image_callbacks(chat_id, "img_style_" + new_style, state)
 
     elif data == "img_show_prompt":
         prompt = state.get("last_img_prompt", "No prompt saved.")
