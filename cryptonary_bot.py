@@ -6095,7 +6095,23 @@ def handle_callback(cb):
 
 # ── POLLING LOOP ──────────────────────────────────────────────────
 
+import signal as _signal
+
+_bot_running = True
+
+def _handle_shutdown(signum, frame):
+    """Called by Render/OS when the instance is being terminated.
+    Sets the flag so the polling loop exits cleanly instead of
+    continuing to fight with the new instance over the Telegram connection."""
+    global _bot_running
+    _bot_running = False
+    print("Shutdown signal received — stopping poll loop.", flush=True)
+
+_signal.signal(_signal.SIGTERM, _handle_shutdown)
+_signal.signal(_signal.SIGINT, _handle_shutdown)
+
 def poll():
+    global _bot_running
     offset = 0
     processed_updates = set()
     print("Cryptonary Bot V9 running.", flush=True)
@@ -6129,18 +6145,22 @@ def poll():
             print("Claim attempt", attempt+1, "error:", e, flush=True)
             time.sleep(3)
 
-    while True:
+    while _bot_running:
         try:
-            url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=30&offset=" + str(offset)
+            url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getUpdates?timeout=8&offset=" + str(offset)
             req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=35) as r:
+            with urllib.request.urlopen(req, timeout=12) as r:
                 data = json.loads(r.read())
             if not data.get("ok"):
                 err_code = data.get("error_code", 0)
                 if err_code == 409:
-                    print("409 Conflict — retrying claim...", flush=True)
+                    print("409 Conflict — another instance running. Waiting 15s...", flush=True)
+                    if not _bot_running:
+                        break
                     time.sleep(5)
-                    # Try to claim again
+                    if not _bot_running:
+                        break
+                    # Try to reclaim
                     try:
                         tg("deleteWebhook", {"drop_pending_updates": False})
                     except:
