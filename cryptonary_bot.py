@@ -1,4 +1,4 @@
-# restart#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Adam AI — Cryptonary OS
 Writing Studio | Data Studio | Creative Studio
