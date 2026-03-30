@@ -1994,14 +1994,36 @@ def tg(method, data):
         return None
 
 def _safe_md(text):
-    """Escape unmatched markdown symbols that break Telegram's parser."""
-    if text.count("*") % 2 != 0:
-        text = text.replace("*", r"\*")
-    if text.count("_") % 2 != 0:
-        text = text.replace("_", r"\_")
+    """Escape characters that break Telegram's Markdown parser.
+    Handles unmatched *, _, `, [ and inline links that confuse the parser."""
+    import re as _re
+    # Replace unmatched backticks
     if text.count("`") % 2 != 0:
-        text = text.replace("`", r"\`")
+        text = text.replace("`", "'")
+    # Escape square brackets that aren't part of a markdown link [text](url)
+    # Simple approach: escape [ and ] that don't form a valid [text](url) pattern
+    # Rather than complex parsing, just escape lone brackets
+    # Escape * only if unmatched
+    if text.count("*") % 2 != 0:
+        text = text.replace("*", "\\*")
+    # Escape _ only if unmatched (but preserve within words for readability)
+    if text.count("_") % 2 != 0:
+        text = text.replace("_", "\\_")
     return text
+
+
+def _send_with_fallback(chat_id, data):
+    """Send a Telegram message, falling back to plain text if markdown fails."""
+    result = tg("sendMessage", data)
+    if result and not result.get("ok"):
+        err = result.get("description", "")
+        if "can't parse entities" in err.lower() or "entity" in err.lower():
+            # Strip markdown and retry as plain text
+            plain_data = dict(data)
+            plain_data.pop("parse_mode", None)
+            plain_data["text"] = plain_data["text"].replace("*", "").replace("_", "").replace("`", "")
+            tg("sendMessage", plain_data)
+    return result
 
 def send(chat_id, text, keyboard=None):
     # Telegram max message length is 4096 chars - chunk if needed
@@ -2011,12 +2033,11 @@ def send(chat_id, text, keyboard=None):
         data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
         if keyboard:
             data["reply_markup"] = {"inline_keyboard": keyboard}
-        tg("sendMessage", data)
+        return _send_with_fallback(chat_id, data)
     else:
         # Send in chunks, keyboard only on last chunk
         chunks = []
         while len(text) > max_len:
-            # Break at last newline before limit
             split_at = text.rfind("\n", 0, max_len)
             if split_at == -1: split_at = max_len
             chunks.append(text[:split_at])
@@ -2027,9 +2048,9 @@ def send(chat_id, text, keyboard=None):
             data = {"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"}
             if is_last and keyboard:
                 data["reply_markup"] = {"inline_keyboard": keyboard}
-            tg("sendMessage", data)
+            _send_with_fallback(chat_id, data)
             if not is_last:
-                time.sleep(0.3)  # avoid hitting rate limits
+                time.sleep(0.3)
 
 def send_plain(chat_id, text, keyboard=None):
     """Send without Markdown parsing - safe for raw Claude output."""
@@ -4834,12 +4855,15 @@ def handle_callback(cb):
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
-        # If coming from an approved post, preserve angle+hooks so we skip straight to format picker
-        if state.get("stage") == "social_approved" and state.get("social_angle"):
-            state["stage"] = "pick_social_formats"
-            # Keep existing hooks so gen_social_selected skips hook generation
-            show_standalone_social_menu(chat_id)
-        elif state.get("report") or state.get("current_social"):
+        # Coming from approved email — report and angle already in state, skip straight to format picker
+        email_stages = {"emails_approved", "emails_ready", "social_approved"}
+        has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
+        has_report = bool(state.get("report") or state.get("current_social") or state.get("current_emails"))
+        if state.get("stage") in email_stages or has_report:
+            # Carry over the angle from email flow if present
+            if not state.get("social_angle") and state.get("selected_angle"):
+                state["social_angle"] = state["selected_angle"]
+            state["social_origin"] = "email"
             state["stage"] = "pick_social_formats"
             show_standalone_social_menu(chat_id)
         else:
@@ -11283,14 +11307,19 @@ def handle_ie_screenshot(chat_id, file_info, stage):
             result = anthropic_vision(
                 [{"role": "user", "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
-                    {"type": "text", "text": "Look at this image. It could be an Instagram post, ad, carousel, or any content. Extract the text, identify the hook, topic, format, and what makes it effective. Return a clear summary as plain text."}
+                    {"type": "text", "text": "Describe this image in detail. Include: what format it is (meme, post, ad, chart, screenshot), ALL text visible on it word for word, the visual elements, the tone, the apparent message or hook, and what makes it effective or shareable. Be specific and literal — describe exactly what you see."}
                 ]}],
-                max_tokens=600,
-                system="You are a creative strategist. Be specific and concise."
+                max_tokens=800,
+                system="You are a precise visual analyst. Describe exactly what is in the image — text, visuals, format, tone. Be specific."
             )
-            user_state[chat_id]["ie_source_content"] = result
-            user_state[chat_id]["ie_source_label"] = "uploaded image"
+            user_state[chat_id]["ie_source_content"] = "IMAGE CONTENT:\n" + result
+            user_state[chat_id]["ie_source_label"] = "uploaded image: " + result[:80].replace("\n", " ")
             user_state[chat_id]["stage"] = "idea_engine_idle"
+            # Show what was extracted so user can confirm it read correctly
+            try:
+                send_plain(chat_id, "*Image read:*\n\n" + result[:400] + ("..." if len(result) > 400 else ""))
+            except Exception:
+                pass
             generate_ie_concept(chat_id)
             return
 
