@@ -4283,6 +4283,12 @@ def handle_message(msg):
         show_standalone_social_menu(chat_id)
         return
 
+    if stage == "awaiting_storyboard_brief" or stage == "awaiting_storyboard_report":
+        state["storyboard_brief"] = text.strip()
+        state["stage"] = "idle"
+        generate_storyboard(chat_id, text.strip())
+        return
+
     if stage == "awaiting_revised_email":
         # Save the revised copy as an approved writing example
         revised = text.strip()
@@ -4396,12 +4402,14 @@ def handle_callback(cb):
 
     elif data == "open_content_studio":
         keyboard = [
-            [{"text": "Emails", "callback_data": "mode_email"}],
-            [{"text": "Ad Copy", "callback_data": "mode_ads"}],
-            [{"text": "✍️ Write copy for a creative", "callback_data": "ad_quick_creative"}],
-            [{"text": "Social Content", "callback_data": "mode_social"}],
-            [{"text": "YouTube Description", "callback_data": "mode_yt_desc"}],
-            [{"text": "Landing Page", "callback_data": "mode_landing"}]
+            [{"text": "Emails",                           "callback_data": "mode_email"}],
+            [{"text": "Ad Copy",                          "callback_data": "mode_ads"}],
+            [{"text": "✍️ Write copy for a creative",    "callback_data": "ad_quick_creative"}],
+            [{"text": "Social Content",                   "callback_data": "mode_social"}],
+            [{"text": "🎬 Storyboard Generator",          "callback_data": "mode_storyboard"}],
+            [{"text": "🔍 Reel Analysis",                 "callback_data": "mode_reel_analysis"}],
+            [{"text": "YouTube Description",              "callback_data": "mode_yt_desc"}],
+            [{"text": "Landing Page",                     "callback_data": "mode_landing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -4446,6 +4454,19 @@ def handle_callback(cb):
     elif data == "mode_landing":
         user_state[chat_id] = {"stage": "lp_idle", "selected_avatars": [], "lp_outline": {}, "lp_full_copy": {}}
         start_landing_page_flow(chat_id)
+
+    elif data == "mode_storyboard":
+        user_state[chat_id] = {"stage": "awaiting_storyboard_brief"}
+        keyboard = [[{"text": "Use a report or article instead", "callback_data": "storyboard_from_report"}]]
+        send(chat_id, "*Storyboard Generator*\n\nPaste your brief, campaign theme, or idea.\n\nI'll generate a production-ready shot-by-shot storyboard with:\n• On-screen text per frame\n• Voiceover script\n• Visual direction\n• Timing\n\n_Or tap below to paste a report/article as the source._", keyboard)
+
+    elif data == "storyboard_from_report":
+        user_state[chat_id]["stage"] = "awaiting_storyboard_report"
+        send(chat_id, "Paste your report, article, or content to base the storyboard on:")
+
+    elif data == "mode_reel_analysis":
+        user_state[chat_id] = {"stage": "awaiting_reel_upload"}
+        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll break down:\n• Hook strength — does it stop the scroll in the first 3 seconds?\n• Pacing and structure\n• Caption quality\n• What's working and what to change\n• A Cryptonary version of the concept\n\n_Works for your own reels or competitor content._")
 
     elif data == "mode_yt_desc":
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
@@ -6282,6 +6303,53 @@ def handle_callback(cb):
         else:
             send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
 
+    elif data == "storyboard_regen":
+        brief = state.get("last_storyboard_brief", "") or state.get("storyboard_brief", "")
+        if brief:
+            generate_storyboard(chat_id, brief)
+        else:
+            state["stage"] = "awaiting_storyboard_brief"
+            send(chat_id, "Paste your brief to regenerate the storyboard:")
+
+    elif data == "storyboard_to_reel":
+        script = state.get("last_storyboard_script", "")
+        if script:
+            state["report"] = script
+            state["social_angle"] = state.get("last_storyboard_brief", "")[:120]
+            state["selected_social_formats"] = ["fmt_reel"]
+            state["social_framework"] = "PAS"
+            state["stage"] = "pick_social_formats"
+            gen_social_angles(chat_id)
+        else:
+            send(chat_id, "Generate a storyboard first.")
+
+    elif data == "storyboard_to_vb":
+        script = state.get("last_storyboard_script", "")
+        if script:
+            state["last_visual_brief"] = script[:600]
+            state["last_visual_type"] = "storyboard"
+            state["stage"] = "visual_brief_ready"
+            keyboard = [
+                [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}],
+                [{"text": "✅ Done",            "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Brief ready. Generate a visual from the storyboard?", keyboard)
+        else:
+            send(chat_id, "Generate a storyboard first.")
+
+    elif data == "reel_to_storyboard":
+        analysis = state.get("last_reel_analysis", "")
+        if analysis:
+            cryptonary_section = ""
+            if "CRYPTONARY VERSION" in analysis:
+                cryptonary_section = analysis.split("CRYPTONARY VERSION")[-1].strip()[:400]
+            brief = cryptonary_section or analysis[:400]
+            state["storyboard_brief"] = brief
+            generate_storyboard(chat_id, brief)
+        else:
+            state["stage"] = "awaiting_storyboard_brief"
+            send(chat_id, "Paste a brief for the storyboard:")
+
     elif data == "price_alert_dismiss":
         send(chat_id, "Got it. I'll alert you on the next significant move.")
 
@@ -6643,7 +6711,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6663,7 +6731,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6695,6 +6763,17 @@ def poll():
                                 else:
                                     ftype = "image" if mime.startswith("image/") else "csv"
                                     handle_ds_file(chat_id, doc, ftype)
+                        elif "video" in msg:
+                            user_state.setdefault(chat_id, {"stage": "idle"})
+                            stage = user_state[chat_id].get("stage", "idle")
+                            video = msg["video"]
+                            if stage == "awaiting_reel_upload":
+                                handle_reel_analysis(chat_id, video)
+                            elif stage == "awaiting_ad_creative_upload":
+                                # Video creative for ad copy — treat as reel analysis then offer copy
+                                handle_reel_analysis(chat_id, video, mode="ad_copy")
+                            else:
+                                send(chat_id, "Video received. To analyse it, go to Writing Studio → Reel Analysis first.")
                         else:
                             handle_message(msg)
                     elif "callback_query" in update:
@@ -6921,6 +7000,345 @@ def toggle_stage(chat_id, stage_key, message_id):
         is_sel = key in selected
         keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + key.capitalize(), "callback_data": "adstage_" + key}])
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def generate_storyboard(chat_id, brief):
+    """Generate a production-ready video storyboard as an HTML file."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
+    send(chat_id, "Building your storyboard...")
+
+    try:
+        prompt = (
+            "You are a senior video producer for Cryptonary, a crypto research brand.\n\n"
+            "Create a production-ready storyboard for a 30-60 second Instagram Reel or short-form video ad.\n\n"
+            "SOURCE BRIEF:\n" + brief[:2000] + "\n\n"
+            "Generate a complete storyboard with 6-10 frames. For each frame output EXACTLY:\n\n"
+            "FRAME [N] — [0:00-0:00]\n"
+            "ON SCREEN: [bold text overlay, max 6 words]\n"
+            "VOICEOVER: [exact spoken words for this frame]\n"
+            "VISUAL: [specific scene direction — what camera sees, movement, style]\n"
+            "DURATION: [seconds]\n\n"
+            "Rules:\n"
+            "- Frame 1 must be a pattern interrupt hook — stops scroll in first 2 seconds\n"
+            "- No em dashes. Short punchy sentences.\n"
+            "- Cryptonary brand: dark, data-driven, authoritative\n"
+            "- Final frame: clear CTA (follow @Cryptonary / link in bio)\n"
+            "- After all frames, write: TOTAL DURATION: [X seconds]\n\n"
+            "Return as plain text with exact formatting above."
+        )
+        script = claude(prompt, max_tokens=2000, system=VOICE_GUIDE)
+        script = clean_copy(script)
+        state["last_storyboard_script"] = script
+        state["last_storyboard_brief"] = brief[:400]
+
+        # Parse frames and build HTML
+        html = build_storyboard_html(brief, script)
+
+        # Save to outputs
+        import os as _os
+        out_path = "/mnt/user-data/outputs/cryptonary_storyboard.html"
+        with open(out_path, "w") as f:
+            f.write(html)
+
+        # Show text preview first
+        send_plain(chat_id, "*STORYBOARD SCRIPT*\n\n" + script[:1500] + ("..." if len(script) > 1500 else ""))
+
+        keyboard = [
+            [{"text": "🔄 Regenerate",          "callback_data": "storyboard_regen"}],
+            [{"text": "📱 Turn into Reel script","callback_data": "storyboard_to_reel"}],
+            [{"text": "🎨 Generate visual brief","callback_data": "storyboard_to_vb"}],
+            [{"text": "✅ Mark complete",        "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Storyboard ready. The HTML file below opens in any browser.", keyboard)
+
+        # Present the file
+        tg("sendDocument", {
+            "chat_id": chat_id,
+            "document": "attach://file",
+            "caption": "Open in browser for full storyboard view."
+        })
+        # Send via file upload
+        import urllib.request as _ur
+        import urllib.parse as _up
+        boundary = "CryptonaryBoundary"
+        body = (
+            "--" + boundary + "\r\n"
+            "Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n" +
+            str(chat_id) + "\r\n"
+            "--" + boundary + "\r\n"
+            "Content-Disposition: form-data; name=\"document\"; filename=\"cryptonary_storyboard.html\"\r\n"
+            "Content-Type: text/html\r\n\r\n" +
+            html + "\r\n"
+            "--" + boundary + "--\r\n"
+        ).encode("utf-8")
+        req = _ur.Request(
+            "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendDocument",
+            data=body,
+            headers={"Content-Type": "multipart/form-data; boundary=" + boundary}
+        )
+        with _ur.urlopen(req, timeout=30) as r:
+            pass
+
+    except Exception as e:
+        send(chat_id, "Error generating storyboard: " + str(e))
+
+
+def build_storyboard_html(brief, script):
+    """Build a clean, printable HTML storyboard from the script."""
+    import re as _re
+
+    # Parse frame blocks
+    frame_pattern = _re.compile(
+        r'FRAME\s+(\d+)[^\n]*\n'
+        r'ON SCREEN:\s*([^\n]+)\n'
+        r'VOICEOVER:\s*([^\n]+)\n'
+        r'VISUAL:\s*([^\n]+)\n'
+        r'DURATION:\s*([^\n]+)',
+        _re.MULTILINE
+    )
+    frames = frame_pattern.findall(script)
+
+    # Total duration
+    total_match = _re.search(r'TOTAL DURATION:\s*([^\n]+)', script)
+    total_dur = total_match.group(1) if total_match else "~45 seconds"
+
+    frames_html = ""
+    for i, (num, onscreen, vo, visual, duration) in enumerate(frames):
+        bg = "#111" if i % 2 == 0 else "#0d0d0d"
+        frames_html += f"""
+        <div class="frame">
+          <div class="frame-header">
+            <span class="frame-num">FRAME {num}</span>
+            <span class="frame-dur">{duration}</span>
+          </div>
+          <div class="frame-body">
+            <div class="frame-col">
+              <div class="frame-screen">
+                <div class="screen-text">{onscreen}</div>
+              </div>
+            </div>
+            <div class="frame-col frame-details">
+              <div class="detail-row">
+                <span class="detail-label">VOICEOVER</span>
+                <span class="detail-val">{vo}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">VISUAL</span>
+                <span class="detail-val">{visual}</span>
+              </div>
+            </div>
+          </div>
+        </div>"""
+
+    if not frames:
+        # Fallback: show raw script in a clean container
+        frames_html = f'<div class="raw-script"><pre>{script}</pre></div>'
+
+    from datetime import datetime as _dt
+    date_str = _dt.now().strftime("%d %b %Y")
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cryptonary Storyboard</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ background: #0a0a0a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 40px 20px; }}
+  .header {{ max-width: 900px; margin: 0 auto 40px; border-bottom: 1px solid #1e1e1e; padding-bottom: 24px; }}
+  .logo {{ color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }}
+  h1 {{ font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }}
+  .meta {{ color: #718096; font-size: 14px; }}
+  .brief-box {{ background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 16px; margin-top: 16px; }}
+  .brief-label {{ color: #4a90d9; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }}
+  .brief-text {{ color: #a0aec0; font-size: 14px; line-height: 1.6; }}
+  .frames {{ max-width: 900px; margin: 0 auto; }}
+  .frame {{ background: #111; border: 1px solid #1e1e1e; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }}
+  .frame-header {{ display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #0d0d0d; border-bottom: 1px solid #1e1e1e; }}
+  .frame-num {{ font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #4a90d9; text-transform: uppercase; }}
+  .frame-dur {{ font-size: 12px; color: #718096; }}
+  .frame-body {{ display: flex; gap: 0; }}
+  .frame-col {{ flex: 1; padding: 20px; }}
+  .frame-screen {{ background: #000; border-radius: 8px; aspect-ratio: 9/16; max-width: 100px; display: flex; align-items: center; justify-content: center; border: 1px solid #222; }}
+  .screen-text {{ color: #fff; font-size: 11px; font-weight: 700; text-align: center; padding: 8px; line-height: 1.3; }}
+  .frame-details {{ border-left: 1px solid #1e1e1e; }}
+  .detail-row {{ margin-bottom: 16px; }}
+  .detail-label {{ display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #4a90d9; margin-bottom: 4px; }}
+  .detail-val {{ font-size: 14px; color: #e2e8f0; line-height: 1.5; }}
+  .footer {{ max-width: 900px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid #1e1e1e; display: flex; justify-content: space-between; color: #718096; font-size: 13px; }}
+  .total-dur {{ color: #4a90d9; font-weight: 700; }}
+  .raw-script {{ max-width: 900px; margin: 0 auto; background: #111; border-radius: 12px; padding: 32px; }}
+  pre {{ white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.8; color: #e2e8f0; }}
+  @media print {{ body {{ background: #fff; color: #000; }} .frame {{ border-color: #ccc; }} }}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Cryptonary</div>
+    <h1>Video Storyboard</h1>
+    <div class="meta">Generated {date_str} — Total: {total_dur}</div>
+    <div class="brief-box">
+      <div class="brief-label">Brief</div>
+      <div class="brief-text">{brief[:200]}{"..." if len(brief) > 200 else ""}</div>
+    </div>
+  </div>
+  <div class="frames">
+    {frames_html}
+  </div>
+  <div class="footer">
+    <span>Cryptonary OS</span>
+    <span class="total-dur">Total: {total_dur}</span>
+  </div>
+</body>
+</html>"""
+
+
+def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
+    """Download a video frame, extract content, and analyse it."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
+    state["stage"] = "idle"
+
+    file_id = video_obj.get("file_id", "")
+    file_size = video_obj.get("file_size", 0)
+
+    # Check size — Telegram bot limit is 20MB
+    if file_size and file_size > 20 * 1024 * 1024:
+        send(chat_id, "Video is over 20MB — Telegram's limit for bots. Compress it first or screenshot a few key frames and upload as images instead.")
+        return
+
+    send(chat_id, "Video received. Extracting content for analysis...")
+
+    try:
+        # Get file path from Telegram
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            send(chat_id, "Could not access the video file. Try again.")
+            return
+
+        # Download video
+        download_url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+        req = urllib.request.Request(download_url)
+        with urllib.request.urlopen(req, timeout=60) as r:
+            video_bytes = r.read()
+
+        # Extract a frame using base64 thumbnail if available, else use video metadata
+        thumb = video_obj.get("thumbnail") or video_obj.get("thumb")
+        frame_b64 = None
+
+        if thumb:
+            thumb_path_data = tg("getFile", {"file_id": thumb["file_id"]})
+            thumb_path = thumb_path_data.get("result", {}).get("file_path", "")
+            if thumb_path:
+                thumb_url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + thumb_path
+                with urllib.request.urlopen(thumb_url, timeout=15) as r:
+                    thumb_bytes = r.read()
+                import base64 as _b64
+                frame_b64 = _b64.b64encode(thumb_bytes).decode()
+
+        duration = video_obj.get("duration", 0)
+        width = video_obj.get("width", 0)
+        height = video_obj.get("height", 0)
+        is_portrait = height > width if width and height else True
+
+        # Build analysis prompt
+        video_meta = f"Duration: {duration}s | Format: {'Portrait (9:16)' if is_portrait else 'Landscape (16:9)'} | {width}x{height}"
+
+        if mode == "ad_copy":
+            # Ad copy mode — generate primary text + headlines
+            analysis_prompt = (
+                "You are analysing a video ad creative for Cryptonary.\n\n"
+                f"VIDEO: {video_meta}\n\n"
+                "Based on what you can see in the thumbnail/frame and the video metadata:\n\n"
+                "1. Describe what you see in the creative\n"
+                "2. Generate 3 primary text options (125 chars optimal, show char count)\n"
+                "3. Generate 5 headline options (27 chars optimal, show char count)\n\n"
+                "Follow Meta best practices. No em dashes. Plain text output."
+            )
+        else:
+            # Full reel analysis mode
+            analysis_prompt = (
+                "You are a senior social media strategist analysing a short-form video for Cryptonary.\n\n"
+                f"VIDEO DETAILS: {video_meta}\n\n"
+                "Analyse this reel/video thoroughly. Structure your response EXACTLY as:\n\n"
+                "HOOK ANALYSIS (first 3 seconds)\n"
+                "[Rate 1-10. What does the hook do well? Does it stop the scroll? Is it specific enough?]\n\n"
+                "PACING AND STRUCTURE\n"
+                "[How does the video flow? Is the information density right? Does it hold attention?]\n\n"
+                "ON-SCREEN TEXT\n"
+                "[Quality of text overlays — clarity, timing, font size, information load]\n\n"
+                "WHAT'S WORKING\n"
+                "[2-3 specific strengths with reasons]\n\n"
+                "WHAT TO CHANGE\n"
+                "[2-3 specific improvements — be direct and actionable]\n\n"
+                "CRYPTONARY VERSION\n"
+                "[A specific concept that takes the best element of this video and adapts it for Cryptonary's brand and audience — include a hook line and angle]\n\n"
+                "Overall score: [X/10]\n\n"
+                "Be direct. No fluff. Reference specific seconds where relevant."
+            )
+
+        # Call Claude vision if we have a frame, otherwise text-only analysis
+        if frame_b64:
+            import json as _json
+            payload = {
+                "model": "claude-sonnet-4-5",
+                "max_tokens": 1500,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": frame_b64}},
+                        {"type": "text", "text": analysis_prompt}
+                    ]
+                }]
+            }
+            body_bytes = _json.dumps(payload).encode()
+            req = urllib.request.Request(
+                "https://api.anthropic.com/v1/messages",
+                data=body_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": ANTHROPIC_KEY,
+                    "anthropic-version": "2023-06-01"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=60) as r:
+                result_data = json.loads(r.read())
+            analysis = result_data.get("content", [{}])[0].get("text", "")
+        else:
+            # No thumbnail — text-only analysis from metadata
+            analysis = claude(
+                f"A {duration}-second {'portrait' if is_portrait else 'landscape'} video was uploaded for analysis. "
+                f"No thumbnail was available. Based on typical {duration}s short-form video structure:\n\n" +
+                analysis_prompt,
+                max_tokens=1200
+            )
+
+        analysis = clean_copy(analysis)
+        state["last_reel_analysis"] = analysis
+
+        if mode == "ad_copy":
+            send_plain(chat_id, "*AD COPY FROM VIDEO CREATIVE*\n\n" + analysis)
+            keyboard = [
+                [{"text": "Regenerate",          "callback_data": "ad_creative_regen"}],
+                [{"text": "Different angle",      "callback_data": "ad_creative_diff_angle"}],
+                [{"text": "✅ Mark complete",     "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Copy ready.", keyboard)
+        else:
+            send_plain(chat_id, "*REEL ANALYSIS*\n\n" + analysis)
+            keyboard = [
+                [{"text": "🎬 Build a storyboard from this", "callback_data": "reel_to_storyboard"}],
+                [{"text": "📱 Generate social content",      "callback_data": "mode_social"}],
+                [{"text": "🔍 Analyse another reel",         "callback_data": "mode_reel_analysis"}],
+                [{"text": "✅ Mark complete",                "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Analysis complete.", keyboard)
+
+    except Exception as e:
+        send(chat_id, "Error analysing video: " + str(e))
+
 
 def gen_ad_copy_for_creative(chat_id, creative_description):
     """Generate primary text + headlines from a creative description or image extract.
