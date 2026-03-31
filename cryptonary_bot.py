@@ -3700,7 +3700,24 @@ def handle_message(msg):
         return
 
     if text == "/help":
-        send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n*Legacy:*\n/logperformance — old performance log\n/stats — old stats summary\n\n/start — return to main menu")
+        send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Brevo commands:*\n/listhealth — pull live segment sizes + trends\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n/start — return to main menu")
+        return
+
+    if text == "/listhealth":
+        if not BREVO_API_KEY:
+            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
+            return
+        send(chat_id, "Pulling segment sizes from Brevo...")
+        current = fetch_all_segment_sizes()
+        prev_sizes, prev_date = get_previous_snapshot()
+        save_health_snapshot(current)
+        report = format_list_health_report(current, prev_sizes, prev_date)
+        send_plain(chat_id, report)
+        keyboard = [
+            [{"text": "🔄 Refresh", "callback_data": "ds_brevo_list_sizes"}],
+            [{"text": "Data Studio", "callback_data": "open_data_studio"}],
+        ]
+        send(chat_id, "Tap Refresh any time.", keyboard)
         return
 
     stage = user_state.get(chat_id, {}).get("stage", "idle")
@@ -4947,6 +4964,7 @@ def handle_callback(cb):
         if pro_body:
             save_voice_example(chat_id, pro_body[:600], "approved_pro_email")
         keyboard = [
+            [{"text": "📤 Push to Brevo",              "callback_data": "brevo_push_start"}],
             [{"text": "📱 Create social content",      "callback_data": "social_yes"}],
             [{"text": "🎨 Email thumbnail brief",      "callback_data": "vb_type_email"}],
             [{"text": "✏️ Submit revised version",     "callback_data": "submit_revised_email"}],
@@ -4997,6 +5015,83 @@ def handle_callback(cb):
         # Full campaign path: brief → single avatar → single stage → static or video
         user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
         send(chat_id, "*Build a Campaign*\n\nPaste your campaign brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
+
+    elif data == "brevo_push_start":
+        if not BREVO_API_KEY:
+            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
+            return
+        keyboard = [
+            [{"text": "Market Update (MU)",    "callback_data": "brevo_type_mu"}],
+            [{"text": "Market Direction (MD)", "callback_data": "brevo_type_md"}],
+        ]
+        send(chat_id, "*Push to Brevo*\n\nWhich email type is this?", keyboard)
+
+    elif data in ("brevo_type_mu", "brevo_type_md"):
+        email_type = "mu" if data == "brevo_type_mu" else "md"
+        state["brevo_email_type"] = email_type
+        keyboard = [
+            [{"text": "Opened last 30 days",             "callback_data": "brevo_seg_opened_30"}],
+            [{"text": "Opened last 60 days",             "callback_data": "brevo_seg_opened_60"}],
+            [{"text": "Opened last 90 days",             "callback_data": "brevo_seg_opened_90"}],
+            [{"text": "All Pro Users",                   "callback_data": "brevo_seg_pro_users"}],
+            [{"text": "Cancellers",                      "callback_data": "brevo_seg_cancellers"}],
+            [{"text": "Never Opened + Joined 30d",       "callback_data": "brevo_seg_never_joined_30"}],
+        ]
+        type_label = "Market Update" if email_type == "mu" else "Market Direction"
+        send(chat_id, f"*{type_label}*\n\nWhich segment gets this send?", keyboard)
+
+    elif data.startswith("brevo_seg_"):
+        seg_key = data.replace("brevo_seg_", "")
+        state["brevo_seg_key"] = seg_key
+        email_type = state.get("brevo_email_type", "mu")
+        emails = state.get("current_emails", {})
+        which = state.get("_approve_which", "both")
+        subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
+        preview = state.get("selected_hook", {}).get("preview", "")
+        seg_id = BREVO_SEGMENTS.get(seg_key, {}).get("id")
+        seg_name = BREVO_SEGMENTS.get(seg_key, {}).get("name", seg_key)
+        send(chat_id, f"Creating Brevo drafts for *{seg_name}*...")
+        pushed = []
+        failed = []
+        if which in ("both", "free") and emails.get("free"):
+            free_body = clean_copy(extract_text(emails["free"]))
+            free_tmpl = BREVO_TEMPLATES.get(f"{email_type}_free", {}).get("id")
+            html_free = build_cryptonary_email_html(subject, preview, free_body)
+            fid, ferr = create_brevo_draft(
+                subject, preview, html_free,
+                list_ids=[seg_id] if seg_id else None,
+                template_id=free_tmpl
+            )
+            if fid:
+                pushed.append(("Free", fid))
+            else:
+                failed.append("Free: " + str(ferr))
+        if which in ("both", "pro") and emails.get("pro"):
+            pro_body = clean_copy(extract_text(emails["pro"]))
+            pro_tmpl = BREVO_TEMPLATES.get(f"{email_type}_premium", {}).get("id")
+            pro_seg_id = BREVO_SEGMENTS["pro_users"]["id"]
+            html_pro = build_cryptonary_email_html(subject, preview, pro_body)
+            pid, perr = create_brevo_draft(
+                subject, preview, html_pro,
+                list_ids=[pro_seg_id],
+                template_id=pro_tmpl
+            )
+            if pid:
+                pushed.append(("Pro", pid))
+            else:
+                failed.append("Pro: " + str(perr))
+        if pushed:
+            msg = "Drafts ready in Brevo:\n\n"
+            for label, cid in pushed:
+                msg += f"• {label}: https://app.brevo.com/campaign/email/{cid}/edit\n"
+            msg += "\nOpen each link, review, schedule and send."
+            keyboard = [
+                [{"text": "📱 Create social content", "callback_data": "social_yes"}],
+                [{"text": "✅ Mark complete",         "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, msg, keyboard)
+        if failed:
+            send(chat_id, "Failed: " + " | ".join(failed))
 
     elif data == "submit_revised_email":
         state["stage"] = "awaiting_revised_email"
@@ -5393,20 +5488,20 @@ def handle_callback(cb):
 
     elif data == "ds_brevo_list_sizes":
         if not BREVO_API_KEY:
-            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render.")
+            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
             return
-        send(chat_id, "Pulling list sizes from Brevo...")
-        list_data, err = fetch_contact_list_sizes()
-        if err:
-            send(chat_id, "Error: " + err)
-        else:
-            msg = format_contact_list_message(list_data)
-            send_plain(chat_id, msg)
-            keyboard = [
-                [{"text": "🔄 Refresh", "callback_data": "ds_brevo_list_sizes"}],
-                [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
-            ]
-            send(chat_id, "Tap Refresh to update.", keyboard)
+        send(chat_id, "Pulling segment sizes from Brevo...")
+        current = fetch_all_segment_sizes()
+        prev_sizes, prev_date = get_previous_snapshot()
+        # Save this pull as the latest snapshot
+        save_health_snapshot(current)
+        report = format_list_health_report(current, prev_sizes, prev_date)
+        send_plain(chat_id, report)
+        keyboard = [
+            [{"text": "🔄 Refresh now",             "callback_data": "ds_brevo_list_sizes"}],
+            [{"text": "Back to Email Analysis",     "callback_data": "ds_emails"}],
+        ]
+        send(chat_id, "Tap Refresh any time to update.", keyboard)
 
     elif data == "ds_brevo_pull":
         send(chat_id, "Pulling Brevo campaign data...")
@@ -6143,33 +6238,130 @@ def handle_callback(cb):
         state.pop("selected_social_hooks", None)
         state.pop("social_framework", None)
         state.pop("pending_img_style", None)
-        # If emails were approved this session, offer Brevo push now
-        if BREVO_API_KEY and state.get("stage") == "emails_approved" and state.get("current_emails"):
-            emails = state.get("current_emails", {})
-            which = state.get("_approve_which", "both")
-            free_body = emails.get("free", "") if which in ("both", "free") else ""
-            pro_body = emails.get("pro", "") if which in ("both", "pro") else ""
-            subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
-            preview = state.get("selected_hook", {}).get("preview", "")
-            pushed = []
-            failed = []
-            if free_body:
-                free_list_id = get_brevo_list_for_type("free")
-                html_free = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + free_body.replace("\n", "<br>") + "</body></html>"
-                fid, ferr = create_brevo_draft("[FREE] " + subject, preview, html_free, [free_list_id] if free_list_id else None)
-                if fid: pushed.append("Free (ID: " + str(fid) + ")")
-                else: failed.append("Free: " + str(ferr))
-            if pro_body:
-                pro_list_id = get_brevo_list_for_type("pro")
-                html_pro = "<html><body style='font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px'>" + pro_body.replace("\n", "<br>") + "</body></html>"
-                pid, perr = create_brevo_draft("[PRO] " + subject, preview, html_pro, [pro_list_id] if pro_list_id else None)
-                if pid: pushed.append("Pro (ID: " + str(pid) + ")")
-                else: failed.append("Pro: " + str(perr))
-            if pushed:
-                send(chat_id, "✅ Pushed to Brevo: " + ", ".join(pushed))
-            if failed:
-                send(chat_id, "⚠️ Brevo push failed: " + " | ".join(failed))
+        # If emails were approved this session and not yet pushed to Brevo, offer it
+        if BREVO_API_KEY and state.get("stage") == "emails_approved" and state.get("current_emails") and not state.get("brevo_draft_pushed"):
+            keyboard = [
+                [{"text": "📧 Push to Brevo", "callback_data": "brevo_push_start"}],
+                [{"text": "Skip — session complete", "callback_data": "brevo_skip_push"}],
+            ]
+            send(chat_id, "Emails approved. Push a draft to Brevo?", keyboard)
+        else:
+            send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
+
+    elif data == "brevo_skip_push":
+        state["brevo_draft_pushed"] = True
         send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
+
+    elif data == "brevo_push_start":
+        # Step 1: Ask email type — MU or MD
+        keyboard = [
+            [{"text": "Market Update (MU)", "callback_data": "brevo_type_mu"}],
+            [{"text": "Market Direction (MD)", "callback_data": "brevo_type_md"}],
+        ]
+        send(chat_id, "*Which email type?*\n\nThis determines which Brevo template is used.", keyboard)
+
+    elif data in ("brevo_type_mu", "brevo_type_md"):
+        state["brevo_email_type"] = "mu" if data == "brevo_type_mu" else "md"
+        # Step 2: Ask which segment to send to
+        seg_options = [
+            ("opened_30",  "Opened last 30 days"),
+            ("opened_60",  "Opened last 60 days"),
+            ("opened_90",  "Opened last 90 days"),
+            ("pro_users",  "All Pro Users"),
+            ("cancellers", "All Cancellers"),
+        ]
+        keyboard = []
+        for key, label in seg_options:
+            seg_id = BREVO_SEGMENTS[key]["id"]
+            keyboard.append([{"text": label, "callback_data": "brevo_seg_" + key}])
+        keyboard.append([{"text": "I'll pick the segment in Brevo", "callback_data": "brevo_seg_none"}])
+        send(chat_id, "*Which segment?*\n\nPick the audience for this campaign:", keyboard)
+
+    elif data.startswith("brevo_seg_") or data == "brevo_seg_none":
+        seg_key = data.replace("brevo_seg_", "") if data != "brevo_seg_none" else None
+        state["brevo_segment_key"] = seg_key
+
+        # Step 3: Ask which email to push — free, pro, or both
+        emails = state.get("current_emails", {})
+        has_free = bool(emails.get("free", ""))
+        has_pro = bool(emails.get("pro", ""))
+        options = []
+        if has_free: options.append([{"text": "Free email only", "callback_data": "brevo_push_free"}])
+        if has_pro:  options.append([{"text": "Pro email only",  "callback_data": "brevo_push_pro"}])
+        if has_free and has_pro:
+            options.insert(0, [{"text": "Both (separate drafts)", "callback_data": "brevo_push_both"}])
+        send(chat_id, "*Which email to push to Brevo?*", options)
+
+    elif data in ("brevo_push_free", "brevo_push_pro", "brevo_push_both"):
+        emails = state.get("current_emails", {})
+        email_type = state.get("brevo_email_type", "mu")
+        seg_key = state.get("brevo_segment_key")
+        subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
+        preview = state.get("selected_hook", {}).get("preview", "")
+        seg_id = BREVO_SEGMENTS[seg_key]["id"] if seg_key and seg_key in BREVO_SEGMENTS else None
+        pushed = []
+        failed = []
+
+        def _push_one(email_variant, template_key, label):
+            body_text = extract_text(emails.get(email_variant, ""))
+            if not body_text:
+                failed.append(label + ": no content")
+                return
+            # Extract subject/preview from body if present
+            subj = subject
+            prev = preview
+            for line in body_text.split("\n")[:4]:
+                if line.lower().startswith("subject line:"):
+                    subj = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("preview:"):
+                    prev = line.split(":", 1)[1].strip()
+            # Strip subject/preview lines from body
+            import re as _re
+            body_clean = _re.sub(r'^(Subject Line|Preview):.*\n?', '', body_text, flags=_re.IGNORECASE | _re.MULTILINE).strip()
+            template_id = BREVO_TEMPLATES[template_key]["id"]
+            html = build_cryptonary_email_html(subj, prev, body_clean)
+            campaign_name = "Draft: [" + email_type.upper() + " " + label + "] " + subj[:60]
+            draft_id, err = create_brevo_draft(
+                subject=subj,
+                preview_text=prev,
+                html_content=html,
+                list_ids=[seg_id] if seg_id else None,
+                template_id=None  # Use our generated HTML, not a Brevo template
+            )
+            if draft_id:
+                url = "https://app.brevo.com/campaign/email/" + str(draft_id) + "/edit"
+                pushed.append((label, draft_id, url))
+            else:
+                failed.append(label + ": " + (err or "unknown error"))
+
+        if data in ("brevo_push_free", "brevo_push_both"):
+            tkey = email_type + "_free"  # mu_free or md_free
+            if tkey in BREVO_TEMPLATES:
+                _push_one("free", tkey, "FREE")
+            else:
+                failed.append("FREE: template key " + tkey + " not found")
+
+        if data in ("brevo_push_pro", "brevo_push_both"):
+            tkey = email_type + "_premium"  # mu_premium or md_premium
+            if tkey in BREVO_TEMPLATES:
+                _push_one("pro", tkey, "PRO")
+            else:
+                failed.append("PRO: template key " + tkey + " not found")
+
+        state["brevo_draft_pushed"] = True
+
+        # Report results
+        if pushed:
+            msg = "Drafts created in Brevo:\n\n"
+            for label, draft_id, url in pushed:
+                msg += label + " draft (ID: " + str(draft_id) + ")\n" + url + "\n\n"
+            msg += "Open the link, review formatting, confirm segment, then send."
+            keyboard = [[{"text": "Session complete", "callback_data": "brevo_skip_push"}]]
+            send(chat_id, msg, keyboard)
+        if failed:
+            send(chat_id, "Some drafts failed:\n" + "\n".join(failed))
+        if not pushed and not failed:
+            send(chat_id, "Nothing to push.")
 
     elif data == "img_from_brief":
         # Must be BEFORE img_ startswith catch below
@@ -10112,11 +10304,295 @@ def fetch_meta_ad_insights(days=30):
     except Exception as e:
         return None, "Meta fetch failed: " + str(e)
 
-# Brevo list memory — persists last used list IDs per email type
-_brevo_list_cache = {"free": None, "pro": None}
+# ── BREVO CONFIGURATION — HARDCODED IDS ─────────────────────────
+# Segment IDs (Brevo "My segments")
+BREVO_SEGMENTS = {
+    "opened_30":        {"id": 15,  "name": "Opened last 30 days"},
+    "opened_60":        {"id": 16,  "name": "Opened last 60 days"},
+    "opened_90":        {"id": 17,  "name": "Opened last 90 days"},
+    "opened_120":       {"id": 18,  "name": "Opened last 120 days"},
+    "opened_150":       {"id": 19,  "name": "Opened last 150 days"},
+    "opened_180":       {"id": 72,  "name": "Opened last 180 days"},
+    "opened_365":       {"id": 74,  "name": "Opened last 365 days"},
+    "opened_720":       {"id": 76,  "name": "Opened last 720 days"},
+    "never_joined_30":  {"id": 86,  "name": "Never Opened + Joined last 30 days"},
+    "never_joined_60":  {"id": 87,  "name": "Never Opened + Joined last 60 days"},
+    "never_joined_90":  {"id": 88,  "name": "Never Opened + Joined last 90 days"},
+    "never_joined_120": {"id": 89,  "name": "Never Opened + Joined last 120 days"},
+    "pro_users":        {"id": 1,   "name": "All Pro Users"},
+    "cancellers":       {"id": 26,  "name": "Ali - All Cancellers"},
+}
+
+# Template IDs
+BREVO_TEMPLATES = {
+    "mu_free":     {"id": 3453, "name": "MU FREE"},
+    "mu_premium":  {"id": 3753, "name": "MU PREMIUM"},
+    "md_free":     {"id": 3734, "name": "MD FREE"},
+    "md_premium":  {"id": 3733, "name": "MD PREMIUM"},
+}
+
+# Sender details
+BREVO_SENDER = {"name": "Cryptonary", "email": "support@cryptonary.com"}
+
+# Snapshot storage for weekly list health trends
+_brevo_health_snapshots = {}  # {timestamp: {segment_key: size}}
+
+# List health send segments (shown in the weekly report)
+BREVO_HEALTH_SEGMENTS = [
+    "opened_30", "opened_60", "opened_90", "opened_120",
+    "opened_150", "opened_180", "opened_365", "opened_720",
+    "never_joined_30", "never_joined_60", "never_joined_90", "never_joined_120",
+    "pro_users", "cancellers",
+]
+
+
+def build_cryptonary_email_html(subject, preview, body_text, cta_text=None, cta_url=None):
+    """Build a properly formatted Cryptonary HTML email from plain text body.
+    Dark background, clean typography, mobile responsive."""
+    import re as _re
+
+    # Convert plain text paragraphs to HTML
+    paragraphs = body_text.strip().split("\n\n")
+    html_body = ""
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+        # Detect P.S. lines
+        if para.startswith("P.S") or para.startswith("PS."):
+            html_body += f'<p style="color:#a0aec0;font-size:14px;font-style:italic;margin:20px 0 0 0;">{para}</p>'
+            continue
+        # Bullet lists
+        if para.startswith("•"):
+            items = [li.strip().lstrip("•").strip() for li in para.split("\n") if li.strip()]
+            html_body += '<ul style="color:#e2e8f0;font-size:16px;line-height:1.7;padding-left:20px;margin:12px 0;">'
+            for item in items:
+                html_body += f"<li>{item}</li>"
+            html_body += "</ul>"
+            continue
+        # Sign-off (Talk soon / Adam)
+        if para.startswith("Talk soon") or (para.strip().startswith("Adam") and len(para) < 80):
+            html_body += f'<p style="color:#e2e8f0;font-size:15px;line-height:1.6;margin:20px 0 0 0;">{para.replace(chr(10), "<br>")}</p>'
+            continue
+        # Regular paragraph
+        html_body += f'<p style="color:#e2e8f0;font-size:16px;line-height:1.8;margin:0 0 16px 0;">{para.replace(chr(10), "<br>")}</p>'
+
+    # CTA button
+    cta_html = ""
+    if cta_text and cta_url:
+        cta_html = f'''
+        <div style="text-align:center;margin:32px 0;">
+          <a href="{cta_url}" style="background-color:#3b82f6;color:#ffffff;font-size:16px;
+             font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;
+             display:inline-block;">
+            {cta_text}
+          </a>
+        </div>'''
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>{subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;padding:20px;">
+    <!-- Header -->
+    <div style="text-align:center;padding:32px 0 24px;">
+      <span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:1px;">CRYPTONARY</span>
+    </div>
+    <!-- Body -->
+    <div style="background-color:#111111;border-radius:12px;padding:40px 40px 32px;border:1px solid #1e1e1e;">
+      {html_body}
+      {cta_html}
+    </div>
+    <!-- Footer -->
+    <div style="padding:24px 0;text-align:center;">
+      <p style="color:#4a5568;font-size:13px;margin:0 0 8px;">
+        You're receiving this because you subscribed to Cryptonary.
+      </p>
+      <p style="color:#4a5568;font-size:13px;margin:0;">
+        <a href="{{{{ unsubscribe }}}}" style="color:#4a5568;text-decoration:underline;">Unsubscribe</a>
+        &nbsp;|&nbsp;
+        <a href="https://cryptonary.com" style="color:#4a5568;text-decoration:underline;">cryptonary.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+def fetch_brevo_segment_size(segment_id):
+    """Fetch the current contact count for a Brevo segment by ID."""
+    if not BREVO_API_KEY:
+        return None, "No API key"
+    try:
+        url = f"https://api.brevo.com/v3/contacts/segments/{segment_id}"
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json", "api-key": BREVO_API_KEY}
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        # Brevo returns segmentsContacts or contacts count
+        size = data.get("segmentsContacts") or data.get("contacts") or 0
+        return size, None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return None, "HTTP " + str(e.code) + ": " + body[:100]
+    except Exception as e:
+        return None, str(e)
+
+
+def fetch_all_segment_sizes():
+    """Pull sizes for all health tracking segments. Returns dict of key: size."""
+    results = {}
+    for key in BREVO_HEALTH_SEGMENTS:
+        seg = BREVO_SEGMENTS.get(key, {})
+        seg_id = seg.get("id")
+        if seg_id:
+            size, err = fetch_brevo_segment_size(seg_id)
+            results[key] = size if size is not None else 0
+        else:
+            results[key] = 0
+    return results
+
+
+def save_health_snapshot(sizes):
+    """Store a snapshot of segment sizes with current timestamp."""
+    ts = time.strftime("%Y-%m-%d")
+    _brevo_health_snapshots[ts] = sizes
+    # Keep only last 8 weeks
+    keys = sorted(_brevo_health_snapshots.keys())
+    while len(keys) > 8:
+        del _brevo_health_snapshots[keys.pop(0)]
+
+
+def get_previous_snapshot():
+    """Get the most recent previous snapshot for comparison."""
+    keys = sorted(_brevo_health_snapshots.keys())
+    if len(keys) >= 2:
+        return _brevo_health_snapshots[keys[-2]], keys[-2]
+    elif len(keys) == 1:
+        return _brevo_health_snapshots[keys[0]], keys[0]
+    return None, None
+
+
+def format_list_health_report(current, prev_sizes, prev_date):
+    """Format the weekly list health report with trends."""
+    today = time.strftime("%d %b %Y")
+    lines = [f"*CRYPTONARY LIST HEALTH — {today}*", ""]
+
+    # Engaged segments
+    lines.append("*ENGAGED (opened recently)*")
+    engaged_keys = ["opened_30", "opened_60", "opened_90", "opened_120", "opened_150", "opened_180"]
+    for key in engaged_keys:
+        seg = BREVO_SEGMENTS[key]
+        size = current.get(key, 0)
+        name = seg["name"].replace("Opened last ", "").replace(" days", "d")
+        if prev_sizes:
+            prev = prev_sizes.get(key, 0)
+            delta = size - prev
+            if delta > 0:
+                trend = f"  +{delta:,} ✅"
+            elif delta < 0:
+                trend = f"  {delta:,} ⚠️"
+            else:
+                trend = "  —"
+        else:
+            trend = ""
+        lines.append(f"{name:<20} {size:>8,}{trend}")
+
+    lines.append("")
+    lines.append("*LONGER TERM*")
+    for key in ["opened_365", "opened_720"]:
+        seg = BREVO_SEGMENTS[key]
+        size = current.get(key, 0)
+        name = seg["name"].replace("Opened last ", "").replace(" days", "d")
+        if prev_sizes:
+            prev = prev_sizes.get(key, 0)
+            delta = size - prev
+            trend = f"  +{delta:,}" if delta > 0 else (f"  {delta:,}" if delta < 0 else "  —")
+        else:
+            trend = ""
+        lines.append(f"{name:<20} {size:>8,}{trend}")
+
+    lines.append("")
+    lines.append("*NEVER OPENED (new joiners)*")
+    for key in ["never_joined_30", "never_joined_60", "never_joined_90", "never_joined_120"]:
+        seg = BREVO_SEGMENTS[key]
+        size = current.get(key, 0)
+        name = seg["name"].replace("Never Opened + Joined last ", "NeverOpened ").replace(" days", "d")
+        if prev_sizes:
+            prev = prev_sizes.get(key, 0)
+            delta = size - prev
+            if delta > 0:
+                trend = f"  +{delta:,} ⚠️"  # More never-opened = bad
+            elif delta < 0:
+                trend = f"  {delta:,} ✅"  # Fewer = good
+            else:
+                trend = "  —"
+        else:
+            trend = ""
+        lines.append(f"{name:<20} {size:>8,}{trend}")
+
+    lines.append("")
+    lines.append("*KEY SEGMENTS*")
+    for key in ["pro_users", "cancellers"]:
+        seg = BREVO_SEGMENTS[key]
+        size = current.get(key, 0)
+        name = seg["name"][:20]
+        if prev_sizes:
+            prev = prev_sizes.get(key, 0)
+            delta = size - prev
+            if key == "pro_users":
+                trend = (f"  +{delta:,} ✅" if delta > 0 else (f"  {delta:,} ⚠️" if delta < 0 else "  —"))
+            else:
+                trend = (f"  +{delta:,} ⚠️" if delta > 0 else (f"  {delta:,} ✅" if delta < 0 else "  —"))
+        else:
+            trend = ""
+        lines.append(f"{name:<20} {size:>8,}{trend}")
+
+    # Health flags
+    flags = []
+    if current.get("opened_30", 0) > 0 and prev_sizes and prev_sizes.get("opened_30", 0) > 0:
+        drop_pct = (prev_sizes["opened_30"] - current["opened_30"]) / prev_sizes["opened_30"] * 100
+        if drop_pct > 5:
+            flags.append(f"⚠️ 0-30d opened dropped {drop_pct:.1f}% — check deliverability and send frequency")
+    if current.get("pro_users", 0) > 0 and prev_sizes and prev_sizes.get("pro_users", 0) > 0:
+        if current["pro_users"] < prev_sizes["pro_users"]:
+            flags.append(f"⚠️ Pro members down {prev_sizes['pro_users'] - current['pro_users']} — review churn")
+    if current.get("opened_30", 0) > 0 and prev_sizes and prev_sizes.get("opened_30", 0) > 0:
+        gain = current["opened_30"] - prev_sizes["opened_30"]
+        if gain > 500:
+            flags.append(f"✅ 0-30d opened up {gain:,} — great engagement week")
+
+    if flags:
+        lines.append("")
+        lines.append("*ALERTS*")
+        for f in flags:
+            lines.append(f)
+
+    if prev_date:
+        lines.append("")
+        lines.append(f"_vs snapshot from {prev_date}_")
+
+    return "\n".join(lines)
+
+
+def get_brevo_list_for_type(email_type):
+    """Return segment ID for free or pro emails using hardcoded segment IDs."""
+    if email_type == "free":
+        return BREVO_SEGMENTS["opened_30"]["id"]  # Last 30 days opened = main free send
+    elif email_type == "pro":
+        return BREVO_SEGMENTS["pro_users"]["id"]
+    return None
+
 
 def fetch_brevo_lists():
-    """Fetch all contact lists from Brevo to find the right ones."""
+    """Fetch all Brevo contact lists."""
     if not BREVO_API_KEY:
         return [], None
     try:
@@ -10130,53 +10606,19 @@ def fetch_brevo_lists():
     except Exception as e:
         return [], str(e)
 
-def find_brevo_list_id(keyword):
-    """Find a Brevo list ID by searching for a keyword in the list name."""
-    lists, _ = fetch_brevo_lists()
-    keyword_lower = keyword.lower()
-    for lst in lists:
-        if keyword_lower in lst.get("name", "").lower():
-            return lst.get("id")
-    return None
-
-def get_brevo_list_for_type(email_type):
-    """Return the best list ID for free or pro emails.
-    Free = last 30 days list (looks for '30' or 'last 30' or 'free' in name).
-    Pro = pro subscribers list (looks for 'pro' in name).
-    Falls back to cached ID if already found, then None if not found."""
-    global _brevo_list_cache
-    if _brevo_list_cache.get(email_type):
-        return _brevo_list_cache[email_type]
-    if email_type == "free":
-        # Try to find a "last 30 days" or "free" list
-        for keyword in ["last 30", "30 day", "free subscriber", "newsletter", "free"]:
-            list_id = find_brevo_list_id(keyword)
-            if list_id:
-                _brevo_list_cache["free"] = list_id
-                return list_id
-    elif email_type == "pro":
-        for keyword in ["pro", "premium", "paid", "member"]:
-            list_id = find_brevo_list_id(keyword)
-            if list_id:
-                _brevo_list_cache["pro"] = list_id
-                return list_id
-    return None
 
 def fetch_brevo_campaigns(limit=30):
-    """Pull recent sent campaigns from Brevo with full stats and subject lines."""
+    """Pull recent sent campaigns from Brevo with full stats."""
     if not BREVO_API_KEY:
-        return None, "Brevo API not configured. Add BREVO_API_KEY to Render environment."
+        return None, "Brevo API not configured."
     try:
-        # Request all useful fields including subject, stats, recipient lists
         url = "https://api.brevo.com/v3/emailCampaigns?limit=" + str(limit) + "&status=sent&sort=desc"
         req = urllib.request.Request(url, headers={
-            "Accept": "application/json",
-            "api-key": BREVO_API_KEY
+            "Accept": "application/json", "api-key": BREVO_API_KEY
         })
         with urllib.request.urlopen(req, timeout=30) as r:
             data = json.loads(r.read())
         campaigns = data.get("campaigns", [])
-        # Enrich each campaign with calculated rates
         for c in campaigns:
             stats = c.get("statistics", {}).get("globalStats", {})
             sent = stats.get("sent", 0) or 0
@@ -10194,8 +10636,9 @@ def fetch_brevo_campaigns(limit=30):
     except Exception as e:
         return None, "Brevo fetch failed: " + str(e)
 
-def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
-    """Create a draft email campaign in Brevo with optional recipient lists."""
+
+def create_brevo_draft(subject, preview_text, html_content, list_ids=None, template_id=None):
+    """Create a draft email campaign in Brevo."""
     if not BREVO_API_KEY:
         return None, "Brevo API not configured."
     try:
@@ -10203,16 +10646,19 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
             "name": "Draft: " + subject[:80],
             "subject": subject,
             "previewText": preview_text or "",
-            "htmlContent": html_content,
-            "sender": {"name": "Adam | Cryptonary", "email": "support@cryptonary.com"},
+            "sender": BREVO_SENDER,
             "type": "classic"
         }
+        if template_id:
+            payload["templateId"] = template_id
+        else:
+            payload["htmlContent"] = html_content
         if list_ids:
             payload["recipients"] = {"listIds": list_ids if isinstance(list_ids, list) else [list_ids]}
-        body = json.dumps(payload).encode()
+        body_bytes = json.dumps(payload).encode()
         req = urllib.request.Request(
             "https://api.brevo.com/v3/emailCampaigns",
-            data=body,
+            data=body_bytes,
             headers={"Content-Type": "application/json", "api-key": BREVO_API_KEY}
         )
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -10221,98 +10667,35 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None):
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
         if "unauthorized" in body.lower() or "key not found" in body.lower():
-            return None, "Brevo API key rejected. Check BREVO_API_KEY in Render — make sure it has campaign read/write permissions."
+            return None, "Brevo API key rejected. Check BREVO_API_KEY in Render."
         return None, "Brevo create error: " + body[:300]
     except Exception as e:
         return None, "Brevo draft failed: " + str(e)
 
 
-# ── CONTACT LIST DASHBOARD ────────────────────────────────────────
-
-# Map of display name → search keywords to find in Brevo list names
-CONTACT_LIST_MAP = [
-    ("Blocklisted",                    ["blocklist", "blocked"]),
-    ("Cancellers",                     ["cancel"]),
-    ("Pro Members",                    ["pro member", "pro subscriber", "pro"]),
-    ("Last 0-30 days Opened",          ["0-30", "0_30", "last 30", "30 day open"]),
-    ("31-60 days Opened",              ["31-60", "31_60", "60 day open"]),
-    ("61-90 days Opened",              ["61-90", "61_90", "90 day open"]),
-    ("91-120 Days Opened",             ["91-120", "91_120", "120 day"]),
-    ("121-150 Days Opened",            ["121-150", "121_150", "150 day"]),
-    ("151-180 Days Opened",            ["151-180", "151_180", "180 day"]),
-    ("181-365 Days Opened",            ["181-365", "181_365", "365 day open"]),
-    ("366 Day+ Opened",                ["366", "366+", "over 365", "inactive"]),
-    ("Last 30 Day Joined (No opens)",  ["30 day joined no", "30 join no", "new no open"]),
-    ("Last 31-60 Day Joined (No opens)", ["31-60 join", "31_60 join no"]),
-    ("Last 61-90 Day Joined (No Opens)", ["61-90 join", "61_90 join no"]),
-    ("Last 91+ Day Joined (No Opens)", ["91+ join", "91 join no", "old join no"]),
-]
-
 def fetch_contact_list_sizes():
-    """Pull all Brevo lists and match them to Cryptonary contact list dashboard."""
-    if not BREVO_API_KEY:
-        return None, "Brevo API not configured."
-    lists, err = fetch_brevo_lists()
-    if err or not lists:
-        return None, err or "No lists returned."
-
-    # Build a lookup: lowercase name -> (id, size)
-    brevo_lookup = {}
-    for lst in lists:
-        name_lower = lst.get("name", "").lower()
-        brevo_lookup[name_lower] = {
-            "id": lst.get("id"),
-            "size": lst.get("totalSubscribers", lst.get("uniqueSubscribers", 0))
-        }
-
+    """Pull sizes for all health segments using hardcoded IDs."""
+    sizes = fetch_all_segment_sizes()
     today = time.strftime("%d/%m/%Y")
-    next_check = time.strftime("%d/%m/%Y", time.localtime(time.time() + 7 * 86400))
-
     rows = []
-    total = 0
-    unmatched = []
+    for key in BREVO_HEALTH_SEGMENTS:
+        seg = BREVO_SEGMENTS.get(key, {})
+        rows.append((seg.get("name", key), sizes.get(key, 0), today))
+    total = sum(sizes.get(k, 0) for k in BREVO_HEALTH_SEGMENTS)
+    return {"rows": rows, "total": total, "date": today, "sizes": sizes}, None
 
-    for display_name, keywords in CONTACT_LIST_MAP:
-        matched = None
-        for kw in keywords:
-            for brevo_name, info in brevo_lookup.items():
-                if kw in brevo_name:
-                    matched = info
-                    break
-            if matched:
-                break
-        if matched:
-            size = matched["size"] or 0
-            total += size
-            rows.append((display_name, size, today))
-        else:
-            rows.append((display_name, "—", today))
-            unmatched.append(display_name)
-
-    return {"rows": rows, "total": total, "date": today, "next_check": next_check, "unmatched": unmatched}, None
 
 def format_contact_list_message(data):
     """Format contact list data as a readable Telegram message."""
     lines = ["*CONTACT LIST — " + data["date"] + "*", ""]
-    lines.append("List                              | Size")
-    lines.append("—" * 42)
-
-    section_headers = {"Last 0-30 days Opened": "FREE LIST COHORTS"}
     for display_name, size, _ in data["rows"]:
-        if display_name in section_headers:
-            lines.append("")
-            lines.append("_" + section_headers[display_name] + "_")
-        size_str = "{:,}".format(size) if isinstance(size, int) else size
-        lines.append("{:<33} {}".format(display_name[:33], size_str))
-
+        size_str = "{:,}".format(size) if isinstance(size, int) else str(size)
+        lines.append(f"{display_name:<40} {size_str}")
     lines.append("")
-    lines.append("—" * 42)
-    lines.append("*TOTAL: {:,}*".format(data["total"]))
-    if data["unmatched"]:
-        lines.append("")
-        lines.append("_⚠️ Not matched in Brevo: " + ", ".join(data["unmatched"][:3]) + ("..." if len(data["unmatched"]) > 3 else "") + "_")
-        lines.append("_Rename your Brevo lists to match the keywords above._")
+    lines.append("*TOTAL: {:,}*".format(data.get("total", 0)))
     return "\n".join(lines)
+
+
 
 
 def openai_gpt(prompt, system="", max_tokens=800):
