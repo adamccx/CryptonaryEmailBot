@@ -1675,9 +1675,16 @@ BULLETS:
   Bullets used for: lists of what a report covers, feature stacks, scenario breakdowns
   Do NOT use bullets for paragraphs that should flow as prose
 
-EM DASHES (—): Used in structural elements (bullet labels, section markers)
-  NOT used mid-sentence where a full stop or line break works better
-  "Oil stays elevated. Rate cuts pushed out." — not "Oil stays elevated — rate cuts pushed out."
+EM DASHES (—): NEVER use em dashes mid-sentence. This is a hard rule with no exceptions.
+  WRONG: "Oil stays elevated — rate cuts pushed out."
+  RIGHT: "Oil stays elevated. Rate cuts pushed out."
+  WRONG: "But — and this is critical — the $54K zone matters."
+  RIGHT: "But this is critical. The $54K zone matters."
+  Replace every em dash with either a full stop, a comma, or a line break.
+
+MARKDOWN IN COPY: Never use ## headers, --- dividers, or **bold:** label patterns in email or social copy.
+  Headers and dividers are not used in emails. Rhythm, bold text (*asterisks*), and spacing do the structural work.
+  Bold is written as *word* or *phrase* — single asterisks, not double.
 
 NUMBERED LISTS: Only in application forms, step-by-step instructions, ordered frameworks
   Never in flowing email prose
@@ -2078,6 +2085,32 @@ def send_plain(chat_id, text, keyboard=None):
                 time.sleep(0.3)
 
 
+def clean_copy(text):
+    """Strip raw markdown and em dashes from all generated copy before sending.
+    Applied universally to emails, social, ads, and any Claude-generated content."""
+    import re as _re
+    if not text:
+        return text
+    # Em dashes — never in Adam's copy
+    text = text.replace(" \u2014 ", ", ")
+    text = text.replace("\u2014 ", "")
+    text = text.replace(" \u2014", "")
+    text = text.replace("\u2014", "-")
+    # Markdown headers
+    text = _re.sub(r'^#{1,6}\s+', '', text, flags=_re.MULTILINE)
+    # Bold/italic — strip markers, keep text
+    text = _re.sub(r'\*\*([^*\n]+)\*\*', r'\1', text)
+    text = _re.sub(r'\*([^*\n]+)\*', r'\1', text)
+    # Horizontal rules / dividers
+    text = _re.sub(r'^[-\u2500\u2550\u2014]{3,}\s*$', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'\n---+\n', '\n\n', text)
+    # Label patterns like **LABEL:** → LABEL:
+    text = _re.sub(r'\*\*([^*:]+):\*\*', r'\1:', text)
+    # Collapse excess blank lines
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def claude(prompt, max_tokens=1500, system=None):
     payload = json.dumps({
         "model": "claude-sonnet-4-5",
@@ -2325,8 +2358,10 @@ def ad_action_keyboard():
         [{"text": "Quick Edit",           "callback_data": "ad_quick_edit"},
          {"text": "Enhance",              "callback_data": "ad_enhance"},
          {"text": "Approve",              "callback_data": "approve_ad"}],
-        [{"text": "Critique",             "callback_data": "critique_ad"},
-         {"text": "Generate another set", "callback_data": "ads_again"}],
+        [{"text": "Different avatar",     "callback_data": "ad_diff_avatar"},
+         {"text": "Different stage",      "callback_data": "ad_diff_stage"}],
+        [{"text": "Different type",       "callback_data": "ad_diff_type"},
+         {"text": "Critique",             "callback_data": "critique_ad"}],
         [{"text": "🎨 Visual brief",      "callback_data": "vb_type_ad_static"},
          {"text": "Mark Complete",        "callback_data": "mark_complete"}],
         [{"text": "✏️ Manual Edit",       "callback_data": "manual_edit_ad"}]
@@ -2358,10 +2393,9 @@ def social_action_keyboard():
 def mark_complete_keyboard():
     return [
         [{"text": "New session", "callback_data": "start_over"}],
-        [{"text": "Log email", "callback_data": "log_email_start"},
-         {"text": "Log ad", "callback_data": "log_ad_start"}],
-        [{"text": "Email report", "callback_data": "run_email_report"},
-         {"text": "Ad report", "callback_data": "run_ad_report"}]
+        [{"text": "Writing Studio", "callback_data": "open_content_studio"},
+         {"text": "Data Studio", "callback_data": "open_data_studio"}],
+        [{"text": "Creative Studio", "callback_data": "open_idea_engine"}],
     ]
 
 def get_perf_context(chat_id):
@@ -2549,9 +2583,9 @@ def gen_emails(chat_id):
             "timestamp": time.strftime("%Y-%m-%d %H:%M")
         }
         if "free" in emails:
-            send_plain(chat_id, "FREE EMAIL\n\n" + extract_text(emails["free"]))
+            send_plain(chat_id, "FREE EMAIL\n\n" + clean_copy(extract_text(emails["free"])))
         if "pro" in emails:
-            send_plain(chat_id, "PRO EMAIL\n\n" + extract_text(emails["pro"]))
+            send_plain(chat_id, "PRO EMAIL\n\n" + clean_copy(extract_text(emails["pro"])))
         send(chat_id, "Emails ready. What would you like to do?", email_action_keyboard())
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -2858,15 +2892,7 @@ def gen_social_selected(chat_id):
         state["selected_social_hooks"] = {}
         gen_social_hooks(chat_id)
         return
-    # If reel/video selected and no framework chosen yet, ask PAS or AIDA first
-    video_fmts = {"fmt_reel", "fmt_story_single", "fmt_story_multi"}
-    if any(f in video_fmts for f in selected) and not state.get("social_framework"):
-        keyboard = [
-            [{"text": "AIDA — build desire then act", "callback_data": "social_fw_aida"}],
-            [{"text": "PAS — problem, agitate, solve", "callback_data": "social_fw_pas"}]
-        ]
-        send(chat_id, "*Which framework?*\n\n*AIDA* — Attention → Interest → Desire → Action. Builds want, then converts.\n*PAS* — Problem → Agitate → Solution. Opens on pain, intensifies it, then offers the fix.", keyboard)
-        return
+    # Framework is auto-set by pick_fmt_ — no longer asks user
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
@@ -2925,6 +2951,7 @@ def gen_reel(chat_id):
             "\n\nRULES:\n- Approximately " + str(word_count) + " words (matches " + str(reel_duration) + "s at natural pace)\n- First 3 seconds must stop the scroll\n- Format: voiceover text | [B-roll instruction] for each line\n- CTA at end: follow Cryptonary\n- Adam's voice: punchy, direct, data-led\n\nReturn as plain string.",
             max_tokens=1500
         )
+        result = clean_copy(result)
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
         state["stage"] = "social_ready"
@@ -2958,6 +2985,7 @@ def gen_carousel(chat_id):
             "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Format: SLIDE N: [headline max 8 words] + [visual direction in brackets]\n- Mix bold text, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more\n\nReturn as plain string.",
             max_tokens=carousel_tokens
         )
+        result = clean_copy(result)
         state["current_social"] = result
         state["current_social_type"] = "Carousel"
         state["stage"] = "social_ready"
@@ -3015,6 +3043,7 @@ CAPTION:
 Return as plain string.""",
             max_tokens=700
         )
+        result = clean_copy(result)
         state["current_social"] = result
         state["current_social_type"] = "Static Post"
         state["stage"] = "social_ready"
@@ -3046,6 +3075,7 @@ def gen_story(chat_id, multi=False):
             max_tokens=700
         )
         social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
+        result = clean_copy(result)
         state["current_social"] = result
         state["current_social_type"] = social_type
         state["stage"] = "social_ready"
@@ -3106,6 +3136,7 @@ def apply_length(chat_id, direction):
         send(chat_id, ("Extending" if direction == "extend" else "Shortening") + " " + social_type + "...")
         try:
             result = claude(instruction + "\n\nCONTENT:\n" + content + "\n\nReturn as plain string.", max_tokens=1200)
+            result = clean_copy(result)
             state["current_social"] = result
             state["stage"] = "social_ready"
             send_plain(chat_id, social_type.upper() + " — " + direction.upper() + "ED\n\n" + result)
@@ -4232,6 +4263,22 @@ def handle_message(msg):
         show_standalone_social_menu(chat_id)
         return
 
+    if stage == "awaiting_revised_email":
+        # Save the revised copy as an approved writing example
+        revised = text.strip()
+        if len(revised) > 50:
+            save_voice_example(chat_id, revised[:800], "revised_approved_email")
+            # Also store as latest approved copy for reference
+            state["last_approved_email_copy"] = revised[:800]
+            keyboard = [
+                [{"text": "📱 Create social content", "callback_data": "social_yes"}],
+                [{"text": "✅ Mark complete", "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Saved. This will inform the voice and style of future emails.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full email body.")
+        return
+
     if stage == "yt_awaiting_content":
         state["yt_content"] = text
         state["yt_mode"] = state.get("yt_mode", "fresh")
@@ -4331,6 +4378,7 @@ def handle_callback(cb):
         keyboard = [
             [{"text": "Emails", "callback_data": "mode_email"}],
             [{"text": "Ad Copy", "callback_data": "mode_ads"}],
+            [{"text": "✍️ Write copy for a creative", "callback_data": "ad_quick_creative"}],
             [{"text": "Social Content", "callback_data": "mode_social"}],
             [{"text": "YouTube Description", "callback_data": "mode_yt_desc"}],
             [{"text": "Landing Page", "callback_data": "mode_landing"}]
@@ -4348,7 +4396,6 @@ def handle_callback(cb):
         # If coming from a Data Studio analysis, pre-fill the theme with insights
         prev_analysis = user_state.get(chat_id, {}).get("last_ds_analysis", "")
         if prev_analysis and user_state.get(chat_id, {}).get("stage") == "ds_analysis_done":
-            # Extract the key patterns section as the ad theme
             theme = "DATA INSIGHTS:\n" + prev_analysis[:1500]
             user_state[chat_id] = {
                 "stage": "pick_ad_avatars",
@@ -4356,11 +4403,15 @@ def handle_callback(cb):
                 "selected_stages": [],
                 "ad_theme": theme
             }
-            send(chat_id, "Using your data analysis as the campaign brief.\n\nNow pick your target avatars:")
+            send(chat_id, "Using your data analysis as the campaign brief.\n\nNow pick your target avatar:")
             show_avatar_menu(chat_id)
         else:
-            user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
-            send(chat_id, "*Ad Creation*\n\nPaste your campaign theme, report, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash opportunity, weekly market update..._")
+            user_state[chat_id] = {"stage": "idle", "selected_avatars": [], "selected_stages": []}
+            keyboard = [
+                [{"text": "✍️ Write copy for an existing creative", "callback_data": "ad_quick_creative"}],
+                [{"text": "📋 Build a campaign set", "callback_data": "ad_build_campaign"}],
+            ]
+            send(chat_id, "*Ad Creation*\n\nWhat would you like to do?", keyboard)
 
     elif data == "mode_social":
         prev_analysis = user_state.get(chat_id, {}).get("last_ds_analysis", "")
@@ -4388,6 +4439,57 @@ def handle_callback(cb):
         state["stage"] = "yt_awaiting_existing"
         send(chat_id, "Paste your existing description. I'll keep all timestamps exactly as-is and repackage the rest.")
 
+    elif data == "yt_gen_thumbnail":
+        brief = state.get("yt_thumbnail_brief", "") or state.get("yt_content", "") or state.get("yt_output", "")[:400]
+        if not brief:
+            send(chat_id, "No content found to generate thumbnail from. Generate a description first.")
+            return
+        send(chat_id, "🎨 Generating YouTube thumbnail with Gemini...")
+        # Build a thumbnail-specific prompt from the video content
+        try:
+            thumb_prompt_text = claude(
+                "Write a YouTube thumbnail image generation prompt for Gemini based on this video content.\n\n"
+                "CONTENT:\n" + brief[:600] + "\n\n"
+                "Output a single paragraph prompt describing the thumbnail visually. "
+                "Follow Cryptonary YouTube thumbnail style: dramatic dark background, bold white Tungsten text, "
+                "red or yellow pill badge, bracket-C logo bottom-left. "
+                "Pick DRAMATIC or SPLIT/POINTING template based on content. "
+                "Be specific about what text goes on the thumbnail (max 5 words). "
+                "Return the prompt as a plain string only.",
+                max_tokens=200
+            )
+            state["last_img_type"] = "youtube"
+            state["last_visual_type"] = "youtube"
+            state["img_engine"] = "gemini"
+            from_brief = build_image_prompt(thumb_prompt_text[:300], "", "youtube_cover")
+            state["last_img_prompt"] = from_brief
+            img_bytes, mime, err = generate_gemini_image(from_brief)
+            if img_bytes:
+                img_bytes, mime = apply_logo_watermark(img_bytes, mime)
+                send_image_bytes(chat_id, img_bytes, mime)
+                keyboard = [
+                    [{"text": "✏️ Give feedback", "callback_data": "img_direction"}],
+                    [{"text": "🔄 Regenerate", "callback_data": "img_regen"}],
+                    [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
+                    [{"text": "✅ Done", "callback_data": "mark_complete"}],
+                ]
+                send(chat_id, "Thumbnail ready. Give feedback to refine it.", keyboard)
+            else:
+                send(chat_id, "Gemini failed: " + (err or "unknown") + "\n\nTrying DALL-E...")
+                url, info = generate_dalle_image(from_brief) if OPENAI_KEY else (None, "No DALL-E key")
+                if url:
+                    send_image_url(chat_id, url)
+                    keyboard = [
+                        [{"text": "✏️ Give feedback", "callback_data": "img_direction"}],
+                        [{"text": "🔄 Regenerate", "callback_data": "img_regen"}],
+                        [{"text": "✅ Done", "callback_data": "mark_complete"}],
+                    ]
+                    send(chat_id, "Thumbnail ready (DALL-E). Give feedback to refine it.", keyboard)
+                else:
+                    send(chat_id, "Image generation failed. Try again or use a different engine.")
+        except Exception as e:
+            send(chat_id, "Error generating thumbnail: " + str(e))
+
     elif data == "yt_regen":
         gen_yt_desc(chat_id)
 
@@ -4408,21 +4510,20 @@ def handle_callback(cb):
     elif data == "adavatars_done":
         selected = state.get("selected_avatars", [])
         if not selected:
-            send(chat_id, "Please select at least one avatar.")
+            send(chat_id, "Please select an avatar.")
         else:
             state["selected_stages"] = []
-            show_stage_menu(chat_id)
+            keyboard = [
+                [{"text": "Awareness — stop the scroll, no selling", "callback_data": "adstage_awareness"}],
+                [{"text": "Consideration — proof and education",     "callback_data": "adstage_consideration"}],
+                [{"text": "Conversion — direct offer and CTA",       "callback_data": "adstage_conversion"}],
+            ]
+            send(chat_id, "*Which funnel stage?*", keyboard)
 
     elif data.startswith("adstage_"):
         stage_key = data.replace("adstage_", "")
-        toggle_stage(chat_id, stage_key, message_id)
-
-    elif data == "adstages_done":
-        selected = state.get("selected_stages", [])
-        if not selected:
-            send(chat_id, "Please select at least one funnel stage.")
-        else:
-            show_adtype_menu(chat_id)
+        state["selected_stages"] = [stage_key]
+        show_adtype_menu(chat_id)
 
     elif data == "adtype_static":
         state["ad_type"] = "static"
@@ -4846,12 +4947,60 @@ def handle_callback(cb):
         if pro_body:
             save_voice_example(chat_id, pro_body[:600], "approved_pro_email")
         keyboard = [
-            [{"text": "📱 Create social content",     "callback_data": "social_yes"}],
-            [{"text": "🎨 Email thumbnail brief",     "callback_data": "vb_type_email"}],
-            [{"text": "✅ Mark complete",             "callback_data": "mark_complete"}],
+            [{"text": "📱 Create social content",      "callback_data": "social_yes"}],
+            [{"text": "🎨 Email thumbnail brief",      "callback_data": "vb_type_email"}],
+            [{"text": "✏️ Submit revised version",     "callback_data": "submit_revised_email"}],
+            [{"text": "✅ Mark complete",              "callback_data": "mark_complete"}],
         ]
         which_label = {"both": "both emails", "free": "Free email", "pro": "Pro email"}.get(which, "emails")
         send(chat_id, which_label.capitalize() + " approved.", keyboard)
+
+    elif data == "ad_creative_regen":
+        creative = state.get("last_ad_creative_desc", "")
+        if creative:
+            gen_ad_copy_for_creative(chat_id, creative)
+        else:
+            send(chat_id, "Upload the creative again to regenerate.")
+            state["stage"] = "awaiting_ad_creative_upload"
+
+    elif data == "ad_creative_diff_angle":
+        creative = state.get("last_ad_creative_desc", "")
+        if creative:
+            state["ad_creative_angle_instruction"] = "Try a completely different emotional angle from the previous version."
+            gen_ad_copy_for_creative(chat_id, creative + "\n\nTry a completely different emotional angle — if previous was fear-based, use aspiration or social proof instead.")
+        else:
+            send(chat_id, "Upload the creative again.")
+            state["stage"] = "awaiting_ad_creative_upload"
+
+    elif data == "ad_diff_avatar":
+        state["selected_avatars"] = []
+        show_avatar_menu(chat_id)
+
+    elif data == "ad_diff_stage":
+        state["selected_stages"] = []
+        keyboard = [
+            [{"text": "Awareness — stop the scroll, no selling", "callback_data": "adstage_awareness"}],
+            [{"text": "Consideration — proof and education",     "callback_data": "adstage_consideration"}],
+            [{"text": "Conversion — direct offer and CTA",       "callback_data": "adstage_conversion"}],
+        ]
+        send(chat_id, "*Which funnel stage?*", keyboard)
+
+    elif data == "ad_diff_type":
+        show_adtype_menu(chat_id)
+
+    elif data == "ad_quick_creative":
+        # Quick path: upload creative → primary text + headlines
+        user_state[chat_id] = {"stage": "awaiting_ad_creative_upload"}
+        send(chat_id, "*Write copy for an existing creative*\n\nUpload a screenshot or image of your ad creative.\n\nI'll read it and generate:\n• 3 primary text options (with character counts)\n• 5 headline options (with character counts)\n\nAll following Meta best practice lengths.")
+
+    elif data == "ad_build_campaign":
+        # Full campaign path: brief → single avatar → single stage → static or video
+        user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
+        send(chat_id, "*Build a Campaign*\n\nPaste your campaign brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
+
+    elif data == "submit_revised_email":
+        state["stage"] = "awaiting_revised_email"
+        send(chat_id, "*Submit Revised Version*\n\nPaste your final edited email copy.\n\nThis will be saved as an approved writing example and used to improve future emails.\n\n_Paste just the body — no need to include subject line._")
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
@@ -4955,8 +5104,32 @@ def handle_callback(cb):
         state["social_source"] = "cold"
         show_social_format_menu(chat_id)
 
+    elif data.startswith("pick_fmt_"):
+        # New single-tap format selection — pick one format and go straight to angle/hook
+        fmt = data.replace("pick_fmt_", "")
+        state["selected_social_formats"] = [fmt]
+        state["social_angle"] = ""
+        state["selected_angle"] = ""
+        state["social_hooks"] = {}
+        state["selected_social_hooks"] = {}
+        state["social_framework"] = ""
+        # Auto-set framework for reels/stories (PAS works best), AIDA for static/carousel
+        if fmt in {"fmt_reel", "fmt_story_single", "fmt_story_multi"}:
+            state["social_framework"] = "PAS"
+        else:
+            state["social_framework"] = "AIDA"
+        state["stage"] = "pick_social_formats"
+        if state.get("social_angle") or state.get("selected_angle"):
+            gen_social_hooks(chat_id)
+        else:
+            gen_social_angles(chat_id)
+
     elif data.startswith("fmt_"):
-        toggle_social_format(chat_id, data, message_id)
+        # Legacy: redirect to single format flow
+        state["selected_social_formats"] = [data]
+        state["social_framework"] = "PAS" if data in {"fmt_reel", "fmt_story_single", "fmt_story_multi"} else "AIDA"
+        state["stage"] = "pick_social_formats"
+        gen_social_angles(chat_id)
 
     elif data == "gen_social_selected":
         gen_social_selected(chat_id)
@@ -5217,6 +5390,23 @@ def handle_callback(cb):
 
     elif data == "ds_brevo_setup":
         send(chat_id, "*Connect Brevo*\n\nAdd this to your Render environment variables:\n\n`BREVO_API_KEY` — your Brevo API key\n\nGet it at: app.brevo.com → Settings → API Keys")
+
+    elif data == "ds_brevo_list_sizes":
+        if not BREVO_API_KEY:
+            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render.")
+            return
+        send(chat_id, "Pulling list sizes from Brevo...")
+        list_data, err = fetch_contact_list_sizes()
+        if err:
+            send(chat_id, "Error: " + err)
+        else:
+            msg = format_contact_list_message(list_data)
+            send_plain(chat_id, msg)
+            keyboard = [
+                [{"text": "🔄 Refresh", "callback_data": "ds_brevo_list_sizes"}],
+                [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
+            ]
+            send(chat_id, "Tap Refresh to update.", keyboard)
 
     elif data == "ds_brevo_pull":
         send(chat_id, "Pulling Brevo campaign data...")
@@ -5947,6 +6137,12 @@ def handle_callback(cb):
         send(chat_id, "Critique dismissed.", kb_fn())
 
     elif data == "mark_complete":
+        # Clear any lingering format/flow state so nothing re-triggers
+        state.pop("selected_social_formats", None)
+        state.pop("social_hooks", None)
+        state.pop("selected_social_hooks", None)
+        state.pop("social_framework", None)
+        state.pop("pending_img_style", None)
         # If emails were approved this session, offer Brevo push now
         if BREVO_API_KEY and state.get("stage") == "emails_approved" and state.get("current_emails"):
             emails = state.get("current_emails", {})
@@ -6218,7 +6414,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6238,7 +6434,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6372,7 +6568,6 @@ def show_stage_menu(chat_id):
     for key in ["awareness", "consideration", "conversion"]:
         is_sel = key in selected
         keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + key.capitalize(), "callback_data": "adstage_" + key}])
-    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adstages_done"}])
     send(chat_id, "*Pick funnel stages:*\n_(tap to select multiple)_", keyboard)
 
 def show_existing_ad_action_menu(chat_id):
@@ -6487,8 +6682,52 @@ def toggle_stage(chat_id, stage_key, message_id):
     for key in ["awareness", "consideration", "conversion"]:
         is_sel = key in selected
         keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + key.capitalize(), "callback_data": "adstage_" + key}])
-    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adstages_done"}])
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
+
+def gen_ad_copy_for_creative(chat_id, creative_description):
+    """Generate primary text + headlines from a creative description or image extract.
+    Path A of the ad flow — quick tool for the team."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
+    send(chat_id, "Writing copy for your creative...")
+    try:
+        prompt = (
+            "You are writing Meta ad copy for Cryptonary — a crypto research platform.\n\n"
+            "CREATIVE DESCRIPTION:\n" + creative_description[:1500] + "\n\n"
+            "Write copy that matches this creative. Apply all direct response principles.\n\n"
+            "OUTPUT FORMAT — return exactly this structure:\n\n"
+            "PRIMARY TEXT OPTIONS (125 characters optimal for Meta):\n"
+            "1. [option 1] ([X] chars)\n"
+            "2. [option 2] ([X] chars)\n"
+            "3. [option 3] ([X] chars)\n\n"
+            "HEADLINE OPTIONS (27 characters optimal for Meta):\n"
+            "1. [option 1] ([X] chars)\n"
+            "2. [option 2] ([X] chars)\n"
+            "3. [option 3] ([X] chars)\n"
+            "4. [option 4] ([X] chars)\n"
+            "5. [option 5] ([X] chars)\n\n"
+            "RULES:\n"
+            "- Primary text: lead with the avatar's pain or desire, no generic openers\n"
+            "- Headlines: scroll-stopping, specific, benefit-led\n"
+            "- No em dashes. No markdown headers. Return as plain text.\n"
+            "- Label each option with its exact character count\n"
+            "- Vary the emotional approach across options (fear, aspiration, social proof, data, curiosity)"
+        )
+        result = claude(prompt, max_tokens=1000)
+        result = clean_copy(result)
+        state["current_ad_output"] = result
+        state["stage"] = "ads_ready"
+        send_plain(chat_id, "*AD COPY*\n\n" + result)
+        keyboard = [
+            [{"text": "Regenerate", "callback_data": "ad_creative_regen"}],
+            [{"text": "Different angle", "callback_data": "ad_creative_diff_angle"}],
+            [{"text": "Build full campaign", "callback_data": "ad_build_campaign"}],
+            [{"text": "✅ Mark complete", "callback_data": "mark_complete"}],
+        ]
+        send(chat_id, "Copy ready. Paste what you need into Ads Manager.", keyboard)
+    except Exception as e:
+        send(chat_id, "Error: " + str(e))
+
 
 def generate_all_ads(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
@@ -6520,9 +6759,9 @@ def generate_all_ads(chat_id):
                     voice_ex = get_voice_corpus_context(chat_id)
                     if voice_ex: prompt = voice_ex + "\n\n" + prompt
                     raw = claude(prompt, max_tokens=1800)
+                    raw = clean_copy(raw)
                     header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | STATIC*\n\n"
                     send_plain(chat_id, header + raw)
-                    # Accumulate output for critique/voice learning
                     state["current_ad_output"] = state.get("current_ad_output", "") + "\n\n" + header + raw[:600]
                 else:
                     # Video: AIDA script + 3 hook variants
@@ -6532,9 +6771,9 @@ def generate_all_ads(chat_id):
                     prompt += "\n\n" + AD_LOGIC_PROMPT
                     prompt += "\n\nSTRUCTURE:\n\nATTENTION (0-3 seconds): Pattern interrupt hook. Must stop the scroll.\n\nINTEREST (3-12 seconds): Agitate the problem or amplify the desire. Make them feel it.\n\nDESIRE (12-28 seconds): The solution. Specific proof points. Transformation.\n\nACTION (28-35 seconds): Clear CTA. What to do next.\n\nFormat each section as:\n[SECTION NAME]\nSPOKEN: [voiceover text]\nON SCREEN: [text overlays]\nVISUAL: [scene direction]\n\nThen write 3 ALTERNATIVE HOOKS (just the Attention section, different each time — pattern interrupt, question, bold claim):\n\nHOOK VARIANT 1:\nSPOKEN: ...\nON SCREEN: ...\nVISUAL: ...\n\nHOOK VARIANT 2: ...\nHOOK VARIANT 3: ...\n\nThen:\nLOGIC:\nHook mechanism: [what stops the scroll]\nLF8 desire: [which life force desire and why]\nCialdini principle: [which one and why]\nFunnel logic: [why this stage approach]\nAIDA breakdown: [one sentence per section on what it does psychologically]\n\nReturn as plain text."
                     raw = claude(prompt, max_tokens=2000)
+                    raw = clean_copy(raw)
                     header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | VIDEO*\n\n"
                     send_plain(chat_id, header + raw)
-                    # Accumulate output for critique/voice learning
                     state["current_ad_output"] = state.get("current_ad_output", "") + "\n\n" + header + raw[:600]
             except Exception as e:
                 send(chat_id, "Error generating " + avatar_name + " / " + stage_key + ": " + str(e))
@@ -6618,8 +6857,11 @@ def gen_yt_desc(chat_id):
         result = claude(prompt, max_tokens=1800)
         state["yt_output"] = result
         state["stage"] = "yt_desc_ready"
+        # Store content for thumbnail generation
+        state["yt_thumbnail_brief"] = (state.get("yt_content", "") or state.get("yt_existing", ""))[:800]
 
         keyboard = [
+            [{"text": "🎬 Generate matching thumbnail", "callback_data": "yt_gen_thumbnail"}],
             [{"text": "Regenerate", "callback_data": "yt_regen"}],
             [{"text": "Edit existing description instead", "callback_data": "yt_switch_edit"}],
             [{"text": "Fresh from content", "callback_data": "yt_switch_fresh"}],
@@ -6774,9 +7016,10 @@ def show_standalone_social_menu_confirm(chat_id):
         hook = selected_hooks.get(fmt, "")
         summary += format_labels.get(fmt, fmt) + "\n"
         if hook:
-            # Fix spacing: collapse multiple spaces and ensure single space after punctuation
             import re as _re
-            hook_clean = _re.sub(r'(\w)([A-Z])', r'\1 \2', hook)  # camelCase split e.g. "MillionRipped"
+            hook_clean = _re.sub(r'\*\*([^*]+)\*\*', r'\1', hook)  # strip **bold**
+            hook_clean = _re.sub(r'\*([^*]+)\*', r'\1', hook_clean)  # strip *italic*
+            hook_clean = _re.sub(r'(\w)([A-Z])', r'\1 \2', hook_clean)  # camelCase split
             hook_clean = _re.sub(r' {2,}', ' ', hook_clean).strip()
             summary += "_Hook: " + hook_clean[:60] + "_\n"
         summary += "\n"
@@ -6784,22 +7027,16 @@ def show_standalone_social_menu_confirm(chat_id):
     send(chat_id, summary, keyboard)
 
 def show_standalone_social_menu(chat_id):
+    """Single-tap format picker — one format per run, no checkboxes."""
     user_state.setdefault(chat_id, {"stage": "idle"})
-    state = user_state[chat_id]
-    selected = state.get("selected_social_formats", [])
-    formats = [
-        ("Reel Script (45-60s)", "fmt_reel"),
-        ("Carousel (5-8 slides)", "fmt_carousel"),
-        ("Static Post + Caption", "fmt_static"),
-        ("Story — Single slide", "fmt_story_single"),
-        ("Story — Multi slide", "fmt_story_multi"),
+    keyboard = [
+        [{"text": "Reel Script (45-60s)",   "callback_data": "pick_fmt_fmt_reel"}],
+        [{"text": "Carousel (5-8 slides)",  "callback_data": "pick_fmt_fmt_carousel"}],
+        [{"text": "Static Post + Caption",  "callback_data": "pick_fmt_fmt_static"}],
+        [{"text": "Story — Single slide",   "callback_data": "pick_fmt_fmt_story_single"}],
+        [{"text": "Story — Multi slide",    "callback_data": "pick_fmt_fmt_story_multi"}],
     ]
-    keyboard = []
-    for label, cb in formats:
-        is_sel = cb in selected
-        keyboard.append([{"text": ("[x] " if is_sel else "[ ] ") + label, "callback_data": cb}])
-    keyboard.append([{"text": "Generate selected (" + str(len(selected)) + ")", "callback_data": "gen_social_selected"}])
-    send(chat_id, "*Select formats to generate:*\n_(tap to select multiple)_", keyboard)
+    send(chat_id, "*Pick a format:*", keyboard)
 
 
 
@@ -7940,6 +8177,7 @@ def start_ds_emails(chat_id):
     keyboard = []
     if BREVO_API_KEY:
         keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_pull"}])
+        keyboard.append([{"text": "📊 List sizes", "callback_data": "ds_brevo_list_sizes"}])
     else:
         keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_setup"}])
     keyboard += [
@@ -8625,6 +8863,10 @@ def handle_voice_message(chat_id, voice):
         "emails_ready", "emails_approved",
         # YouTube description flow
         "yt_awaiting_content", "yt_awaiting_existing",
+        # Revised copy memory
+        "awaiting_revised_email",
+        # Quick ad creative
+        "awaiting_ad_creative_upload",
     }
 
     if current_stage in input_stages:
@@ -11199,6 +11441,13 @@ def handle_content_file(chat_id, file_info, file_type="image"):
         elif stage == "awaiting_lp_context_text":
             user_state[chat_id]["lp_context"] = sanitise(extracted[:500])
             generate_lp_outline(chat_id)
+
+        elif stage == "awaiting_ad_creative_upload":
+            # Quick ad copy tool — extract creative then generate copy
+            user_state[chat_id]["stage"] = "idle"
+            user_state[chat_id]["last_ad_creative_desc"] = extracted[:1500]
+            send_plain(chat_id, "*Creative read:*\n\n" + summary)
+            gen_ad_copy_for_creative(chat_id, extracted[:1500])
 
         elif stage == "yt_awaiting_content":
             user_state[chat_id]["yt_content"] = sanitise(extracted)
