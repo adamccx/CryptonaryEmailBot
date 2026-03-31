@@ -13,7 +13,7 @@ Writing Studio | Data Studio | Creative Studio
 
 import os, json, ssl, urllib.request, time, re, traceback
 
-TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_TOKEN", "8611455908:AAH2zTch0Nf5tM590-_ouPZO2at-sqDpj_Y")
+TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_TOKEN", "")
 ANTHROPIC_KEY   = os.environ.get("ANTHROPIC_KEY",  "YOUR_ANTHROPIC_KEY_HERE")
 OPENAI_KEY      = os.environ.get("OPENAI_KEY",     "")
 X_BEARER_TOKEN  = os.environ.get("X_BEARER_TOKEN", "")
