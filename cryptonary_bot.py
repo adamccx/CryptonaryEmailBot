@@ -21,6 +21,9 @@ GEMINI_KEY      = os.environ.get("GEMINI_KEY",     "")
 META_TOKEN      = os.environ.get("META_TOKEN",     "")   # Meta Business API token
 META_AD_ACCOUNT = os.environ.get("META_AD_ACCOUNT","")   # e.g. act_123456789
 BREVO_API_KEY   = os.environ.get("BREVO_API_KEY",  "")   # Brevo (Sendinblue) API key
+MIXPANEL_PROJECT_ID = os.environ.get("MIXPANEL_PROJECT_ID", "")
+MIXPANEL_USERNAME   = os.environ.get("MIXPANEL_SERVICE_ACCOUNT_USERNAME", "")
+MIXPANEL_SECRET     = os.environ.get("MIXPANEL_SERVICE_ACCOUNT_SECRET", "")
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # ── CRYPTONARY LOGOMARK SVGs (exact brand assets) ─────────────────
@@ -5548,6 +5551,37 @@ def handle_callback(cb):
         else:
             send(chat_id, "Draft created in Brevo. Campaign ID: " + str(draft_id) + "\n\nOpen Brevo to review and schedule.")
 
+    elif data == "ds_website":
+        if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
+            keyboard = [[{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]]
+            send(chat_id, "*Website Analytics*\n\nMixpanel not connected.\n\nAdd to Render environment variables:\n• MIXPANEL_PROJECT_ID\n• MIXPANEL_SERVICE_ACCOUNT_USERNAME\n• MIXPANEL_SERVICE_ACCOUNT_SECRET", keyboard)
+            return
+        keyboard = [
+            [{"text": "Today",       "callback_data": "ds_web_range_today"}],
+            [{"text": "Yesterday",   "callback_data": "ds_web_range_yesterday"}],
+            [{"text": "Last 7 days", "callback_data": "ds_web_range_7d"}],
+            [{"text": "Last 30 days","callback_data": "ds_web_range_30d"}],
+        ]
+        send(chat_id, "*Website Analytics*\n\nWhich time period?", keyboard)
+
+    elif data.startswith("ds_web_range_"):
+        range_key = data.replace("ds_web_range_", "")
+        send(chat_id, "Pulling Mixpanel data...")
+        try:
+            from_date, to_date, label = get_mixpanel_date_range(range_key)
+            report = fetch_mixpanel_report(from_date, to_date, label)
+            send_plain(chat_id, report)
+            keyboard = [
+                [{"text": "Today",        "callback_data": "ds_web_range_today"},
+                 {"text": "Yesterday",    "callback_data": "ds_web_range_yesterday"}],
+                [{"text": "Last 7 days",  "callback_data": "ds_web_range_7d"},
+                 {"text": "Last 30 days", "callback_data": "ds_web_range_30d"}],
+                [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}],
+            ]
+            send(chat_id, "Tap another range to compare.", keyboard)
+        except Exception as e:
+            send(chat_id, "Error pulling Mixpanel data: " + str(e))
+
     elif data == "ds_landing":
         state["ds_images"] = []
         state.pop("ds_csv_text", None)
@@ -6248,6 +6282,9 @@ def handle_callback(cb):
         else:
             send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
 
+    elif data == "price_alert_dismiss":
+        send(chat_id, "Got it. I'll alert you on the next significant move.")
+
     elif data == "brevo_skip_push":
         state["brevo_draft_pushed"] = True
         send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
@@ -6678,6 +6715,15 @@ def poll():
                 time.sleep(3)
             else:
                 time.sleep(5)
+        # Schedulers — run after every poll cycle (every ~8-15s)
+        try:
+            check_and_send_briefing()
+        except Exception as e:
+            print("Briefing scheduler error:", e, flush=True)
+        try:
+            check_price_alerts()
+        except Exception as e:
+            print("Price alert scheduler error:", e, flush=True)
 
 # ── MAIN MENU ─────────────────────────────────────────────────────
 
@@ -7989,10 +8035,11 @@ Grade engagement rate within format cohort (Reels vs Reels etc).
 def show_data_studio_menu(chat_id):
     user_state[chat_id] = {"stage": "data_studio_idle"}
     keyboard = [
-        [{"text": "Adverts", "callback_data": "ds_adverts"}],
+        [{"text": "Adverts",            "callback_data": "ds_adverts"}],
         [{"text": "Social (Instagram)", "callback_data": "ds_social"}],
-        [{"text": "Emails", "callback_data": "ds_emails"}],
-        [{"text": "Landing Pages", "callback_data": "ds_landing"}],
+        [{"text": "Emails",             "callback_data": "ds_emails"}],
+        [{"text": "🌐 Website",         "callback_data": "ds_website"}],
+        [{"text": "Landing Pages",      "callback_data": "ds_landing"}],
     ]
     send(chat_id, "*Data Studio*\n\nWhich data would you like to analyse?", keyboard)
 
@@ -10591,6 +10638,206 @@ def get_brevo_list_for_type(email_type):
     return None
 
 
+# ══════════════════════════════════════════════════════════════════
+# MIXPANEL INTEGRATION
+# Website analytics: traffic, funnel, revenue, campaign attribution
+# ══════════════════════════════════════════════════════════════════
+
+def get_mixpanel_date_range(range_key):
+    """Return (from_date, to_date, label) for a given range key.
+    Last 7 days and last 30 days start from yesterday, not today."""
+    from datetime import datetime as _dt, timedelta as _td
+    today = _dt.utcnow().date()
+    yesterday = today - _td(days=1)
+
+    if range_key == "today":
+        return today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d"), "Today"
+    elif range_key == "yesterday":
+        return yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Yesterday"
+    elif range_key == "7d":
+        start = yesterday - _td(days=6)  # 7 days ending yesterday
+        return start.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Last 7 days"
+    elif range_key == "30d":
+        start = yesterday - _td(days=29)  # 30 days ending yesterday
+        return start.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Last 30 days"
+    else:
+        return yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Yesterday"
+
+
+def mixpanel_query(endpoint, params):
+    """Make an authenticated request to the Mixpanel Data Export API."""
+    import base64 as _b64
+    if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
+        return None, "Mixpanel credentials not configured"
+    try:
+        credentials = _b64.b64encode(
+            (MIXPANEL_USERNAME + ":" + MIXPANEL_SECRET).encode()
+        ).decode()
+        import urllib.parse as _parse
+        query_string = _parse.urlencode(params)
+        url = f"https://data.mixpanel.com/api/2.0/{endpoint}?{query_string}"
+        req = urllib.request.Request(url, headers={
+            "Authorization": "Basic " + credentials,
+            "Accept": "application/json",
+        })
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read()), None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return None, "Mixpanel API error " + str(e.code) + ": " + body[:200]
+    except Exception as e:
+        return None, "Mixpanel fetch failed: " + str(e)
+
+
+def mixpanel_jql(script):
+    """Run a JQL query against Mixpanel."""
+    import base64 as _b64
+    if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
+        return None, "Mixpanel credentials not configured"
+    try:
+        credentials = _b64.b64encode(
+            (MIXPANEL_USERNAME + ":" + MIXPANEL_SECRET).encode()
+        ).decode()
+        payload = ("script=" + urllib.parse.quote(script)).encode()
+        url = f"https://data.mixpanel.com/api/2.0/jql"
+        req = urllib.request.Request(url, data=payload, headers={
+            "Authorization": "Basic " + credentials,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        })
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read()), None
+    except Exception as e:
+        return None, str(e)
+
+
+def fetch_mixpanel_event_totals(event_names, from_date, to_date):
+    """Fetch total event counts for a list of events over a date range."""
+    results = {}
+    for event in event_names:
+        data, err = mixpanel_query("segmentation", {
+            "project_id": MIXPANEL_PROJECT_ID,
+            "event": event,
+            "from_date": from_date,
+            "to_date": to_date,
+            "type": "general",
+            "unit": "day",
+        })
+        if data and "data" in data:
+            values = data["data"].get("values", {}).get(event, {})
+            total = sum(values.values()) if values else 0
+            results[event] = total
+        else:
+            results[event] = None  # None = error, distinct from 0
+    return results
+
+
+def fetch_mixpanel_unique_users(event_name, from_date, to_date):
+    """Fetch unique user count for an event."""
+    data, err = mixpanel_query("segmentation", {
+        "project_id": MIXPANEL_PROJECT_ID,
+        "event": event_name,
+        "from_date": from_date,
+        "to_date": to_date,
+        "type": "unique",
+        "unit": "day",
+    })
+    if data and "data" in data:
+        values = data["data"].get("values", {}).get(event_name, {})
+        return sum(values.values()) if values else 0
+    return None
+
+
+def fetch_mixpanel_report(from_date, to_date, label):
+    """Build a full website analytics report from Mixpanel data."""
+    from datetime import datetime as _dt
+
+    # Event names — these are the standard Mixpanel events
+    # Adjust if your Mixpanel uses different event names
+    EVENTS = {
+        "page_view":         "$mp_web_page_view",
+        "session":           "$mp_web_session_start",
+        "cta_click":         "CTA Click",
+        "checkout_start":    "Checkout Started",
+        "checkout_complete": "Checkout Completed",
+        "subscription":      "Subscription Created",
+    }
+
+    lines = [f"*CRYPTONARY WEBSITE — {label}*", f"_{from_date} to {to_date}_", ""]
+
+    # Fetch key metrics
+    try:
+        # Sessions / unique visitors
+        sessions = fetch_mixpanel_unique_users(EVENTS["session"], from_date, to_date)
+        page_views = fetch_mixpanel_event_totals([EVENTS["page_view"]], from_date, to_date)
+        pv_total = page_views.get(EVENTS["page_view"], 0) or 0
+
+        lines.append("*TRAFFIC*")
+        if sessions is not None:
+            lines.append(f"Unique visitors:    {sessions:>10,}")
+        if pv_total:
+            lines.append(f"Page views:         {pv_total:>10,}")
+            if sessions and sessions > 0:
+                lines.append(f"Pages per visit:    {pv_total/sessions:>10.1f}")
+        lines.append("")
+    except Exception as e:
+        lines.append("Traffic: error — " + str(e))
+        lines.append("")
+
+    # Funnel
+    try:
+        funnel_events = [
+            EVENTS["cta_click"],
+            EVENTS["checkout_start"],
+            EVENTS["checkout_complete"],
+            EVENTS["subscription"],
+        ]
+        totals = fetch_mixpanel_event_totals(funnel_events, from_date, to_date)
+
+        cta      = totals.get(EVENTS["cta_click"], 0) or 0
+        checkout = totals.get(EVENTS["checkout_start"], 0) or 0
+        complete = totals.get(EVENTS["checkout_complete"], 0) or 0
+        subs     = totals.get(EVENTS["subscription"], 0) or 0
+
+        lines.append("*FUNNEL*")
+        if sessions:
+            lines.append(f"Visited site:       {sessions:>10,}   100%")
+        if cta is not None:
+            pct = f"{cta/sessions*100:.1f}%" if sessions else "—"
+            lines.append(f"Clicked CTA:        {cta:>10,}   {pct}")
+        if checkout is not None:
+            pct = f"{checkout/sessions*100:.1f}%" if sessions else "—"
+            lines.append(f"Started checkout:   {checkout:>10,}   {pct}")
+        if complete is not None:
+            pct = f"{complete/sessions*100:.1f}%" if sessions else "—"
+            lines.append(f"Completed:          {complete:>10,}   {pct}")
+        if subs is not None:
+            pct = f"{subs/sessions*100:.1f}%" if sessions else "—"
+            lines.append(f"Subscribed (Pro):   {subs:>10,}   {pct}")
+        lines.append("")
+    except Exception as e:
+        lines.append("Funnel: error — " + str(e))
+        lines.append("")
+
+    # Insight from Claude
+    try:
+        data_summary = "\n".join(lines)
+        insight = claude(
+            "You are a growth analyst for Cryptonary. Based on this website data, give 2-3 sharp, specific insights "
+            "and one concrete action to take. Be direct. No fluff.\n\nDATA:\n" + data_summary,
+            max_tokens=300,
+            system=DATA_STUDIO_SYSTEM
+        )
+        lines.append("*INSIGHTS*")
+        lines.append(clean_copy(insight))
+        lines.append("")
+    except Exception:
+        pass
+
+    lines.append("_Note: event names may need adjusting to match your Mixpanel setup_")
+    return "\n".join(lines)
+
+
 def fetch_brevo_lists():
     """Fetch all Brevo contact lists."""
     if not BREVO_API_KEY:
@@ -10816,7 +11063,7 @@ def get_last_week_performance(chat_id):
 
 def generate_briefing(chat_id):
     """Generate and send the full weekly briefing."""
-    send(chat_id, "Generating your weekly briefing...")
+    send(chat_id, "Generating your daily briefing...")
 
     # Register this chat for auto-briefing
     subscribers = load_briefing_subscribers()
@@ -10857,7 +11104,7 @@ SINCE LAST BRIEF (""" + last_brief_date + """):
 
         briefing_prompt = """You are the chief strategist for Cryptonary, a crypto research platform with 300K+ subscribers.
 
-Generate a """ + ("full briefing with recap" if include_recap else "weekly Monday morning briefing") + """ for Adam (Co-Founder). Be direct, specific, and actionable.
+Generate a """ + ("full briefing with recap" if include_recap else "daily morning briefing") + """ for Adam (Co-Founder). Be direct, specific, and actionable. Today is """ + date_str + """.
 
 MARKET DATA:
 """ + market_context + """
@@ -10870,32 +11117,28 @@ LAST WEEK'S PERFORMANCE:
 STRUCTURE THE BRIEFING EXACTLY AS:
 
 MARKET PULSE
-[BTC price, 7d change, Fear & Greed with one line on what it means for content tone this week]
+[BTC price, 24h and 7d change, Fear & Greed with one line on what it means for content tone today]
 
-TOP STORIES THIS WEEK
-[3 most important crypto stories from the past 7 days with specific numbers and why each matters for Cryptonary's content]
+TOP STORIES TODAY
+[2-3 most important crypto stories from the last 24-48 hours with specific numbers and why each matters for Cryptonary's content and audience]
 
-LAST WEEK RECAP
-[Summary of what was created and best performance metrics. If no data: note that logging performance in Data Studio will make this section more useful over time]
+TODAY'S CONTENT OPPORTUNITIES
+[Specific, actionable content ideas based on today's market conditions and news:]
+- Email angle: [specific suggestion if market conditions warrant one]
+- Social post: [1-2 specific post ideas tied to today's news — include a suggested hook]
+- Ad angle: [which avatar/stage to push given current market sentiment]
 
-THIS WEEK'S CONTENT PLAN
-[Specific recommendations based on market conditions and news:]
-- Monday email angle: [specific suggestion based on market mood]
-- Mid-week content: [social or email suggestion]
-- Ad focus: [which avatar/stage to push given current market sentiment]
-- Social: [1-2 specific post ideas tied to the week's news]
+TONE FOR TODAY
+[Based on Fear & Greed + price action: Standard / Aggressive / Empathetic and why in one sentence]
 
-TONE RECOMMENDATION
-[Based on Fear & Greed + price action: Standard / Aggressive / Empathetic and why]
-
-Keep it tight. Every line should be actionable. No fluff."""
+Keep it tight. Every line should be actionable. No fluff. No padding."""
 
         result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM)
 
         # Format header
         from datetime import datetime as _dt2
         date_str = _dt2.now().strftime("%A %d %B %Y")
-        header = "CRYPTONARY WEEKLY BRIEFING\n" + date_str + "\n\n"
+        header = "CRYPTONARY DAILY BRIEFING\n" + date_str + "\n\n"
 
         send_plain(chat_id, header + result)
 
@@ -10929,17 +11172,151 @@ def check_and_send_briefing():
     now = _dt3.utcnow()
     today = now.strftime("%Y-%m-%d")
 
-    # Monday = 0, hour 7
-    if now.weekday() == 0 and now.hour == 9 and _last_briefing_date != today:
+    # Daily at 9am UK time (BST = UTC+1 in summer, GMT = UTC+0 in winter)
+    # We target UTC 8am in summer / UTC 9am in winter — use 8am UTC as safe default
+    # which lands at 9am BST (Mar-Oct) and 8am GMT (Oct-Mar, close enough)
+    if now.hour == 8 and _last_briefing_date != today:
         _last_briefing_date = today
         subscribers = load_briefing_subscribers()
-        print("Sending weekly briefing to", len(subscribers), "subscribers", flush=True)
+        print("Sending daily briefing to", len(subscribers), "subscribers", flush=True)
         for chat_id in subscribers:
             try:
                 generate_briefing(chat_id)
                 time.sleep(2)  # avoid rate limits between sends
             except Exception as e:
                 print("Briefing send error for", chat_id, ":", e, flush=True)
+
+# ══════════════════════════════════════════════════════════════════
+# PRICE ALERT WATCHER
+# Checks BTC/ETH/SOL price moves every 15 minutes.
+# If a significant move is detected, fires social content ideas
+# to all briefing subscribers.
+# ══════════════════════════════════════════════════════════════════
+
+_price_alert_state = {
+    "last_check": 0,
+    "last_btc": 0,
+    "last_eth": 0,
+    "last_sol": 0,
+    "last_alert_time": 0,  # prevent repeated alerts
+}
+
+PRICE_CHECK_INTERVAL = 900   # check every 15 minutes
+PRICE_ALERT_COOLDOWN = 3600  # don't alert more than once per hour
+MOVE_THRESHOLD = 4.0         # % move in 1 hour to trigger alert
+
+def fetch_prices_coingecko():
+    """Fetch BTC, ETH, SOL prices from CoinGecko. No API key needed."""
+    try:
+        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_1h_change=true"
+        req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "CryptonaryBot/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        return {
+            "btc": data.get("bitcoin", {}).get("usd", 0),
+            "btc_1h": round(data.get("bitcoin", {}).get("usd_1h_change", 0), 2),
+            "eth": data.get("ethereum", {}).get("usd", 0),
+            "eth_1h": round(data.get("ethereum", {}).get("usd_1h_change", 0), 2),
+            "sol": data.get("solana", {}).get("usd", 0),
+            "sol_1h": round(data.get("solana", {}).get("usd_1h_change", 0), 2),
+        }, None
+    except Exception as e:
+        return None, str(e)
+
+
+def check_price_alerts():
+    """Called from poll loop every cycle. Fires if significant price move detected."""
+    global _price_alert_state
+    now = time.time()
+
+    # Only check every 15 minutes
+    if now - _price_alert_state["last_check"] < PRICE_CHECK_INTERVAL:
+        return
+    _price_alert_state["last_check"] = now
+
+    # Don't alert if we alerted in the last hour
+    if now - _price_alert_state["last_alert_time"] < PRICE_ALERT_COOLDOWN:
+        return
+
+    subscribers = load_briefing_subscribers()
+    if not subscribers:
+        return
+
+    prices, err = fetch_prices_coingecko()
+    if err or not prices:
+        print("Price watcher fetch error:", err, flush=True)
+        return
+
+    # Detect significant moves
+    alerts = []
+    for coin, key, label in [("btc", "btc_1h", "BTC"), ("eth", "eth_1h", "ETH"), ("sol", "sol_1h", "SOL")]:
+        move = prices.get(key, 0)
+        price = prices.get(coin, 0)
+        if abs(move) >= MOVE_THRESHOLD:
+            direction = "up" if move > 0 else "down"
+            emoji = "🟢" if move > 0 else "🔴"
+            alerts.append({
+                "coin": label,
+                "price": price,
+                "move": move,
+                "direction": direction,
+                "emoji": emoji,
+            })
+
+    if not alerts:
+        return
+
+    _price_alert_state["last_alert_time"] = now
+
+    # Build the alert message and generate social content ideas
+    primary = alerts[0]  # lead with the biggest mover
+    coin = primary["coin"]
+    price = primary["price"]
+    move = primary["move"]
+    direction = primary["direction"]
+    emoji = primary["emoji"]
+
+    price_str = "${:,.0f}".format(price) if coin == "BTC" else "${:,.2f}".format(price)
+    move_str = "{:+.1f}%".format(move)
+
+    header = f"{emoji} *{coin} {direction} {move_str} in the last hour*\n{coin}: {price_str}"
+    if len(alerts) > 1:
+        others = ", ".join(f"{a['coin']} {a['move']:+.1f}%" for a in alerts[1:])
+        header += f"\nAlso: {others}"
+
+    # Generate social content ideas from Claude
+    try:
+        idea_prompt = (
+            f"Cryptonary is a crypto research platform. {coin} just moved {move_str} in the last hour, "
+            f"currently at {price_str}.\n\n"
+            f"Generate 3 sharp, specific Instagram content ideas to post RIGHT NOW that capitalise on this move. "
+            f"Each idea should be one of: Static post, Reel hook, or Story slide.\n\n"
+            f"For each idea give:\n"
+            f"FORMAT: [Static/Reel/Story]\n"
+            f"HOOK: [the opening line or on-screen text — max 8 words, scroll-stopping]\n"
+            f"ANGLE: [one sentence on what the post covers]\n\n"
+            f"Be specific to this exact move. No generic crypto advice. "
+            f"Reference the price, the direction, and what it means for Cryptonary's audience.\n\n"
+            f"Return as plain text."
+        )
+        ideas = claude(idea_prompt, max_tokens=600, system="You are a sharp crypto content strategist. Be specific, punchy, and timely.")
+        ideas = clean_copy(ideas)
+    except Exception as e:
+        ideas = "Could not generate ideas: " + str(e)
+
+    # Send to all subscribers
+    for chat_id in subscribers:
+        try:
+            send_plain(chat_id, header + "\n\n" + ideas)
+            keyboard = [
+                [{"text": "📱 Generate social content", "callback_data": "mode_social"}],
+                [{"text": "Not now", "callback_data": "price_alert_dismiss"}],
+            ]
+            send(chat_id, "Want to create content from this move?", keyboard)
+            time.sleep(1)
+        except Exception as e:
+            print("Price alert send error for", chat_id, ":", e, flush=True)
+
 
 # ══════════════════════════════════════════════════════════════════
 # CRYPTONARY IDEA ENGINE
