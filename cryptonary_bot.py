@@ -22,8 +22,8 @@ META_TOKEN      = os.environ.get("META_TOKEN",     "")   # Meta Business API tok
 META_AD_ACCOUNT = os.environ.get("META_AD_ACCOUNT","")   # e.g. act_123456789
 BREVO_API_KEY   = os.environ.get("BREVO_API_KEY",  "")   # Brevo (Sendinblue) API key
 MIXPANEL_PROJECT_ID = os.environ.get("MIXPANEL_PROJECT_ID", "")
-MIXPANEL_USERNAME   = os.environ.get("MIXPANEL_SERVICE_ACCOUNT_USERNAME", "")
-MIXPANEL_SECRET     = os.environ.get("MIXPANEL_SERVICE_ACCOUNT_SECRET", "")
+MIXPANEL_USERNAME   = os.environ.get("MIXPANEL_USERNAME", "") or os.environ.get("MIXPANEL_SERVICE_ACCOUNT_USERNAME", "")
+MIXPANEL_SECRET     = os.environ.get("MIXPANEL_SECRET", "") or os.environ.get("MIXPANEL_SERVICE_ACCOUNT_SECRET", "")
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # ── CRYPTONARY LOGOMARK SVGs (exact brand assets) ─────────────────
@@ -236,7 +236,7 @@ THE VALUE EQUATION — the most important formula in modern offer creation:
 Value = (Dream Outcome × Perceived Likelihood of Achievement) ÷ (Time Delay × Effort and Sacrifice)
 
 Each variable explained:
-• DREAM OUTCOME: The specific end state the customer wants. Not "make money" — "know before the move and act with conviction." Specificity increases perceived value of the dream.
+• DREAM OUTCOME: The specific end state the customer wants. Not "make money" - "know before the move and act with conviction." Specificity increases perceived value of the dream.
 • PERCEIVED LIKELIHOOD: How confident they are that YOU can get them there. Social proof, track record, credentials, testimonials all increase this. The more uncertain the domain, the more this variable matters.
 • TIME DELAY: How long between purchase and result. The shorter the perceived time to first value, the higher the equation output. "Analysis in your inbox before the market opens" = near-zero time delay.
 • EFFORT AND SACRIFICE: What they have to give up or change. The less behavioural change required, the higher the value. "5 minutes a day" = near-zero effort.
@@ -246,7 +246,7 @@ Cryptonary value equation copy: "Get the analysis that called SOL at $23 [likeli
 To INCREASE value in copy: raise the dream outcome (more specific, more compelling), add more social proof (higher likelihood), show how fast results come (less time delay), show how easy it is (less effort).
 
 GRAND SLAM OFFER CONSTRUCTION:
-Step 1: Identify the single most compelling dream outcome. Not "crypto success" — "knowing before the move and acting on it."
+Step 1: Identify the single most compelling dream outcome. Not "crypto success" - "knowing before the move and acting on it."
 Step 2: List every obstacle standing between the reader and that dream outcome. Be exhaustive.
 Step 3: Convert each obstacle into a deliverable or feature.
 Step 4: Name each deliverable compellingly.
@@ -268,7 +268,7 @@ VALUE STACKING LANGUAGE — Hormozi's exact copy structure:
 
 THE PAIN/DREAM/FIX STRUCTURE — most reliable copy formula for cold-ish audiences:
 PAIN: Name the exact, specific, felt pain. Not category pain — their pain. Not "crypto is hard" but "you watched Bitcoin run 40% last month and you were either unpositioned or sold too early because you didn't know if the move had legs."
-Dream: Paint the specific outcome with sensory detail. Not "financial freedom" — "you wake up, the brief is already in your inbox, the levels are set, and you know exactly what you're watching and why. You act with conviction, not hope."
+Dream: Paint the specific outcome with sensory detail. Not "financial freedom" - "you wake up, the brief is already in your inbox, the levels are set, and you know exactly what you're watching and why. You act with conviction, not hope."
 Fix: Position Cryptonary as the bridge — not the destination. "Pro gives you the analysis. What you do with it is yours."
 The fix must be presented as the natural, obvious, inevitable solution to the pain. Not a pitch — a relief.
 
@@ -363,7 +363,7 @@ Cryptonary application: "Cryptonary doesn't win. You win. Cryptonary gives you t
 THE 7-PART BRANDSCRIPT — every element must be present for maximum conversion:
 
 1. THE CHARACTER — Who is the hero? What do they want?
-The hero is one specific person with one specific want. Not "crypto investors" — "the investor managing a $50K-$500K portfolio who knows the information asymmetry between retail and institutional is real, has felt the cost of it, and wants to close that gap."
+The hero is one specific person with one specific want. Not "crypto investors" - "the investor managing a $50K-$500K portfolio who knows the information asymmetry between retail and institutional is real, has felt the cost of it, and wants to close that gap."
 The want must be singular, specific, and felt: "To know before the move. Not to get lucky — to have a system that puts them on the right side consistently."
 
 2. THE PROBLEM — Three levels must all be addressed. Copy that only addresses the external problem misses 80% of the motivation.
@@ -1759,7 +1759,7 @@ STRUCTURE:
 1. Hook — open on something real that happened. Market event, data print, geopolitical development. Specific, not vague.
 2. Context — why it matters RIGHT NOW. 2-3 paragraphs max.
 3. The tease — what Pro members know that free readers don't. Name the specific asset, level, or scenario without revealing it.
-4. CTA — specific, transformation-focused. Not "subscribe" — "know before the move."
+4. CTA — specific, transformation-focused. Not "subscribe" - "know before the move."
 5. P.S. — urgency, proof, or what's coming next.
 
 CURIOSITY GAP TECHNIQUE: Name exactly what they're missing without giving it.
@@ -2947,7 +2947,7 @@ def gen_reel(chat_id):
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
             "Write a " + str(reel_duration) + "-second Instagram Reel voiceover script for Cryptonary.\n\n" +
-            "FRAMEWORK: " + framework + " — " + fw_instruction + "\n\n" +
+            "FRAMEWORK: " + framework + " - " + fw_instruction + "\n\n" +
             ("OPENING HOOK (use this as the first spoken line): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
@@ -3142,7 +3142,7 @@ def apply_length(chat_id, direction):
             result = clean_copy(result)
             state["current_social"] = result
             state["stage"] = "social_ready"
-            send_plain(chat_id, social_type.upper() + " — " + direction.upper() + "ED\n\n" + result)
+            send_plain(chat_id, social_type.upper() + " - " + direction.upper() + "ED\n\n" + result)
             send(chat_id, "Done.", social_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -3460,7 +3460,7 @@ def ask_seg_edit(chat_id, segment):
     user_state[chat_id]["stage"] = "awaiting_seg_edit"
     user_state[chat_id]["seg_edit_target"] = segment
     label = SEG_DEFS.get(segment, ("",))[0]
-    send(chat_id, "*Quick Edit — " + label + "*\n\nType your instruction:")
+    send(chat_id, "*Quick Edit: " + label + "*\n\nType your instruction:")
 
 def apply_seg_edit(chat_id, instruction):
     user_state.setdefault(chat_id, {"stage": "idle"})
@@ -3480,7 +3480,7 @@ def apply_seg_edit(chat_id, instruction):
         segments[segment] = result
         state["current_segments"] = segments
         state["stage"] = "segments_ready"
-        send_plain(chat_id, "*EDITED — " + label.upper() + "*\n\n" + result)
+        send_plain(chat_id, "*EDITED: " + label.upper() + "*\n\n" + result)
         keyboard = [
             [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
              {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
@@ -4150,7 +4150,7 @@ def handle_message(msg):
         try:
             prompt = BRANDSCRIPT_PROMPT
             prompt += "\n\nAVATAR(S): " + avatar_descs
-            prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            prompt += "\nCTA: " + cta["label"] + " - " + cta["price"]
             prompt += "\nPOSITIONING: " + cta["positioning"]
             if context: prompt += "\nCONTEXT: " + context
             if instruction: prompt += "\nSPECIFIC DIRECTION: " + instruction
@@ -4402,14 +4402,12 @@ def handle_callback(cb):
 
     elif data == "open_content_studio":
         keyboard = [
-            [{"text": "Emails",                           "callback_data": "mode_email"}],
-            [{"text": "Ad Copy",                          "callback_data": "mode_ads"}],
-            [{"text": "✍️ Write copy for a creative",    "callback_data": "ad_quick_creative"}],
-            [{"text": "Social Content",                   "callback_data": "mode_social"}],
-            [{"text": "🎬 Storyboard Generator",          "callback_data": "mode_storyboard"}],
-            [{"text": "🔍 Reel Analysis",                 "callback_data": "mode_reel_analysis"}],
-            [{"text": "YouTube Description",              "callback_data": "mode_yt_desc"}],
-            [{"text": "Landing Page",                     "callback_data": "mode_landing"}],
+            [{"text": "Emails",                        "callback_data": "mode_email"}],
+            [{"text": "Ad Copy",                       "callback_data": "mode_ads"}],
+            [{"text": "Social Content",                "callback_data": "mode_social"}],
+            [{"text": "🎬 Storyboard Generator",       "callback_data": "mode_storyboard"}],
+            [{"text": "YouTube Description",           "callback_data": "mode_yt_desc"}],
+            [{"text": "Landing Page",                  "callback_data": "mode_landing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -4437,7 +4435,7 @@ def handle_callback(cb):
             user_state[chat_id] = {"stage": "idle", "selected_avatars": [], "selected_stages": []}
             keyboard = [
                 [{"text": "✍️ Write copy for an existing creative", "callback_data": "ad_quick_creative"}],
-                [{"text": "📋 Build a campaign set", "callback_data": "ad_build_campaign"}],
+                [{"text": "🎯 Create Ad",                           "callback_data": "ad_build_campaign"}],
             ]
             send(chat_id, "*Ad Creation*\n\nWhat would you like to do?", keyboard)
 
@@ -4466,7 +4464,7 @@ def handle_callback(cb):
 
     elif data == "mode_reel_analysis":
         user_state[chat_id] = {"stage": "awaiting_reel_upload"}
-        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll break down:\n• Hook strength — does it stop the scroll in the first 3 seconds?\n• Pacing and structure\n• Caption quality\n• What's working and what to change\n• A Cryptonary version of the concept\n\n_Works for your own reels or competitor content._")
+        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll break down:\n• Hook strength - does it stop the scroll in the first 3 seconds?\n• Pacing and structure\n• Caption quality\n• What's working and what to change\n• A Cryptonary version of the concept\n\n_Works for your own reels or competitor content._")
 
     elif data == "mode_yt_desc":
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
@@ -4576,7 +4574,7 @@ def handle_callback(cb):
 
     elif data == "ad_quick_edit":
         state["stage"] = "awaiting_ad_quick_edit"
-        send(chat_id, "*Quick Edit — Ad Copy*\n\nType your instruction:")
+        send(chat_id, "*Quick Edit: Ad Copy*\n\nType your instruction:")
 
     elif data == "ad_enhance":
         ad_content = state.get("current_ad", "")
@@ -4656,7 +4654,7 @@ def handle_callback(cb):
 
     elif data == "lp_quick_edit":
         state["stage"] = "awaiting_lp_quick_edit"
-        send(chat_id, "*Quick Edit — Landing Page*\n\nWhich section and what to change?\n_e.g. Rewrite the hero headline / Make the value stack more specific / Shorten the FAQ_")
+        send(chat_id, "*Quick Edit: Landing Page*\n\nWhich section and what to change?\n_e.g. Rewrite the hero headline / Make the value stack more specific / Shorten the FAQ_")
 
     elif data == "lp_regen":
         state["stage"] = "awaiting_lp_regen"
@@ -4689,7 +4687,7 @@ def handle_callback(cb):
         send(chat_id, "Regenerating " + section + "...")
         try:
             user_prompt = "LANDING PAGE BRIEF:\nAVATAR(S): " + avatar_descs
-            user_prompt += "\nCTA: " + cta["label"] + " — " + cta["price"]
+            user_prompt += "\nCTA: " + cta["label"] + " - " + cta["price"]
             user_prompt += "\nPOSITIONING: " + cta["positioning"]
             if context: user_prompt += "\nCONTEXT: " + context
             user_prompt += "\n\nREGENERATE ONLY: " + section.upper() + " SECTION. Return as plain text with graphic recommendations."
@@ -5036,9 +5034,8 @@ def handle_callback(cb):
         send(chat_id, "*Write copy for an existing creative*\n\nUpload a screenshot or image of your ad creative.\n\nI'll read it and generate:\n• 3 primary text options (with character counts)\n• 5 headline options (with character counts)\n\nAll following Meta best practice lengths.")
 
     elif data == "ad_build_campaign":
-        # Full campaign path: brief → single avatar → single stage → static or video
         user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
-        send(chat_id, "*Build a Campaign*\n\nPaste your campaign brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
+        send(chat_id, "*Create Ad*\n\nPaste your brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
 
     elif data == "brevo_push_start":
         if not BREVO_API_KEY:
@@ -8132,7 +8129,7 @@ def show_lp_avatar_menu(chat_id, page=0):
     page_avatars = avatars[start:start + page_size]
     keyboard = []
     for key, val in page_avatars:
-        name = val[0] if isinstance(val, tuple) else val.split(" — ")[0]
+        name = val[0] if isinstance(val, tuple) else val.split(" - ")[0]
         is_sel = key in selected
         keyboard.append([{"text": ("✓ " if is_sel else "○ ") + name, "callback_data": "lpavatar_" + key}])
     nav = []
@@ -8162,7 +8159,7 @@ def toggle_lp_avatar(chat_id, avatar_key, message_id):
     page_avatars = avatars[start:start + page_size]
     keyboard = []
     for key, val in page_avatars:
-        name = val[0] if isinstance(val, tuple) else val.split(" — ")[0]
+        name = val[0] if isinstance(val, tuple) else val.split(" - ")[0]
         is_sel = key in selected
         keyboard.append([{"text": ("✓ " if is_sel else "○ ") + name, "callback_data": "lpavatar_" + key}])
     nav = []
@@ -8313,7 +8310,7 @@ INNER CIRCLE SPECIFIC CONTEXT:
         try:
             user_prompt = "APPROVED OUTLINE:\n" + outline
             user_prompt += "\n\nAVATAR(S):\n" + avatar_detail
-            user_prompt += "\n\nCTA: " + cta["label"] + " — " + cta["price"]
+            user_prompt += "\n\nCTA: " + cta["label"] + " - " + cta["price"]
             user_prompt += "\n\nPOSITIONING: " + cta["positioning"]
             if ic_copy_brief: user_prompt += ic_copy_brief
             if context: user_prompt += "\n\nEXTRA CONTEXT: " + context
@@ -9286,7 +9283,7 @@ def get_voice_corpus_context(chat_id):
     recent = examples[-5:]
     ctx = "\n\n=== APPROVED WRITING EXAMPLES (Adam's actual voice — match this style) ===\n"
     for ex in recent:
-        ctx += "\n[" + ex.get("source","") + " — " + ex.get("date","") + "]\n"
+        ctx += "\n[" + ex.get("source","") + " - " + ex.get("date","") + "]\n"
         ctx += ex.get("text","") + "\n"
     return ctx
 
@@ -10890,23 +10887,40 @@ def build_cryptonary_email_html(subject, preview, body_text, cta_text=None, cta_
 
 
 def fetch_brevo_segment_size(segment_id):
-    """Fetch the current contact count for a Brevo segment by ID."""
+    """Fetch the current contact count for a Brevo segment by ID.
+    Tries contacts/lists first (static lists), then segments endpoint (dynamic segments).
+    Brevo uses numeric IDs for both — we try list first since Rayhan uses lists."""
     if not BREVO_API_KEY:
         return None, "No API key"
+    headers = {"Accept": "application/json", "api-key": BREVO_API_KEY}
+
+    # Try 1: static contact list endpoint
     try:
-        url = f"https://api.brevo.com/v3/contacts/segments/{segment_id}"
-        req = urllib.request.Request(
-            url,
-            headers={"Accept": "application/json", "api-key": BREVO_API_KEY}
-        )
+        url = f"https://api.brevo.com/v3/contacts/lists/{segment_id}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
-        # Brevo returns segmentsContacts or contacts count
-        size = data.get("segmentsContacts") or data.get("contacts") or 0
+        size = data.get("totalSubscribers") or data.get("uniqueSubscribers") or data.get("totalBlacklisted", 0)
+        if size:
+            return size, None
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            body = e.read().decode("utf-8", errors="ignore")
+            return None, "List HTTP " + str(e.code) + ": " + body[:100]
+    except Exception:
+        pass
+
+    # Try 2: dynamic segment endpoint
+    try:
+        url = f"https://api.brevo.com/v3/contacts/segments/{segment_id}"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        size = data.get("segmentsContacts") or data.get("contacts") or data.get("count") or 0
         return size, None
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
-        return None, "HTTP " + str(e.code) + ": " + body[:100]
+        return None, "Segment HTTP " + str(e.code) + ": " + body[:100]
     except Exception as e:
         return None, str(e)
 
@@ -11064,8 +11078,8 @@ def get_brevo_list_for_type(email_type):
 def get_mixpanel_date_range(range_key):
     """Return (from_date, to_date, label) for a given range key.
     Last 7 days and last 30 days start from yesterday, not today."""
-    from datetime import datetime as _dt, timedelta as _td
-    today = _dt.utcnow().date()
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    today = _dt.now(_tz.utc).date()
     yesterday = today - _td(days=1)
 
     if range_key == "today":
@@ -11470,7 +11484,7 @@ def get_last_week_performance(chat_id):
     # Best logged email
     if email_records:
         best = max(email_records, key=lambda r: r.get("open_rate", 0))
-        summary.append("Best email: " + best.get("subject","")[:50] + " — " + str(best.get("open_rate","?")) + "% open / " + str(best.get("ctr","?")) + "% CTR")
+        summary.append("Best email: " + best.get("subject","")[:50] + " - " + str(best.get("open_rate","?")) + "% open / " + str(best.get("ctr","?")) + "% CTR")
 
     # Recent insights
     recent_insights = [i for i in insights if i.get("date","") >= week_ago]
@@ -11584,10 +11598,10 @@ Keep it tight. Every line should be actionable. No fluff. No padding."""
 _last_briefing_date = None
 
 def check_and_send_briefing():
-    """Called from poll loop. Sends briefing to all subscribers on Monday 7-8am GMT."""
+    """Called from poll loop. Sends daily briefing to all subscribers at 8am UTC."""
     global _last_briefing_date
-    from datetime import datetime as _dt3
-    now = _dt3.utcnow()
+    from datetime import datetime as _dt3, timezone as _tz3
+    now = _dt3.now(_tz3.utc)
     today = now.strftime("%Y-%m-%d")
 
     # Daily at 9am UK time (BST = UTC+1 in summer, GMT = UTC+0 in winter)
@@ -11841,7 +11855,7 @@ def format_rss_context(headlines):
             lines.append("\n[" + tier_labels.get(current_tier, "NEWS") + "]")
         line = "• " + h["source"] + ": " + h["title"]
         if h.get("desc"):
-            line += " — " + h["desc"][:80]
+            line += " - " + h["desc"][:80]
         lines.append(line)
     lines.append("===")
     return "\n".join(lines)
@@ -11862,10 +11876,10 @@ def save_idea_sources(sources):
 
 def show_idea_engine_menu(chat_id):
     user_state[chat_id] = {"stage": "idea_engine_idle"}
-    feed_count = len(RSS_FEEDS)
     keyboard = [
-        [{"text": "💡 Generate ideas from scratch", "callback_data": "ie_from_scratch"}],
-        [{"text": "🔗 Generate from inspiration", "callback_data": "ie_from_inspiration"}],
+        [{"text": "💡 Generate ideas from scratch",  "callback_data": "ie_from_scratch"}],
+        [{"text": "🔗 Generate from inspiration",    "callback_data": "ie_from_inspiration"}],
+        [{"text": "🔍 Reel Analysis",                "callback_data": "mode_reel_analysis"}],
     ]
     send(chat_id, "*Creative Studio*\n\nHow do you want to generate ideas?", keyboard)
 
@@ -12142,7 +12156,7 @@ def fetch_source_content(sources):
             "source": h["source"],
             "type": "rss",
             "tier": h["tier"],
-            "content": h["title"] + (" — " + h["desc"] if h.get("desc") else "")
+            "content": h["title"] + (" - " + h["desc"] if h.get("desc") else "")
         })
 
     # Reddit removed — returns 403 Blocked when fetched from server IPs
