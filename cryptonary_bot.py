@@ -20,6 +20,7 @@ X_BEARER_TOKEN  = os.environ.get("X_BEARER_TOKEN", "")
 GEMINI_KEY      = os.environ.get("GEMINI_KEY",     "")
 META_TOKEN      = os.environ.get("META_TOKEN",     "")   # Meta Business API token
 META_AD_ACCOUNT = os.environ.get("META_AD_ACCOUNT","")   # e.g. act_123456789
+VWO_API_KEY     = os.environ.get("VWO_API_KEY",    "")   # VWO A/B split test API key
 BREVO_API_KEY   = os.environ.get("BREVO_API_KEY",  "")   # Brevo (Sendinblue) API key
 MIXPANEL_PROJECT_ID = os.environ.get("MIXPANEL_PROJECT_ID", "")
 MIXPANEL_USERNAME   = os.environ.get("MIXPANEL_USERNAME", "") or os.environ.get("MIXPANEL_SERVICE_ACCOUNT_USERNAME", "")
@@ -2088,6 +2089,100 @@ def send_plain(chat_id, text, keyboard=None):
                 time.sleep(0.3)
 
 
+def notify_failure(chat_id, context, error=None, fallback_action=None, fallback_keyboard=None):
+    """Central failure handler — tells the user clearly what failed and what to do instead.
+    
+    context: one of 'brevo_lists', 'brevo_campaigns', 'brevo_push', 'mixpanel',
+             'image_gemini', 'image_dalle', 'image_claude', 'rss_feeds',
+             'price_fetch', 'meta_ads', 'url_fetch', 'reel_analysis'
+    error: optional raw error string for logging
+    fallback_action: optional string describing what the user can do
+    fallback_keyboard: optional keyboard to show
+    """
+    if error:
+        print(f"FAILURE [{context}]: {error}", flush=True)
+
+    messages = {
+        "brevo_lists": (
+            "Couldn't pull live list sizes from Brevo.",
+            "Go to Brevo → Contacts → Lists, screenshot the list sizes, and upload here."
+        ),
+        "brevo_campaigns": (
+            "Couldn't pull campaign data from Brevo.",
+            "Export your campaign report from Brevo → Campaigns → Export, then upload the CSV or paste the numbers."
+        ),
+        "brevo_push": (
+            "Brevo draft creation failed.",
+            "Copy your email copy and create the campaign manually in Brevo. Check that your API key has write permissions in Brevo → Settings → API Keys."
+        ),
+        "mixpanel": (
+            "Mixpanel returned no data.",
+            "Check your event names in Mixpanel → Events. Common names vary by setup — look for events like 'Page View', '$mp_web_page_view', 'Checkout Started', or 'Subscription Created'. Once you know your exact event names, let me know and I'll update the connection."
+        ),
+        "image_gemini": (
+            "Gemini image generation failed.",
+            "Trying DALL-E instead..."
+        ),
+        "image_dalle": (
+            "DALL-E image generation failed.",
+            "Try regenerating, or switch to Claude for an HTML canvas version."
+        ),
+        "image_claude": (
+            "Claude visual generation failed.",
+            "Try regenerating. For complex layouts like carousels, try breaking the brief into fewer slides."
+        ),
+        "rss_feeds": (
+            "Live news feeds unavailable right now.",
+            "Paste an article, link, or topic and I'll generate ideas from that instead."
+        ),
+        "price_fetch": (
+            "Live price data unavailable.",
+            "CoinGecko may be rate-limiting. Try again in a few minutes, or paste the current BTC price and I'll work from that."
+        ),
+        "meta_ads": (
+            "Meta Ads connection failed.",
+            "Upload your CSV export from Meta Ads Manager instead. Go to Ads Manager → Export → select your date range → download CSV."
+        ),
+        "url_fetch": (
+            "Couldn't read that URL.",
+            "The page may be paywalled, JavaScript-only, or blocking bots. Paste the article text directly instead."
+        ),
+        "reel_analysis": (
+            "Couldn't extract the video thumbnail for analysis.",
+            "I'll analyse based on the video metadata. For better results, screenshot a key frame and upload that as an image."
+        ),
+    }
+
+    title, suggestion = messages.get(context, ("Something went wrong.", "Please try again."))
+
+    msg = title + "\n\n" + suggestion
+    if fallback_action:
+        msg += "\n\n" + fallback_action
+
+    # Default fallback keyboards per context
+    if fallback_keyboard is None:
+        fallback_keyboard = {
+            "brevo_lists":     [[{"text": "Upload screenshot instead", "callback_data": "ds_email_manual"}],
+                                [{"text": "Back to Email Analysis",    "callback_data": "ds_emails"}]],
+            "brevo_campaigns": [[{"text": "Upload CSV instead",        "callback_data": "ds_email_manual"}],
+                                [{"text": "Paste numbers manually",    "callback_data": "ds_email_type_numbers"}]],
+            "brevo_push":      [[{"text": "Try again",                 "callback_data": "brevo_push_start"}],
+                                [{"text": "Mark complete",             "callback_data": "mark_complete"}]],
+            "mixpanel":        [[{"text": "Back to Data Studio",       "callback_data": "open_data_studio"}]],
+            "image_claude":    [[{"text": "Regenerate",                "callback_data": "img_regen"}],
+                                [{"text": "Different engine",          "callback_data": "img_restyle"}],
+                                [{"text": "Done",                      "callback_data": "mark_complete"}]],
+            "image_dalle":     [[{"text": "Regenerate",                "callback_data": "img_regen"}],
+                                [{"text": "Done",                      "callback_data": "mark_complete"}]],
+            "rss_feeds":       [[{"text": "Generate from inspiration", "callback_data": "ie_from_inspiration"}]],
+            "meta_ads":        [[{"text": "Upload CSV instead",        "callback_data": "ds_adverts_upload"}]],
+            "url_fetch":       None,
+            "reel_analysis":   None,
+        }.get(context)
+
+    send(chat_id, msg, fallback_keyboard)
+
+
 def clean_copy(text):
     """Strip raw markdown and em dashes from all generated copy before sending.
     Applied universally to emails, social, ads, and any Claude-generated content."""
@@ -4047,6 +4142,174 @@ def handle_message(msg):
         show_avatar_menu(chat_id)
         return
 
+    if stage == "ds_vwo_awaiting_manual_data":
+        # Parse pasted VWO data — extract campaign, variants, metrics
+        import re as _re
+        raw = text.strip()
+
+        # Extract campaign name
+        camp_match = _re.search(r'Campaign:\s*(.+)', raw, _re.IGNORECASE)
+        campaign_label = camp_match.group(1).strip() if camp_match else "Unknown"
+
+        # Extract date range
+        date_match = _re.search(r'Date range:\s*(.+)', raw, _re.IGNORECASE)
+        date_label = date_match.group(1).strip() if date_match else ""
+
+        # Extract variants — each block starts with a variant name line
+        variant_pattern = _re.split(r'\n(?=Control|Variant|Original)', raw, flags=_re.IGNORECASE)
+        variants = []
+        for block in variant_pattern:
+            if not any(w in block.lower() for w in ("control", "variant", "original")):
+                continue
+            name_match = _re.match(r'^(.+?)(?:\s*\(([AB])\))?$', block.split('\n')[0].strip(), _re.IGNORECASE)
+            var_name = name_match.group(0).strip() if name_match else block.split('\n')[0].strip()
+            visitors = 0
+            subscriptions = 0
+            checkouts = 0
+            v_match = _re.search(r'Visitors?:\s*([\d,]+)', block, _re.IGNORECASE)
+            s_match = _re.search(r'Subscriptions?:\s*([\d,]+)', block, _re.IGNORECASE)
+            c_match = _re.search(r'Checkout[s]?[^:]*:\s*([\d,]+)', block, _re.IGNORECASE)
+            if v_match: visitors = int(v_match.group(1).replace(',', ''))
+            if s_match: subscriptions = int(s_match.group(1).replace(',', ''))
+            if c_match: checkouts = int(c_match.group(1).replace(',', ''))
+            if visitors > 0:
+                variants.append({"name": var_name, "visitors": visitors,
+                                 "subscriptions": subscriptions, "checkouts": checkouts})
+
+        if not variants:
+            send(chat_id, "Couldn't parse that format. Make sure each variant block starts with 'Control (A)' or 'Variant (B)' and includes Visitors, Subscriptions, and Checkout initiations.", [
+                [{"text": "Try again", "callback_data": "ds_vwo_manual"}],
+                [{"text": "Back to Split Tests", "callback_data": "ds_web_splittests"}],
+            ])
+            state["stage"] = "idle"
+            return
+
+        # Build report
+        lines = [f"*VWO SPLIT TEST — {campaign_label}*"]
+        if date_label:
+            lines.append(f"_{date_label}_")
+        lines.append("")
+
+        col_w = 16
+        header = f"{'':25}" + "".join(f"{v['name'][:col_w]:>{col_w}}" for v in variants)
+        lines.append(header)
+        lines.append("─" * (25 + col_w * len(variants)))
+
+        def fmt_row(label, vals):
+            return f"{label:<25}" + "".join(f"{str(v):>{col_w}}" for v in vals)
+
+        lines.append(fmt_row("Visitors (unique)", [f"{v['visitors']:,}" for v in variants]))
+        lines.append("")
+        lines.append("*PRIMARY: Subscription*")
+        sub_rates = [
+            f"{v['subscriptions']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "—"
+            for v in variants
+        ]
+        lines.append(fmt_row("Conversions", [f"{v['subscriptions']:,}" for v in variants]))
+        lines.append(fmt_row("Conversion rate", sub_rates))
+        if len(variants) > 1:
+            best_sub = max(variants, key=lambda v: v["subscriptions"] / v["visitors"] if v["visitors"] > 0 else 0)
+            lines.append(f"→ Winner: {best_sub['name']}")
+
+        has_checkouts = any(v["checkouts"] > 0 for v in variants)
+        if has_checkouts:
+            lines.append("")
+            lines.append("*SECONDARY: Initiate Checkout*")
+            chk_rates = [
+                f"{v['checkouts']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "—"
+                for v in variants
+            ]
+            lines.append(fmt_row("Conversions", [f"{v['checkouts']:,}" for v in variants]))
+            lines.append(fmt_row("Conversion rate", chk_rates))
+            if len(variants) > 1:
+                best_chk = max(variants, key=lambda v: v["checkouts"] / v["visitors"] if v["visitors"] > 0 else 0)
+                lines.append(f"→ Winner: {best_chk['name']}")
+
+        send_plain(chat_id, "\n".join(lines))
+        keyboard = [
+            [{"text": "Paste another test",   "callback_data": "ds_vwo_manual"}],
+            [{"text": "Back to Split Tests",  "callback_data": "ds_web_splittests"}],
+        ]
+        send(chat_id, "Analysis complete.", keyboard)
+        state["stage"] = "idle"
+        return
+
+    if stage == "ds_vwo_awaiting_num":
+        raw = text.strip()
+        # Parse input — could be "001" or "001_Homepage"
+        if "_" in raw:
+            parts = raw.split("_", 1)
+            campaign_num = parts[0].zfill(3)
+            page_filter = parts[1]
+        else:
+            campaign_num = raw.zfill(3)
+            page_filter = None
+
+        # Custom date range — ask for it
+        state["ds_vwo_campaign_num"] = campaign_num
+        state["ds_vwo_page_filter"] = page_filter
+        state["stage"] = "ds_vwo_awaiting_dates"
+        page_txt = f"/{page_filter}" if page_filter else "(all pages)"
+        send(chat_id, f"Campaign `{campaign_num}` {page_txt}\n\nEnter date range:\n\n_Format:_ `2026-03-01 to 2026-03-31`\n_Or type_ `all` _for full test duration._")
+        return
+
+    if stage == "ds_vwo_awaiting_dates":
+        raw = text.strip().lower()
+        campaign_num = state.get("ds_vwo_campaign_num", "001")
+        page_filter = state.get("ds_vwo_page_filter")
+        if raw == "all" or "to" not in raw:
+            from_date, to_date = None, None
+        else:
+            try:
+                parts = [p.strip() for p in raw.split("to")]
+                from_date, to_date = parts[0], parts[1]
+            except Exception:
+                from_date, to_date = None, None
+
+        send(chat_id, "Pulling VWO test data...")
+        result, err = analyse_vwo_test(campaign_num, page_filter=page_filter, from_date=from_date, to_date=to_date)
+        if err:
+            send(chat_id, "VWO error: " + err, [[{"text": "Back to Website", "callback_data": "ds_web_splittests"}]])
+        else:
+            send_plain(chat_id, result)
+            keyboard = [
+                [{"text": "Run another test",   "callback_data": "ds_vwo_entry"}],
+                [{"text": "Back to Website",    "callback_data": "ds_web_splittests"}],
+            ]
+            send(chat_id, "Analysis complete.", keyboard)
+        state["stage"] = "idle"
+        return
+
+    if stage == "ds_awaiting_campaign_num":
+        num = text.strip().lstrip("0") or "0"
+        num_padded = text.strip().zfill(3)
+        mode = state.get("ds_campaign_mode", "performance")
+        send(chat_id, f"Pulling campaigns matching `{num_padded}_*` from Brevo...")
+        if mode == "performance":
+            result, err = analyse_campaign_performance(num_padded)
+            if err:
+                notify_failure(chat_id, "brevo_campaigns", error=err)
+            else:
+                send_plain(chat_id, result)
+                keyboard = [
+                    [{"text": "🔀 Run split test instead", "callback_data": "ds_splittest_by_num"}],
+                    [{"text": "Back to Email Analysis",    "callback_data": "ds_emails"}],
+                ]
+                send(chat_id, "Analysis complete.", keyboard)
+        else:
+            result, err = analyse_split_test(num_padded)
+            if err:
+                notify_failure(chat_id, "brevo_campaigns", error=err)
+            else:
+                send_plain(chat_id, result)
+                keyboard = [
+                    [{"text": "📈 Campaign performance instead", "callback_data": "ds_campaign_by_num"}],
+                    [{"text": "Back to Email Analysis",          "callback_data": "ds_emails"}],
+                ]
+                send(chat_id, "Split test complete.", keyboard)
+        state["stage"] = "idle"
+        return
+
     if stage == "ds_awaiting_email_splitvar":
         user_state[chat_id]["ds_split_var"] = text
         user_state[chat_id]["stage"] = "ds_awaiting_email_split_data"
@@ -5390,9 +5653,10 @@ def handle_callback(cb):
         send(chat_id, "Pulling Meta ad data (last 30 days)...")
         ads, err = fetch_meta_ad_insights(30)
         if err:
-            send(chat_id, "Error: " + err)
+            notify_failure(chat_id, "meta_ads", error=err)
         elif not ads:
-            send(chat_id, "No ad data found. Check your ad account ID and token permissions.")
+            notify_failure(chat_id, "meta_ads", error="No ads returned",
+                          fallback_action="Check your ad account ID and token permissions in Render environment variables.")
         else:
             # Format as text for analysis
             lines = ["META ADS — Last 30 Days\n"]
@@ -5432,26 +5696,38 @@ def handle_callback(cb):
 
     elif data == "ds_brevo_list_sizes":
         if not BREVO_API_KEY:
-            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
+            notify_failure(chat_id, "brevo_lists", error="No API key configured")
             return
-        send(chat_id, "Pulling segment sizes from Brevo...")
-        current = fetch_all_segment_sizes()
-        prev_sizes, prev_date = get_previous_snapshot()
-        # Save this pull as the latest snapshot
-        save_health_snapshot(current)
-        report = format_list_health_report(current, prev_sizes, prev_date)
-        send_plain(chat_id, report)
-        keyboard = [
-            [{"text": "🔄 Refresh now",             "callback_data": "ds_brevo_list_sizes"}],
-            [{"text": "Back to Email Analysis",     "callback_data": "ds_emails"}],
-        ]
-        send(chat_id, "Tap Refresh any time to update.", keyboard)
+        send(chat_id, "Pulling segment sizes from Brevo — this takes about 30 seconds...")
+        try:
+            report = build_brevo_list_health()
+            current = fetch_all_segment_sizes()
+            prev_sizes, prev_date = get_previous_snapshot()
+            save_health_snapshot(current)
+            send_plain(chat_id, report)
+            keyboard = [
+                [{"text": "🔄 Refresh now",         "callback_data": "ds_brevo_list_sizes"}],
+                [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
+            ]
+            send(chat_id, "Snapshot saved. Run again next week to see trends.", keyboard)
+        except Exception as e:
+            notify_failure(chat_id, "brevo_lists", error=str(e))
+
+    elif data == "ds_campaign_by_num":
+        user_state[chat_id]["stage"] = "ds_awaiting_campaign_num"
+        user_state[chat_id]["ds_campaign_mode"] = "performance"
+        send(chat_id, "*Campaign Performance*\n\nEnter the campaign number:\n\n_e.g. type_ `001` _to pull all campaigns matching_ `001_*`\n\nPro and Free are shown separately. Free lists are combined._")
+
+    elif data == "ds_splittest_by_num":
+        user_state[chat_id]["stage"] = "ds_awaiting_campaign_num"
+        user_state[chat_id]["ds_campaign_mode"] = "splittest"
+        send(chat_id, "*Split Test Performance*\n\nEnter the campaign number:\n\n_e.g. type_ `001` _to pull all campaigns matching_ `001_*`\n\nA/B stats shown per variant. Free lists combined, Pro standalone._")
 
     elif data == "ds_brevo_pull":
         send(chat_id, "Pulling Brevo campaign data...")
         campaigns, err = fetch_brevo_campaigns(30)
         if err:
-            send(chat_id, "Error: " + err)
+            notify_failure(chat_id, "brevo_campaigns", error=err)
         elif not campaigns:
             send(chat_id, "No campaigns found.")
         else:
@@ -5493,35 +5769,116 @@ def handle_callback(cb):
             send(chat_id, "Draft created in Brevo. Campaign ID: " + str(draft_id) + "\n\nOpen Brevo to review and schedule.")
 
     elif data == "ds_website":
+        keyboard = [
+            [{"text": "📊 Analytics",    "callback_data": "ds_web_analytics"}],
+            [{"text": "🔀 Split Tests",  "callback_data": "ds_web_splittests"}],
+        ]
+        send(chat_id, "*Website*\n\nWhat would you like to view?", keyboard)
+
+    elif data == "ds_web_analytics":
         if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
-            keyboard = [[{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]]
-            send(chat_id, "*Website Analytics*\n\nMixpanel not connected.\n\nAdd to Render environment variables:\n• MIXPANEL_PROJECT_ID\n• MIXPANEL_SERVICE_ACCOUNT_USERNAME\n• MIXPANEL_SERVICE_ACCOUNT_SECRET", keyboard)
+            keyboard = [[{"text": "Back to Website", "callback_data": "ds_website"}]]
+            send(chat_id, "*Website Analytics*\n\nMixpanel not connected.\n\nAdd to Render:\n• MIXPANEL_PROJECT_ID\n• MIXPANEL_USERNAME\n• MIXPANEL_SECRET", keyboard)
             return
         keyboard = [
-            [{"text": "Today",       "callback_data": "ds_web_range_today"}],
-            [{"text": "Yesterday",   "callback_data": "ds_web_range_yesterday"}],
-            [{"text": "Last 7 days", "callback_data": "ds_web_range_7d"}],
-            [{"text": "Last 30 days","callback_data": "ds_web_range_30d"}],
+            [{"text": "Today",              "callback_data": "ds_web_range_today"},
+             {"text": "Yesterday",          "callback_data": "ds_web_range_yesterday"}],
+            [{"text": "Last 7 days",        "callback_data": "ds_web_range_7d"},
+             {"text": "Last 30 days",       "callback_data": "ds_web_range_30d"}],
+            [{"text": "📊 Compare periods", "callback_data": "ds_web_compare"}],
         ]
         send(chat_id, "*Website Analytics*\n\nWhich time period?", keyboard)
+
+    elif data == "ds_web_splittests":
+        keyboard = [
+            [{"text": "📋 Paste VWO data manually", "callback_data": "ds_vwo_manual"}],
+        ]
+        if VWO_API_KEY:
+            keyboard.insert(0, [{"text": "🔀 Pull from VWO API", "callback_data": "ds_vwo_entry"}])
+        send(chat_id, "*Website Split Tests*\n\nVWO is used for landing page split tests.\n\nNaming convention: `001_Homepage`\nThe number is the campaign. The page name lets you filter to a single page or combine all pages for that campaign.", keyboard)
+
+    elif data == "ds_vwo_manual":
+        send(chat_id, (
+            "*Paste VWO Split Test Data*\n\n"
+            "Copy your results from VWO and paste them here in this format:\n\n"
+            "```\n"
+            "Campaign: 001_Homepage\n"
+            "Date range: 2026-03-01 to 2026-03-31\n\n"
+            "Control (A)\n"
+            "Visitors: 4,521\n"
+            "Subscriptions: 38\n"
+            "Checkout initiations: 142\n\n"
+            "Variant (B)\n"
+            "Visitors: 4,489\n"
+            "Subscriptions: 51\n"
+            "Checkout initiations: 168\n"
+            "```\n\n"
+            "*Where to find these numbers in VWO:*\n"
+            "1. Go to VWO → Campaigns → select your test\n"
+            "2. Open the Results tab\n"
+            "3. You need: Unique Visitors per variant, and Unique Conversions for each goal\n"
+            "4. Goals to look for: your Subscription goal (primary) and Checkout/Initiate Checkout goal (secondary)\n\n"
+            "_If you have more than 2 variants, add them in the same format (Variant C, Variant D etc.)_\n\n"
+            "_If you only have one conversion metric, just omit the other — the bot will handle it._"
+        ))
+        user_state[chat_id]["stage"] = "ds_vwo_awaiting_manual_data"
+
+    elif data == "ds_web_compare":
+        keyboard = [
+            [{"text": "7 days vs previous 7",   "callback_data": "ds_web_cmp_7d"}],
+            [{"text": "30 days vs previous 30",  "callback_data": "ds_web_cmp_30d"}],
+        ]
+        send(chat_id, "*Compare periods*\n\nWhich comparison?", keyboard)
+
+    elif data.startswith("ds_web_cmp_"):
+        cmp_key = data.replace("ds_web_cmp_", "")
+        send(chat_id, "Pulling Mixpanel data for both periods...")
+        try:
+            fd, td, label, pf, pt = get_mixpanel_date_range(cmp_key)
+            prev_label = "previous " + cmp_key.replace("d", " days")
+            curr = fetch_mixpanel_metrics(fd, td)
+            prev = fetch_mixpanel_metrics(pf, pt)
+            report = format_mixpanel_report(curr, label, fd, td, prev_metrics=prev, prev_label=prev_label)
+            send_plain(chat_id, report)
+            keyboard = [
+                [{"text": "Back to Website Analytics", "callback_data": "ds_website"}],
+                [{"text": "Back to Data Studio",       "callback_data": "open_data_studio"}],
+            ]
+            send(chat_id, "Comparison complete.", keyboard)
+        except Exception as e:
+            notify_failure(chat_id, "mixpanel", error=str(e))
 
     elif data.startswith("ds_web_range_"):
         range_key = data.replace("ds_web_range_", "")
         send(chat_id, "Pulling Mixpanel data...")
         try:
-            from_date, to_date, label = get_mixpanel_date_range(range_key)
-            report = fetch_mixpanel_report(from_date, to_date, label)
+            fd, td, label, pf, pt = get_mixpanel_date_range(range_key)
+            metrics = fetch_mixpanel_metrics(fd, td)
+            report = format_mixpanel_report(metrics, label, fd, td)
             send_plain(chat_id, report)
             keyboard = [
-                [{"text": "Today",        "callback_data": "ds_web_range_today"},
-                 {"text": "Yesterday",    "callback_data": "ds_web_range_yesterday"}],
-                [{"text": "Last 7 days",  "callback_data": "ds_web_range_7d"},
-                 {"text": "Last 30 days", "callback_data": "ds_web_range_30d"}],
-                [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}],
+                [{"text": "Today",              "callback_data": "ds_web_range_today"},
+                 {"text": "Yesterday",          "callback_data": "ds_web_range_yesterday"}],
+                [{"text": "Last 7 days",        "callback_data": "ds_web_range_7d"},
+                 {"text": "Last 30 days",       "callback_data": "ds_web_range_30d"}],
+                [{"text": "📊 Compare periods", "callback_data": "ds_web_compare"}],
+                [{"text": "Back to Data Studio","callback_data": "open_data_studio"}],
             ]
-            send(chat_id, "Tap another range to compare.", keyboard)
+            send(chat_id, "Tap another range or compare.", keyboard)
         except Exception as e:
-            send(chat_id, "Error pulling Mixpanel data: " + str(e))
+            notify_failure(chat_id, "mixpanel", error=str(e))
+
+    elif data == "ds_vwo_entry":
+        if not VWO_API_KEY:
+            send(chat_id, "*VWO Split Tests*\n\nNot connected yet.\n\nTo connect:\n1. Add `VWO_API_KEY` to Render environment variables\n2. Add `VWO_ACCOUNT_ID` to Render environment variables\n3. Optionally set `VWO_GOAL_SUBSCRIPTION` and `VWO_GOAL_CHECKOUT` to match your VWO goal names\n\nGet your API key from VWO → Account Settings → API Keys.", [
+                [{"text": "Back to Website", "callback_data": "ds_web_splittests"}]
+            ])
+            return
+        user_state[chat_id]["stage"] = "ds_vwo_awaiting_num"
+        send(chat_id, "*VWO Split Tests*\n\nEnter a campaign number:\n\n_e.g._ `001` _pulls all tests matching_ `001_*`\nOr enter_ `001_Homepage` _to analyse a single page._\n\nResults show unique visitors, subscription rate (primary), checkout rate (secondary) per variant.")
+
+    elif data == "ds_vwo_back":
+        show_data_studio_menu(chat_id)
 
     elif data == "ds_landing":
         state["ds_images"] = []
@@ -7124,7 +7481,7 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
         path_data = tg("getFile", {"file_id": file_id})
         file_path = path_data.get("result", {}).get("file_path", "")
         if not file_path:
-            send(chat_id, "Could not access the video file. Try again.")
+            notify_failure(chat_id, "reel_analysis", error="No file_path from Telegram")
             return
 
         # Download video
@@ -7313,7 +7670,8 @@ def _execute_brevo_push(chat_id):
         keyboard = [[{"text": "Session complete", "callback_data": "brevo_skip_push"}]]
         send(chat_id, msg, keyboard)
     if failed:
-        send(chat_id, "Failed:\n" + "\n".join(failed))
+        notify_failure(chat_id, "brevo_push", error="\n".join(failed),
+                      fallback_action="Details: " + "\n".join(failed))
     if not pushed and not failed:
         send(chat_id, "Nothing to push.")
 
@@ -8439,7 +8797,6 @@ def show_data_studio_menu(chat_id):
         [{"text": "Social (Instagram)", "callback_data": "ds_social"}],
         [{"text": "Emails",             "callback_data": "ds_emails"}],
         [{"text": "🌐 Website",         "callback_data": "ds_website"}],
-        [{"text": "Landing Pages",      "callback_data": "ds_landing"}],
     ]
     send(chat_id, "*Data Studio*\n\nWhich data would you like to analyse?", keyboard)
 
@@ -8816,15 +9173,17 @@ def start_ds_emails(chat_id):
     state["ds_images"] = []
     keyboard = []
     if BREVO_API_KEY:
-        keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_pull"}])
-        keyboard.append([{"text": "📊 List sizes", "callback_data": "ds_brevo_list_sizes"}])
+        keyboard.append([{"text": "📊 List sizes",              "callback_data": "ds_brevo_list_sizes"}])
+        keyboard.append([{"text": "📈 Campaign performance",    "callback_data": "ds_campaign_by_num"}])
+        keyboard.append([{"text": "🔀 Split test performance",  "callback_data": "ds_splittest_by_num"}])
+        keyboard.append([{"text": "📧 Import from Brevo",       "callback_data": "ds_brevo_pull"}])
     else:
-        keyboard.append([{"text": "📧 Import from Brevo", "callback_data": "ds_brevo_setup"}])
+        keyboard.append([{"text": "📧 Import from Brevo",       "callback_data": "ds_brevo_setup"}])
     keyboard += [
         [{"text": "📁 Upload file (CSV / screenshot)", "callback_data": "ds_email_manual"}],
-        [{"text": "✏️ Paste numbers manually", "callback_data": "ds_email_type_numbers"}],
+        [{"text": "✏️ Paste numbers manually",         "callback_data": "ds_email_type_numbers"}],
     ]
-    send(chat_id, "*Email Analysis*\n\nHow would you like to bring your data in?", keyboard)
+    send(chat_id, "*Email Analysis*\n\nWhat would you like to do?", keyboard)
 
 def start_ds_email_splittest(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
@@ -10109,7 +10468,7 @@ def generate_claude_visual(chat_id, brief, post_type, send_html=True):
         send_file_bytes(chat_id, html.encode(), filename, "text/html")
         send(chat_id, "📄 Open in browser for full quality. Screenshot to share.")
     else:
-        send(chat_id, "Generation failed: " + (html_err or "unknown"))
+        notify_failure(chat_id, "image_claude", error=html_err)
 
 
 def apply_logo_watermark(image_bytes, mime_type="image/png"):
@@ -10762,20 +11121,20 @@ def fetch_meta_ad_insights(days=30):
 # ── BREVO CONFIGURATION — HARDCODED IDS ─────────────────────────
 # Segment IDs (Brevo "My segments")
 BREVO_SEGMENTS = {
-    "opened_30":        {"id": 15,  "name": "Opened last 30 days"},
-    "opened_60":        {"id": 16,  "name": "Opened last 60 days"},
-    "opened_90":        {"id": 17,  "name": "Opened last 90 days"},
-    "opened_120":       {"id": 18,  "name": "Opened last 120 days"},
-    "opened_150":       {"id": 19,  "name": "Opened last 150 days"},
-    "opened_180":       {"id": 72,  "name": "Opened last 180 days"},
-    "opened_365":       {"id": 74,  "name": "Opened last 365 days"},
-    "opened_720":       {"id": 76,  "name": "Opened last 720 days"},
-    "never_joined_30":  {"id": 86,  "name": "Never Opened + Joined last 30 days"},
-    "never_joined_60":  {"id": 87,  "name": "Never Opened + Joined last 60 days"},
-    "never_joined_90":  {"id": 88,  "name": "Never Opened + Joined last 90 days"},
-    "never_joined_120": {"id": 89,  "name": "Never Opened + Joined last 120 days"},
-    "pro_users":        {"id": 1,   "name": "All Pro Users"},
-    "cancellers":       {"id": 26,  "name": "Ali - All Cancellers"},
+    "pro_users":        {"id": 1,   "name": "Pro Members",                    "type": "pro"},
+    "opened_30":        {"id": 15,  "name": "Last 0-30 days Opened",          "type": "free"},
+    "opened_60":        {"id": 16,  "name": "31-60 days Opened",              "type": "free"},
+    "opened_90":        {"id": 17,  "name": "61-90 days Opened",              "type": "free"},
+    "opened_120":       {"id": 18,  "name": "91-120 days Opened",             "type": "free"},
+    "opened_150":       {"id": 19,  "name": "121-150 days Opened",            "type": "free"},
+    "opened_180":       {"id": 72,  "name": "151-180 days Opened",            "type": "free"},
+    "opened_365":       {"id": 74,  "name": "181-365 days Opened",            "type": "free"},
+    "opened_720":       {"id": 76,  "name": "366 Day+ Opened",                "type": "free"},
+    "cancellers":       {"id": 26,  "name": "Cancellers",                     "type": "free"},
+    "never_joined_30":  {"id": 86,  "name": "Last 30 Day Joined (No opens)",  "type": "free"},
+    "never_joined_60":  {"id": 87,  "name": "Last 31-60 Day Joined (No opens)","type": "free"},
+    "never_joined_90":  {"id": 88,  "name": "Last 61-90 Day Joined (No opens)","type": "free"},
+    "never_joined_120": {"id": 89,  "name": "Last 91+ Day Joined (No opens)", "type": "free"},
 }
 
 # Template IDs
@@ -10881,29 +11240,25 @@ def build_cryptonary_email_html(subject, preview, body_text, cta_text=None, cta_
 
 def fetch_brevo_segment_size(segment_id):
     """Fetch the current contact count for a Brevo segment by ID.
-    Tries contacts/lists first (static lists), then segments endpoint (dynamic segments).
-    Brevo uses numeric IDs for both — we try list first since Rayhan uses lists."""
+    Tries contacts search endpoint first (most accurate for dynamic segments),
+    then falls back to segment detail endpoint."""
     if not BREVO_API_KEY:
         return None, "No API key"
     headers = {"Accept": "application/json", "api-key": BREVO_API_KEY}
 
-    # Try 1: static contact list endpoint
+    # Try: contacts search with segmentId — most reliable for dynamic segments
     try:
-        url = f"https://api.brevo.com/v3/contacts/lists/{segment_id}"
+        url = f"https://api.brevo.com/v3/contacts?segmentId={segment_id}&limit=1"
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
-        size = data.get("totalSubscribers") or data.get("uniqueSubscribers") or data.get("totalBlacklisted", 0)
-        if size:
-            return size, None
-    except urllib.error.HTTPError as e:
-        if e.code != 404:
-            body = e.read().decode("utf-8", errors="ignore")
-            return None, "List HTTP " + str(e.code) + ": " + body[:100]
+        count = data.get("count")
+        if count is not None:
+            return count, None
     except Exception:
         pass
 
-    # Try 2: dynamic segment endpoint
+    # Fallback: segment detail endpoint
     try:
         url = f"https://api.brevo.com/v3/contacts/segments/{segment_id}"
         req = urllib.request.Request(url, headers=headers)
@@ -10913,9 +11268,265 @@ def fetch_brevo_segment_size(segment_id):
         return size, None
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
-        return None, "Segment HTTP " + str(e.code) + ": " + body[:100]
+        return None, "HTTP " + str(e.code) + ": " + body[:100]
     except Exception as e:
         return None, str(e)
+
+
+# ── VWO SPLIT TEST INTEGRATION ────────────────────────────────────
+
+def fetch_vwo_tests(campaign_number=None):
+    """Fetch VWO A/B tests. Filters by campaign number prefix if provided.
+    
+    VWO API: GET https://app.vwo.com/api/v2/accounts/{account_id}/campaigns
+    Auth: token-based via VWO_API_KEY.
+    
+    TODO: Once VWO_API_KEY and account ID are confirmed, update:
+    - VWO_ACCOUNT_ID env var (add to Render)
+    - Goal names for Subscription and Initiate Checkout
+    - Confirm whether tests are A/B only or can be A/B/C
+    """
+    if not VWO_API_KEY:
+        return None, "VWO_API_KEY not configured. Add it to Render environment variables."
+    try:
+        import urllib.parse as _up
+        VWO_ACCOUNT_ID = os.environ.get("VWO_ACCOUNT_ID", "")
+        if not VWO_ACCOUNT_ID:
+            return None, "VWO_ACCOUNT_ID not configured. Add it to Render environment variables."
+        url = f"https://app.vwo.com/api/v2/accounts/{VWO_ACCOUNT_ID}/campaigns?status=RUNNING,STOPPED"
+        req = urllib.request.Request(url, headers={
+            "token": VWO_API_KEY,
+            "Accept": "application/json",
+        })
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+        tests = data.get("data", data if isinstance(data, list) else [])
+        if campaign_number:
+            num = str(campaign_number).strip().zfill(3)
+            tests = [t for t in tests if t.get("name", "").startswith(num + "_") or
+                                         t.get("name", "").startswith(str(campaign_number).strip() + "_")]
+        return tests, None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return None, "VWO API error " + str(e.code) + ": " + body[:200]
+    except Exception as e:
+        return None, "VWO fetch failed: " + str(e)
+
+
+def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=None):
+    """Analyse VWO split test by campaign number.
+    
+    campaign_number: e.g. '001'
+    page_filter: e.g. 'Homepage' — if set, only analyse tests matching 001_Homepage
+    from_date/to_date: YYYY-MM-DD strings for custom date range
+    
+    Metrics per variant:
+    - Visitors (unique)
+    - Subscriptions (primary conversion) — unique
+    - Subscription conversion rate (subscriptions / visitors)
+    - Checkout initiations (secondary conversion) — unique
+    - Checkout conversion rate (checkouts / visitors)
+    """
+    tests, err = fetch_vwo_tests(campaign_number)
+    if err:
+        return None, err
+    if not tests:
+        return None, f"No VWO tests found matching '{campaign_number}_*'. Check the campaign number and naming convention."
+
+    # Filter by page if specified
+    if page_filter:
+        tests = [t for t in tests if page_filter.lower() in t.get("name", "").lower()]
+        if not tests:
+            return None, f"No tests found for '{campaign_number}_{page_filter}'."
+
+    lines = [
+        f"*VWO SPLIT TEST — Campaign {campaign_number}*",
+    ]
+    if page_filter:
+        lines[0] += f" / {page_filter}"
+    if from_date and to_date:
+        lines.append(f"_{from_date} to {to_date}_")
+    lines.append("")
+
+    # VWO goal name mapping — update once goal names are confirmed
+    # These are the goal IDs/names to look for in VWO stats
+    SUBSCRIPTION_GOAL = os.environ.get("VWO_GOAL_SUBSCRIPTION", "Subscription")
+    CHECKOUT_GOAL = os.environ.get("VWO_GOAL_CHECKOUT", "Initiate Checkout")
+
+    combined_tests = len(tests) > 1 and not page_filter
+    if combined_tests:
+        lines.append(f"_Combining {len(tests)} test(s):_")
+        for t in tests:
+            lines.append(f"  • {t.get('name', 'Unknown')}")
+        lines.append("")
+
+    # Per-test stats
+    totals = {}  # variant_name -> {visitors, subscriptions, checkouts}
+
+    for test in tests:
+        test_name = test.get("name", "Unknown")
+        variations = test.get("variations", [])
+        goals = test.get("goals", [])
+
+        for var in variations:
+            var_name = var.get("name", "Control")
+            # Normalise variant names A/B
+            if var.get("isControl") or var_name.lower() in ("control", "a", "original"):
+                key = "A (Control)"
+            else:
+                key = "B (Variant)"
+
+            if key not in totals:
+                totals[key] = {"visitors": 0, "subscriptions": 0, "checkouts": 0}
+
+            visitors = var.get("visitors", var.get("uniqueVisitors", 0)) or 0
+            totals[key]["visitors"] += visitors
+
+            # Goal stats
+            var_goals = var.get("goals", [])
+            for g in var_goals:
+                gname = g.get("name", "")
+                convs = g.get("uniqueConversions", g.get("conversions", 0)) or 0
+                if SUBSCRIPTION_GOAL.lower() in gname.lower():
+                    totals[key]["subscriptions"] += convs
+                elif CHECKOUT_GOAL.lower() in gname.lower():
+                    totals[key]["checkouts"] += convs
+
+    if not totals:
+        return None, "No variant data found in VWO tests. The API response may use a different structure — check VWO_GOAL_SUBSCRIPTION and VWO_GOAL_CHECKOUT in Render."
+
+    # Format output
+    keys = sorted(totals.keys())
+    header = f"{'':25}" + "".join(f"{k:>15}" for k in keys)
+    lines.append(header)
+    lines.append("─" * (25 + 15 * len(keys)))
+
+    def row(label, vals):
+        return f"{label:<25}" + "".join(f"{v:>15}" for v in vals)
+
+    visitors_row = [totals[k]["visitors"] for k in keys]
+    sub_row = [totals[k]["subscriptions"] for k in keys]
+    chk_row = [totals[k]["checkouts"] for k in keys]
+    sub_rate_row = [
+        f"{totals[k]['subscriptions']/totals[k]['visitors']*100:.2f}%"
+        if totals[k]["visitors"] > 0 else "—"
+        for k in keys
+    ]
+    chk_rate_row = [
+        f"{totals[k]['checkouts']/totals[k]['visitors']*100:.2f}%"
+        if totals[k]["visitors"] > 0 else "—"
+        for k in keys
+    ]
+
+    lines.append(row("Visitors (unique)", [f"{v:,}" for v in visitors_row]))
+    lines.append("")
+    lines.append("*PRIMARY: Subscription*")
+    lines.append(row("Conversions", [f"{v:,}" for v in sub_row]))
+    lines.append(row("Conversion rate", sub_rate_row))
+
+    # Winner for subscriptions
+    best_sub = max(keys, key=lambda k: totals[k]["subscriptions"])
+    if len(keys) > 1:
+        lines.append(f"→ Winner: {best_sub}")
+
+    lines.append("")
+    lines.append("*SECONDARY: Initiate Checkout*")
+    lines.append(row("Conversions", [f"{v:,}" for v in chk_row]))
+    lines.append(row("Conversion rate", chk_rate_row))
+
+    best_chk = max(keys, key=lambda k: totals[k]["checkouts"])
+    if len(keys) > 1:
+        lines.append(f"→ Winner: {best_chk}")
+
+    return "\n".join(lines), None
+
+
+def fetch_brevo_segment_subscribed(segment_id):
+    """Fetch subscribed contact count within a segment.
+    Returns (subscribed, unsubscribed, total)."""
+    if not BREVO_API_KEY:
+        return 0, 0, 0
+    headers = {"Accept": "application/json", "api-key": BREVO_API_KEY}
+    try:
+        # Total in segment
+        url = f"https://api.brevo.com/v3/contacts?segmentId={segment_id}&limit=1"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            total = json.loads(r.read()).get("count", 0) or 0
+
+        # Subscribed within segment
+        import urllib.parse as _up
+        params = _up.urlencode({"segmentId": segment_id, "emailBlacklisted": "false", "limit": 1})
+        url2 = f"https://api.brevo.com/v3/contacts?{params}"
+        req2 = urllib.request.Request(url2, headers=headers)
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            subscribed = json.loads(r.read()).get("count", 0) or 0
+
+        unsubscribed = max(0, total - subscribed)
+        return subscribed, unsubscribed, total
+    except Exception:
+        # Fallback: try to get total only
+        try:
+            url = f"https://api.brevo.com/v3/contacts?segmentId={segment_id}&limit=1"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                total = json.loads(r.read()).get("count", 0) or 0
+            return total, 0, total
+        except Exception:
+            return 0, 0, 0
+
+
+def build_brevo_list_health():
+    """Build the full list health report — total, subscribed, unsubscribed per segment.
+    Blocklisted = sum of unsubscribed across all segments."""
+    from datetime import datetime as _dt
+    today = _dt.now().strftime("%d %b %Y")
+
+    # Order matching the screenshot
+    DISPLAY_ORDER = [
+        "pro_users",
+        "opened_30", "opened_60", "opened_90", "opened_120",
+        "opened_150", "opened_180", "opened_365", "opened_720",
+        "cancellers",
+        "never_joined_30", "never_joined_60", "never_joined_90", "never_joined_120",
+    ]
+
+    lines = [
+        f"*CRYPTONARY LIST HEALTH — {today}*",
+        "",
+        f"{'SEGMENT':<30} {'TOTAL':>8} {'SENDABLE':>10} {'BLOCKED':>8}",
+        "─" * 58,
+    ]
+
+    grand_total = 0
+    grand_sendable = 0
+    grand_blocked = 0
+
+    for key in DISPLAY_ORDER:
+        seg = BREVO_SEGMENTS.get(key, {})
+        seg_id = seg.get("id")
+        name = seg.get("name", key)
+        if not seg_id:
+            continue
+        subscribed, unsubscribed, total = fetch_brevo_segment_subscribed(seg_id)
+        grand_total += total
+        grand_sendable += subscribed
+        grand_blocked += unsubscribed
+        # Truncate name to fit
+        name_short = name[:28]
+        lines.append(f"{name_short:<30} {total:>8,} {subscribed:>10,} {unsubscribed:>8,}")
+
+    lines.append("─" * 58)
+    lines.append(f"{'TOTALS':<30} {grand_total:>8,} {grand_sendable:>10,} {grand_blocked:>8,}")
+    lines.append("")
+
+    if grand_total > 0:
+        send_pct = round(grand_sendable / grand_total * 100, 1)
+        block_pct = round(grand_blocked / grand_total * 100, 1)
+        lines.append(f"Sendable: {grand_sendable:,} ({send_pct}% of total)")
+        lines.append(f"Blocklisted (derived): {grand_blocked:,} ({block_pct}% of total)")
+
+    return "\n".join(lines)
 
 
 def fetch_all_segment_sizes():
@@ -11069,40 +11680,47 @@ def get_brevo_list_for_type(email_type):
 # ══════════════════════════════════════════════════════════════════
 
 def get_mixpanel_date_range(range_key):
-    """Return (from_date, to_date, label) for a given range key.
-    Last 7 days and last 30 days start from yesterday, not today."""
+    """Return (from_date, to_date, label, prev_from, prev_to) for a given range key."""
     from datetime import datetime as _dt, timedelta as _td, timezone as _tz
     today = _dt.now(_tz.utc).date()
     yesterday = today - _td(days=1)
 
     if range_key == "today":
-        return today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d"), "Today"
+        fd, td = today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+        pf = (today - _td(days=1)).strftime("%Y-%m-%d")
+        return fd, td, "Today", pf, pf
     elif range_key == "yesterday":
-        return yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Yesterday"
+        fd = yesterday.strftime("%Y-%m-%d")
+        pf = (yesterday - _td(days=1)).strftime("%Y-%m-%d")
+        return fd, fd, "Yesterday", pf, pf
     elif range_key == "7d":
-        start = yesterday - _td(days=6)  # 7 days ending yesterday
-        return start.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Last 7 days"
+        fd = (yesterday - _td(days=6)).strftime("%Y-%m-%d")
+        td = yesterday.strftime("%Y-%m-%d")
+        pf = (yesterday - _td(days=13)).strftime("%Y-%m-%d")
+        pt = (yesterday - _td(days=7)).strftime("%Y-%m-%d")
+        return fd, td, "Last 7 days", pf, pt
     elif range_key == "30d":
-        start = yesterday - _td(days=29)  # 30 days ending yesterday
-        return start.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Last 30 days"
+        fd = (yesterday - _td(days=29)).strftime("%Y-%m-%d")
+        td = yesterday.strftime("%Y-%m-%d")
+        pf = (yesterday - _td(days=59)).strftime("%Y-%m-%d")
+        pt = (yesterday - _td(days=30)).strftime("%Y-%m-%d")
+        return fd, td, "Last 30 days", pf, pt
     else:
-        return yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), "Yesterday"
+        fd = yesterday.strftime("%Y-%m-%d")
+        return fd, fd, "Yesterday", fd, fd
 
 
-def mixpanel_query(endpoint, params):
-    """Make an authenticated request to the Mixpanel Data Export API."""
-    import base64 as _b64
+def mixpanel_api(endpoint, params):
+    """Authenticated request to Mixpanel Data Export API."""
+    import base64 as _b64, urllib.parse as _up
     if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
         return None, "Mixpanel credentials not configured"
     try:
-        credentials = _b64.b64encode(
-            (MIXPANEL_USERNAME + ":" + MIXPANEL_SECRET).encode()
-        ).decode()
-        import urllib.parse as _parse
-        query_string = _parse.urlencode(params)
-        url = f"https://data.mixpanel.com/api/2.0/{endpoint}?{query_string}"
+        creds = _b64.b64encode((MIXPANEL_USERNAME + ":" + MIXPANEL_SECRET).encode()).decode()
+        qs = _up.urlencode(params)
+        url = f"https://data.mixpanel.com/api/2.0/{endpoint}?{qs}"
         req = urllib.request.Request(url, headers={
-            "Authorization": "Basic " + credentials,
+            "Authorization": "Basic " + creds,
             "Accept": "application/json",
         })
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -11114,153 +11732,149 @@ def mixpanel_query(endpoint, params):
         return None, "Mixpanel fetch failed: " + str(e)
 
 
-def mixpanel_jql(script):
-    """Run a JQL query against Mixpanel."""
-    import base64 as _b64
-    if not (MIXPANEL_PROJECT_ID and MIXPANEL_USERNAME and MIXPANEL_SECRET):
-        return None, "Mixpanel credentials not configured"
-    try:
-        credentials = _b64.b64encode(
-            (MIXPANEL_USERNAME + ":" + MIXPANEL_SECRET).encode()
-        ).decode()
-        payload = ("script=" + urllib.parse.quote(script)).encode()
-        url = f"https://data.mixpanel.com/api/2.0/jql"
-        req = urllib.request.Request(url, data=payload, headers={
-            "Authorization": "Basic " + credentials,
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-        })
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read()), None
-    except Exception as e:
-        return None, str(e)
+def mixpanel_get_total(event_name, from_date, to_date, url_filter=None):
+    """Get total event count for a single event over a date range.
+    url_filter: if set, filter [Auto] Page View by URL path (for checkout)."""
+    params = {
+        "project_id": MIXPANEL_PROJECT_ID,
+        "event": event_name,
+        "from_date": from_date,
+        "to_date": to_date,
+        "type": "general",
+        "unit": "day",
+    }
+    if url_filter:
+        params["where"] = f'properties[""] contains "{url_filter}"'
+    data, err = mixpanel_api("segmentation", params)
+    if err or not data:
+        return 0, err
+    values = data.get("data", {}).get("values", {}).get(event_name, {})
+    return sum(values.values()) if values else 0, None
 
 
-def fetch_mixpanel_event_totals(event_names, from_date, to_date):
-    """Fetch total event counts for a list of events over a date range."""
-    results = {}
-    for event in event_names:
-        data, err = mixpanel_query("segmentation", {
-            "project_id": MIXPANEL_PROJECT_ID,
-            "event": event,
-            "from_date": from_date,
-            "to_date": to_date,
-            "type": "general",
-            "unit": "day",
-        })
-        if data and "data" in data:
-            values = data["data"].get("values", {}).get(event, {})
-            total = sum(values.values()) if values else 0
-            results[event] = total
-        else:
-            results[event] = None  # None = error, distinct from 0
-    return results
-
-
-def fetch_mixpanel_unique_users(event_name, from_date, to_date):
-    """Fetch unique user count for an event."""
-    data, err = mixpanel_query("segmentation", {
+def mixpanel_get_uniques(event_name, from_date, to_date, url_filter=None):
+    """Get unique user count for a single event."""
+    params = {
         "project_id": MIXPANEL_PROJECT_ID,
         "event": event_name,
         "from_date": from_date,
         "to_date": to_date,
         "type": "unique",
         "unit": "day",
-    })
-    if data and "data" in data:
-        values = data["data"].get("values", {}).get(event_name, {})
-        return sum(values.values()) if values else 0
-    return None
-
-
-def fetch_mixpanel_report(from_date, to_date, label):
-    """Build a full website analytics report from Mixpanel data."""
-    from datetime import datetime as _dt
-
-    # Event names — these are the standard Mixpanel events
-    # Adjust if your Mixpanel uses different event names
-    EVENTS = {
-        "page_view":         "$mp_web_page_view",
-        "session":           "$mp_web_session_start",
-        "cta_click":         "CTA Click",
-        "checkout_start":    "Checkout Started",
-        "checkout_complete": "Checkout Completed",
-        "subscription":      "Subscription Created",
     }
+    if url_filter:
+        params["where"] = f'properties[""] contains "{url_filter}"'
+    data, err = mixpanel_api("segmentation", params)
+    if err or not data:
+        return 0, err
+    values = data.get("data", {}).get("values", {}).get(event_name, {})
+    return sum(values.values()) if values else 0, None
 
-    lines = [f"*CRYPTONARY WEBSITE — {label}*", f"_{from_date} to {to_date}_", ""]
 
-    # Fetch key metrics
-    try:
-        # Sessions / unique visitors
-        sessions = fetch_mixpanel_unique_users(EVENTS["session"], from_date, to_date)
-        page_views = fetch_mixpanel_event_totals([EVENTS["page_view"]], from_date, to_date)
-        pv_total = page_views.get(EVENTS["page_view"], 0) or 0
+def fetch_mixpanel_metrics(from_date, to_date):
+    """Fetch all 5 key metrics for a date range. Returns dict of metric: value."""
+    metrics = {}
+    errors = []
 
-        lines.append("*TRAFFIC*")
-        if sessions is not None:
-            lines.append(f"Unique visitors:    {sessions:>10,}")
-        if pv_total:
-            lines.append(f"Page views:         {pv_total:>10,}")
-            if sessions and sessions > 0:
-                lines.append(f"Pages per visit:    {pv_total/sessions:>10.1f}")
+    # Unique website visitors — [Auto] Page View, unique users, exclude bots
+    v, err = mixpanel_get_uniques("[Auto] Page View", from_date, to_date)
+    metrics["visitors"] = v
+    if err: errors.append("visitors: " + err)
+
+    # Emails collected — All Emails Collected, unique
+    v, err = mixpanel_get_uniques("All Emails Collected", from_date, to_date)
+    metrics["emails"] = v
+    if err: errors.append("emails: " + err)
+
+    # Checkouts — [Auto] Page View filtered by /checkout URL path
+    v, err = mixpanel_get_uniques("[Auto] Page View", from_date, to_date, url_filter="/checkout")
+    metrics["checkouts"] = v
+    if err: errors.append("checkouts: " + err)
+
+    # Add payment info — Add Payment Info event
+    v, err = mixpanel_get_total("Add Payment Info", from_date, to_date)
+    metrics["add_payment"] = v
+    if err: errors.append("add_payment: " + err)
+
+    # Purchases — First Pro Invoice (primary conversion event)
+    v, err = mixpanel_get_total("First Pro Invoice", from_date, to_date)
+    metrics["purchases"] = v
+    if err: errors.append("purchases: " + err)
+
+    metrics["_errors"] = errors
+    return metrics
+
+
+def format_mixpanel_report(metrics, label, from_date, to_date, prev_metrics=None, prev_label=None):
+    """Format a clean Mixpanel report. Includes comparison if prev_metrics provided."""
+    def pct_change(curr, prev):
+        if not prev: return ""
+        delta = curr - prev
+        pct = round(delta / prev * 100, 1)
+        arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "—")
+        return f"  {arrow} {abs(pct)}% vs {prev_label}"
+
+    lines = [
+        f"*CRYPTONARY WEBSITE — {label}*",
+        f"_{from_date} to {to_date}_",
+        "",
+    ]
+
+    rows = [
+        ("visitors",    "Unique visitors"),
+        ("emails",      "Emails collected"),
+        ("checkouts",   "Checkouts (/checkout)"),
+        ("add_payment", "Add payment info"),
+        ("purchases",   "Purchases (Pro)"),
+    ]
+
+    lines.append("*METRICS*")
+    for key, label_str in rows:
+        val = metrics.get(key, 0)
+        comp = pct_change(val, prev_metrics.get(key, 0)) if prev_metrics else ""
+        lines.append(f"{label_str:<28} {val:>6,}{comp}")
+
+    # Funnel conversion rates
+    visitors = metrics.get("visitors", 0)
+    checkouts = metrics.get("checkouts", 0)
+    add_payment = metrics.get("add_payment", 0)
+    purchases = metrics.get("purchases", 0)
+
+    if visitors > 0:
         lines.append("")
-    except Exception as e:
-        lines.append("Traffic: error — " + str(e))
-        lines.append("")
-
-    # Funnel
-    try:
-        funnel_events = [
-            EVENTS["cta_click"],
-            EVENTS["checkout_start"],
-            EVENTS["checkout_complete"],
-            EVENTS["subscription"],
-        ]
-        totals = fetch_mixpanel_event_totals(funnel_events, from_date, to_date)
-
-        cta      = totals.get(EVENTS["cta_click"], 0) or 0
-        checkout = totals.get(EVENTS["checkout_start"], 0) or 0
-        complete = totals.get(EVENTS["checkout_complete"], 0) or 0
-        subs     = totals.get(EVENTS["subscription"], 0) or 0
-
         lines.append("*FUNNEL*")
-        if sessions:
-            lines.append(f"Visited site:       {sessions:>10,}   100%")
-        if cta is not None:
-            pct = f"{cta/sessions*100:.1f}%" if sessions else "—"
-            lines.append(f"Clicked CTA:        {cta:>10,}   {pct}")
-        if checkout is not None:
-            pct = f"{checkout/sessions*100:.1f}%" if sessions else "—"
-            lines.append(f"Started checkout:   {checkout:>10,}   {pct}")
-        if complete is not None:
-            pct = f"{complete/sessions*100:.1f}%" if sessions else "—"
-            lines.append(f"Completed:          {complete:>10,}   {pct}")
-        if subs is not None:
-            pct = f"{subs/sessions*100:.1f}%" if sessions else "—"
-            lines.append(f"Subscribed (Pro):   {subs:>10,}   {pct}")
-        lines.append("")
-    except Exception as e:
-        lines.append("Funnel: error — " + str(e))
-        lines.append("")
+        lines.append(f"Visitors → Checkout:   {checkouts/visitors*100:.1f}%")
+        if checkouts > 0:
+            lines.append(f"Checkout → Payment:    {add_payment/checkouts*100:.1f}%")
+        if add_payment > 0:
+            lines.append(f"Payment → Purchase:    {purchases/add_payment*100:.1f}%")
 
-    # Insight from Claude
+    # Errors
+    errs = metrics.get("_errors", [])
+    if errs:
+        lines.append("")
+        lines.append("_Note: some metrics may be incomplete — " + "; ".join(errs[:2]) + "_")
+
+    # Claude insight
     try:
-        data_summary = "\n".join(lines)
+        data_txt = "\n".join(lines)
         insight = claude(
-            "You are a growth analyst for Cryptonary. Based on this website data, give 2-3 sharp, specific insights "
-            "and one concrete action to take. Be direct. No fluff.\n\nDATA:\n" + data_summary,
-            max_tokens=300,
-            system=DATA_STUDIO_SYSTEM
+            "Cryptonary website data. Give 2 sharp, specific observations and one action. Be direct.\n\nDATA:\n" + data_txt,
+            max_tokens=200, system=DATA_STUDIO_SYSTEM
         )
+        lines.append("")
         lines.append("*INSIGHTS*")
         lines.append(clean_copy(insight))
-        lines.append("")
     except Exception:
         pass
 
-    lines.append("_Note: event names may need adjusting to match your Mixpanel setup_")
     return "\n".join(lines)
+
+
+# Keep old name as alias for compatibility
+def fetch_mixpanel_report(from_date, to_date, label):
+    metrics = fetch_mixpanel_metrics(from_date, to_date)
+    return format_mixpanel_report(metrics, label, from_date, to_date)
 
 
 def fetch_brevo_lists():
@@ -11298,8 +11912,10 @@ def fetch_brevo_campaigns(limit=30):
             clicks = stats.get("uniqueClicks", 0) or 0
             unsubs = stats.get("unsubscriptions", 0) or 0
             c["_sent"] = sent
+            c["_opens"] = opens
+            c["_clicks"] = clicks
             c["_open_rate"] = round(opens / sent * 100, 1) if sent > 0 else 0
-            c["_ctr"] = round(clicks / sent * 100, 2) if sent > 0 else 0
+            c["_click_rate"] = round(clicks / opens * 100, 2) if opens > 0 else 0  # clicks/opens
             c["_unsub_rate"] = round(unsubs / sent * 100, 3) if sent > 0 else 0
         return campaigns, None
     except urllib.error.HTTPError as e:
@@ -11307,6 +11923,184 @@ def fetch_brevo_campaigns(limit=30):
         return None, "Brevo API error: " + body[:200]
     except Exception as e:
         return None, "Brevo fetch failed: " + str(e)
+
+
+def fetch_campaigns_by_number(campaign_number):
+    """Fetch all campaigns matching a campaign number prefix (e.g. '001').
+    Returns (pro_campaigns, free_campaigns, error).
+    Naming convention: 001_Pro = pro, everything else with 001_ = free."""
+    # Fetch more campaigns to ensure we find all matches
+    campaigns, err = fetch_brevo_campaigns(limit=100)
+    if err:
+        return [], [], err
+    if not campaigns:
+        return [], [], "No sent campaigns found in Brevo."
+
+    num = str(campaign_number).strip().zfill(3)  # normalise to 3 digits
+    matched = []
+    for c in campaigns:
+        name = c.get("name", "")
+        # Match: starts with the number followed by _ or space, or contains _001_ etc.
+        if name.startswith(num + "_") or name.startswith(num + " "):
+            matched.append(c)
+
+    if not matched:
+        # Try without zero-padding
+        num_raw = str(campaign_number).strip()
+        for c in campaigns:
+            name = c.get("name", "")
+            if name.startswith(num_raw + "_") or name.startswith(num_raw + " "):
+                matched.append(c)
+
+    pro = [c for c in matched if "pro" in c.get("name", "").lower()]
+    free = [c for c in matched if "pro" not in c.get("name", "").lower()]
+    return pro, free, None
+
+
+def analyse_campaign_performance(campaign_number):
+    """Analyse campaign performance by number. Combines free lists, shows pro standalone."""
+    pro_camps, free_camps, err = fetch_campaigns_by_number(campaign_number)
+    if err:
+        return None, err
+
+    total_found = len(pro_camps) + len(free_camps)
+    if total_found == 0:
+        return None, f"No campaigns found matching '{campaign_number}_*'. Check the campaign number and naming convention."
+
+    lines = [f"*CAMPAIGN {campaign_number} — PERFORMANCE*", ""]
+
+    # PRO section
+    if pro_camps:
+        lines.append("*PRO*")
+        for c in pro_camps:
+            name = c.get("name", "Unknown")
+            sent = c.get("_sent", 0)
+            opens = c.get("_opens", 0)
+            clicks = c.get("_clicks", 0)
+            open_rate = c.get("_open_rate", 0)
+            click_rate = c.get("_click_rate", 0)
+            lines.append(f"Campaign: {name}")
+            lines.append(f"Sent:         {sent:,}")
+            lines.append(f"Opens:        {opens:,} ({open_rate}%)")
+            lines.append(f"Clicks:       {clicks:,} ({click_rate}% of opens)")
+            lines.append("")
+    else:
+        lines.append("*PRO* — no campaigns found")
+        lines.append("")
+
+    # FREE section — combine all
+    if free_camps:
+        total_sent = sum(c.get("_sent", 0) for c in free_camps)
+        total_opens = sum(c.get("_opens", 0) for c in free_camps)
+        total_clicks = sum(c.get("_clicks", 0) for c in free_camps)
+        combined_open_rate = round(total_opens / total_sent * 100, 1) if total_sent > 0 else 0
+        combined_click_rate = round(total_clicks / total_opens * 100, 2) if total_opens > 0 else 0
+
+        lines.append(f"*FREE (combined across {len(free_camps)} lists)*")
+        for c in free_camps:
+            lines.append(f"  • {c.get('name','?')}: {c.get('_sent',0):,} sent, {c.get('_open_rate',0)}% open, {c.get('_click_rate',0)}% CTR")
+        lines.append("")
+        lines.append("*COMBINED FREE TOTALS*")
+        lines.append(f"Total sent:   {total_sent:,}")
+        lines.append(f"Total opens:  {total_opens:,} ({combined_open_rate}%)")
+        lines.append(f"Total clicks: {total_clicks:,} ({combined_click_rate}% of opens)")
+    else:
+        lines.append("*FREE* — no campaigns found")
+
+    return "\n".join(lines), None
+
+
+def analyse_split_test(campaign_number):
+    """Analyse A/B split test for a campaign number.
+    Brevo runs A/B within a single campaign — extracts variant stats per campaign,
+    combines free lists, shows pro standalone."""
+    pro_camps, free_camps, err = fetch_campaigns_by_number(campaign_number)
+    if err:
+        return None, err
+
+    if not pro_camps and not free_camps:
+        return None, f"No campaigns found matching '{campaign_number}_*'."
+
+    def extract_ab_stats(campaign):
+        """Extract A/B variant stats from a Brevo campaign object."""
+        stats = campaign.get("statistics", {})
+        # Brevo A/B stats structure
+        a_stats = stats.get("campaignStats", [{}])[0] if stats.get("campaignStats") else {}
+        b_stats = stats.get("campaignStats", [{}])[1] if len(stats.get("campaignStats", [])) > 1 else {}
+        # Also check splitTestStats
+        split = stats.get("splitTestStats", {})
+        if split:
+            a_stats = split.get("a", a_stats)
+            b_stats = split.get("b", b_stats)
+        # Global as fallback
+        glob = stats.get("globalStats", {})
+        sent_total = glob.get("sent", 0) or 0
+        # If no A/B breakdown found, treat as single variant
+        a_sent = a_stats.get("sent", sent_total // 2 if sent_total else 0)
+        b_sent = b_stats.get("sent", sent_total // 2 if sent_total else 0)
+        a_opens = a_stats.get("uniqueOpens", 0) or glob.get("uniqueOpens", 0) // 2
+        b_opens = b_stats.get("uniqueOpens", 0) or glob.get("uniqueOpens", 0) // 2
+        a_clicks = a_stats.get("uniqueClicks", 0) or glob.get("uniqueClicks", 0) // 2
+        b_clicks = b_stats.get("uniqueClicks", 0) or glob.get("uniqueClicks", 0) // 2
+        return {
+            "a_sent": a_sent, "b_sent": b_sent,
+            "a_opens": a_opens, "b_opens": b_opens,
+            "a_clicks": a_clicks, "b_clicks": b_clicks,
+            "has_ab": bool(b_stats),
+        }
+
+    def format_ab_block(label, ab_list):
+        """Format combined A/B stats for a group of campaigns."""
+        tot_a_sent = sum(x["a_sent"] for x in ab_list)
+        tot_b_sent = sum(x["b_sent"] for x in ab_list)
+        tot_a_opens = sum(x["a_opens"] for x in ab_list)
+        tot_b_opens = sum(x["b_opens"] for x in ab_list)
+        tot_a_clicks = sum(x["a_clicks"] for x in ab_list)
+        tot_b_clicks = sum(x["b_clicks"] for x in ab_list)
+        a_open_rate = round(tot_a_opens / tot_a_sent * 100, 1) if tot_a_sent > 0 else 0
+        b_open_rate = round(tot_b_opens / tot_b_sent * 100, 1) if tot_b_sent > 0 else 0
+        a_click_rate = round(tot_a_clicks / tot_a_opens * 100, 2) if tot_a_opens > 0 else 0
+        b_click_rate = round(tot_b_clicks / tot_b_opens * 100, 2) if tot_b_opens > 0 else 0
+        open_winner = "A" if a_open_rate > b_open_rate else ("B" if b_open_rate > a_open_rate else "TIE")
+        click_winner = "A" if a_click_rate > b_click_rate else ("B" if b_click_rate > a_click_rate else "TIE")
+
+        out = [f"*{label}*"]
+        out.append(f"{'':20} {'A':>10} {'B':>10}")
+        out.append(f"{'Sent':<20} {tot_a_sent:>10,} {tot_b_sent:>10,}")
+        out.append(f"{'Opens':<20} {tot_a_opens:>10,} {tot_b_opens:>10,}")
+        out.append(f"{'Open rate':<20} {a_open_rate:>9.1f}% {b_open_rate:>9.1f}%")
+        out.append(f"{'Clicks':<20} {tot_a_clicks:>10,} {tot_b_clicks:>10,}")
+        out.append(f"{'Click rate':<20} {a_click_rate:>9.2f}% {b_click_rate:>9.2f}%")
+        out.append(f"Open winner: {open_winner}  |  Click winner: {click_winner}")
+        return "\n".join(out)
+
+    lines = [f"*CAMPAIGN {campaign_number} — SPLIT TEST*", ""]
+
+    # Determine what was tested from campaign names/subject lines
+    all_subjects = [c.get("subject", "") for c in pro_camps + free_camps]
+    lines.append("_Subject lines found:_")
+    for s in all_subjects:
+        if s: lines.append(f"  • {s}")
+    lines.append("")
+
+    # PRO
+    if pro_camps:
+        pro_ab = [extract_ab_stats(c) for c in pro_camps]
+        lines.append(format_ab_block("PRO", pro_ab))
+        lines.append("")
+
+    # FREE combined
+    if free_camps:
+        free_ab = [extract_ab_stats(c) for c in free_camps]
+        lines.append(f"_Free campaigns ({len(free_camps)} lists combined):_")
+        for c in free_camps:
+            lines.append(f"  • {c.get('name','?')}: {c.get('_sent',0):,} sent")
+        lines.append("")
+        lines.append(format_ab_block("FREE (combined)", free_ab))
+
+    return "\n".join(lines), None
+
+
 
 
 def create_brevo_draft(subject, preview_text, html_content, list_ids=None, template_id=None):
@@ -11436,6 +12230,7 @@ def fetch_market_data():
             results["btc_price"] = 0
             results["btc_24h"] = 0
             results["btc_7d"] = 0
+            results["price_unavailable"] = True
             print("BTC price fetch error:", e, flush=True)
 
     try:
@@ -11502,7 +12297,9 @@ def generate_briefing(chat_id):
 
     # Build context for Claude
     market_context = ""
-    if market.get("btc_price"):
+    if market.get("price_unavailable"):
+        market_context += "PRICE DATA UNAVAILABLE — both CoinGecko and Binance failed. Do not reference BTC price in this briefing.\n"
+    elif market.get("btc_price"):
         price = "${:,.0f}".format(market["btc_price"])
         market_context += "BTC: " + price + " (" + str(market["btc_7d"]) + "% 7d, " + str(market["btc_24h"]) + "% 24h)\n"
     if market.get("fng_value") != "N/A":
@@ -11925,13 +12722,17 @@ def generate_ie_concept(chat_id):
         send(chat_id, "Pulling live trends...")
         headlines = fetch_rss_headlines(max_per_feed=2, max_total=16)
         rss_context = format_rss_context(headlines)
-        # Layer X tweets on top if key is configured
         x_tweets = fetch_x_tweets(max_per_account=2, max_total=10) if X_BEARER_TOKEN else []
         x_context = format_x_context(x_tweets) if x_tweets else ""
         source_content = rss_context + x_context
         label = "Live news + Twitter" if x_tweets else "Live news feeds"
         if not user_state[chat_id].get("ie_source_label"):
             user_state[chat_id]["ie_source_label"] = label
+        # If feeds returned nothing, warn and offer alternative
+        if not source_content.strip():
+            notify_failure(chat_id, "rss_feeds")
+            state["stage"] = "idea_engine_idle"
+            return
 
 
     # Track previously generated batches to force genuine variety on regen
@@ -12978,7 +13779,7 @@ def analyse_url(chat_id, url, mode="ideas"):
     text_content = fetch_url_content(url, url_type)
 
     if not text_content or len(text_content.strip()) < 50:
-        send(chat_id, "Could not read content from that link. The page may require login or block bots.\n\nTry screenshotting it and uploading the image instead.")
+        notify_failure(chat_id, "url_fetch", error="Empty content from " + url)
         return
 
     _process_ie_text_content(chat_id, state.get("stage", "idea_engine_idle"), text_content,
