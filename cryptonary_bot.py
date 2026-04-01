@@ -4402,12 +4402,11 @@ def handle_callback(cb):
 
     elif data == "open_content_studio":
         keyboard = [
-            [{"text": "Emails",                        "callback_data": "mode_email"}],
-            [{"text": "Ad Copy",                       "callback_data": "mode_ads"}],
-            [{"text": "Social Content",                "callback_data": "mode_social"}],
-            [{"text": "🎬 Storyboard Generator",       "callback_data": "mode_storyboard"}],
-            [{"text": "YouTube Description",           "callback_data": "mode_yt_desc"}],
-            [{"text": "Landing Page",                  "callback_data": "mode_landing"}],
+            [{"text": "Emails",              "callback_data": "mode_email"}],
+            [{"text": "Ad Copy",             "callback_data": "mode_ads"}],
+            [{"text": "Social Content",      "callback_data": "mode_social"}],
+            [{"text": "YouTube Description", "callback_data": "mode_yt_desc"}],
+            [{"text": "Landing Page",        "callback_data": "mode_landing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -4463,8 +4462,9 @@ def handle_callback(cb):
         send(chat_id, "Paste your report, article, or content to base the storyboard on:")
 
     elif data == "mode_reel_analysis":
-        user_state[chat_id] = {"stage": "awaiting_reel_upload"}
-        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll break down:\n• Hook strength - does it stop the scroll in the first 3 seconds?\n• Pacing and structure\n• Caption quality\n• What's working and what to change\n• A Cryptonary version of the concept\n\n_Works for your own reels or competitor content._")
+        user_state.setdefault(chat_id, {})
+        user_state[chat_id]["stage"] = "awaiting_reel_upload"
+        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll score it on:\n• Hook (1-10) — does it stop the scroll in 3 seconds?\n• Pacing (1-10) — information density, hold rate\n• On-screen text (1-10) — clarity, timing, load\n• Shareability (1-10) — would someone send this?\n• Overall score (1-10)\n\nPlus: what's working, what to change, and a Cryptonary version of the concept.\n\n_Works for your own reels or competitor content. Max 20MB._")
 
     elif data == "mode_yt_desc":
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
@@ -5036,83 +5036,6 @@ def handle_callback(cb):
     elif data == "ad_build_campaign":
         user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
         send(chat_id, "*Create Ad*\n\nPaste your brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
-
-    elif data == "brevo_push_start":
-        if not BREVO_API_KEY:
-            send(chat_id, "Brevo not connected. Add BREVO_API_KEY to Render environment.")
-            return
-        keyboard = [
-            [{"text": "Market Update (MU)",    "callback_data": "brevo_type_mu"}],
-            [{"text": "Market Direction (MD)", "callback_data": "brevo_type_md"}],
-        ]
-        send(chat_id, "*Push to Brevo*\n\nWhich email type is this?", keyboard)
-
-    elif data in ("brevo_type_mu", "brevo_type_md"):
-        email_type = "mu" if data == "brevo_type_mu" else "md"
-        state["brevo_email_type"] = email_type
-        keyboard = [
-            [{"text": "Opened last 30 days",             "callback_data": "brevo_seg_opened_30"}],
-            [{"text": "Opened last 60 days",             "callback_data": "brevo_seg_opened_60"}],
-            [{"text": "Opened last 90 days",             "callback_data": "brevo_seg_opened_90"}],
-            [{"text": "All Pro Users",                   "callback_data": "brevo_seg_pro_users"}],
-            [{"text": "Cancellers",                      "callback_data": "brevo_seg_cancellers"}],
-            [{"text": "Never Opened + Joined 30d",       "callback_data": "brevo_seg_never_joined_30"}],
-        ]
-        type_label = "Market Update" if email_type == "mu" else "Market Direction"
-        send(chat_id, f"*{type_label}*\n\nWhich segment gets this send?", keyboard)
-
-    elif data.startswith("brevo_seg_"):
-        seg_key = data.replace("brevo_seg_", "")
-        state["brevo_seg_key"] = seg_key
-        email_type = state.get("brevo_email_type", "mu")
-        emails = state.get("current_emails", {})
-        which = state.get("_approve_which", "both")
-        subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
-        preview = state.get("selected_hook", {}).get("preview", "")
-        seg_id = BREVO_SEGMENTS.get(seg_key, {}).get("id")
-        seg_name = BREVO_SEGMENTS.get(seg_key, {}).get("name", seg_key)
-        send(chat_id, f"Creating Brevo drafts for *{seg_name}*...")
-        pushed = []
-        failed = []
-        if which in ("both", "free") and emails.get("free"):
-            free_body = clean_copy(extract_text(emails["free"]))
-            free_tmpl = BREVO_TEMPLATES.get(f"{email_type}_free", {}).get("id")
-            html_free = build_cryptonary_email_html(subject, preview, free_body)
-            fid, ferr = create_brevo_draft(
-                subject, preview, html_free,
-                list_ids=[seg_id] if seg_id else None,
-                template_id=free_tmpl
-            )
-            if fid:
-                pushed.append(("Free", fid))
-            else:
-                failed.append("Free: " + str(ferr))
-        if which in ("both", "pro") and emails.get("pro"):
-            pro_body = clean_copy(extract_text(emails["pro"]))
-            pro_tmpl = BREVO_TEMPLATES.get(f"{email_type}_premium", {}).get("id")
-            pro_seg_id = BREVO_SEGMENTS["pro_users"]["id"]
-            html_pro = build_cryptonary_email_html(subject, preview, pro_body)
-            pid, perr = create_brevo_draft(
-                subject, preview, html_pro,
-                list_ids=[pro_seg_id],
-                template_id=pro_tmpl
-            )
-            if pid:
-                pushed.append(("Pro", pid))
-            else:
-                failed.append("Pro: " + str(perr))
-        if pushed:
-            msg = "Drafts ready in Brevo:\n\n"
-            for label, cid in pushed:
-                msg += f"• {label}: https://app.brevo.com/campaign/email/{cid}/edit\n"
-            msg += "\nOpen each link, review, schedule and send."
-            keyboard = [
-                [{"text": "📱 Create social content", "callback_data": "social_yes"}],
-                [{"text": "✅ Mark complete",         "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, msg, keyboard)
-        if failed:
-            send(chat_id, "Failed: " + " | ".join(failed))
 
     elif data == "submit_revised_email":
         state["stage"] = "awaiting_revised_email"
@@ -5952,26 +5875,20 @@ def handle_callback(cb):
             send(chat_id, "Nothing to revert to.")
 
     elif data == "ie_to_content_studio":
-        content_val = state.get("ie_generated_content", "")
+        content_val = state.get("ie_generated_content", "") or state.get("ie_concepts", "")
         ie_format = state.get("ie_format", "")
-        if "reel" in ie_format or "video" in ie_format:
-            user_state[chat_id]["report"] = content_val
-            user_state[chat_id]["social_angle"] = state.get("ie_selected_angle", "")
-            user_state[chat_id]["social_origin"] = "idea_engine"
-            user_state[chat_id]["stage"] = "pick_social_formats"
-            show_standalone_social_menu(chat_id)
-        elif "carousel" in ie_format or "story" in ie_format or "static_post" in ie_format:
-            user_state[chat_id]["report"] = content_val
-            user_state[chat_id]["social_angle"] = state.get("ie_selected_angle", "")
-            user_state[chat_id]["social_origin"] = "idea_engine"
-            user_state[chat_id]["stage"] = "pick_social_formats"
-            show_standalone_social_menu(chat_id)
-        elif "static" in ie_format or "video_script" in ie_format:
+        # Always carry the concept into social content flow
+        user_state[chat_id]["report"] = content_val
+        user_state[chat_id]["social_angle"] = state.get("ie_selected_angle", "") or state.get("social_angle", "")
+        user_state[chat_id]["social_origin"] = "idea_engine"
+        user_state[chat_id]["stage"] = "pick_social_formats"
+        if "ad" in ie_format or "video_script" in ie_format:
             user_state[chat_id]["ad_theme"] = content_val[:500]
             user_state[chat_id]["stage"] = "pick_ad_avatars"
             show_avatar_menu(chat_id)
         else:
-            show_main_menu(chat_id)
+            # Route to social format picker — stays inside creative flow
+            show_standalone_social_menu(chat_id)
 
     elif data == "ie_manage_sources":
         show_ie_manage_sources(chat_id)
@@ -6355,115 +6272,95 @@ def handle_callback(cb):
         send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
 
     elif data == "brevo_push_start":
-        # Step 1: Ask email type — MU or MD
-        keyboard = [
-            [{"text": "Market Update (MU)", "callback_data": "brevo_type_mu"}],
-            [{"text": "Market Direction (MD)", "callback_data": "brevo_type_md"}],
-        ]
-        send(chat_id, "*Which email type?*\n\nThis determines which Brevo template is used.", keyboard)
-
-    elif data in ("brevo_type_mu", "brevo_type_md"):
-        state["brevo_email_type"] = "mu" if data == "brevo_type_mu" else "md"
-        # Step 2: Ask which segment to send to
-        seg_options = [
-            ("opened_30",  "Opened last 30 days"),
-            ("opened_60",  "Opened last 60 days"),
-            ("opened_90",  "Opened last 90 days"),
-            ("pro_users",  "All Pro Users"),
-            ("cancellers", "All Cancellers"),
-        ]
-        keyboard = []
-        for key, label in seg_options:
-            seg_id = BREVO_SEGMENTS[key]["id"]
-            keyboard.append([{"text": label, "callback_data": "brevo_seg_" + key}])
-        keyboard.append([{"text": "I'll pick the segment in Brevo", "callback_data": "brevo_seg_none"}])
-        send(chat_id, "*Which segment?*\n\nPick the audience for this campaign:", keyboard)
-
-    elif data.startswith("brevo_seg_") or data == "brevo_seg_none":
-        seg_key = data.replace("brevo_seg_", "") if data != "brevo_seg_none" else None
-        state["brevo_segment_key"] = seg_key
-
-        # Step 3: Ask which email to push — free, pro, or both
+        # Step 1: Which email(s) to push — Free goes to multiple lists, Pro to Pro list only
         emails = state.get("current_emails", {})
         has_free = bool(emails.get("free", ""))
         has_pro = bool(emails.get("pro", ""))
+        state["brevo_selected_segs"] = []  # reset multi-select
         options = []
-        if has_free: options.append([{"text": "Free email only", "callback_data": "brevo_push_free"}])
-        if has_pro:  options.append([{"text": "Pro email only",  "callback_data": "brevo_push_pro"}])
         if has_free and has_pro:
-            options.insert(0, [{"text": "Both (separate drafts)", "callback_data": "brevo_push_both"}])
-        send(chat_id, "*Which email to push to Brevo?*", options)
+            options.append([{"text": "Both emails (separate drafts)", "callback_data": "brevo_push_which_both"}])
+        if has_free:
+            options.append([{"text": "Free email only", "callback_data": "brevo_push_which_free"}])
+        if has_pro:
+            options.append([{"text": "Pro email only", "callback_data": "brevo_push_which_pro"}])
+        send(chat_id, "*Push to Brevo*\n\nWhich email(s)?", options)
+
+    elif data.startswith("brevo_push_which_"):
+        which = data.replace("brevo_push_which_", "")
+        state["brevo_push_which"] = which
+        state["brevo_selected_segs"] = []
+
+        if which == "pro":
+            # Pro always goes to Pro list only — skip segment picker
+            state["brevo_free_segs"] = []
+            state["brevo_pro_segs"] = [BREVO_SEGMENTS["pro_users"]["id"]]
+            _execute_brevo_push(chat_id)
+        else:
+            # Free email — pick which lists (multi-select)
+            keyboard = []
+            free_seg_options = [
+                ("opened_30",       "Opened last 30 days"),
+                ("opened_60",       "Opened last 60 days"),
+                ("opened_90",       "Opened last 90 days"),
+                ("never_joined_30", "Never Opened - joined 30d"),
+                ("cancellers",      "Cancellers"),
+            ]
+            for key, label in free_seg_options:
+                keyboard.append([{"text": "[ ] " + label, "callback_data": "brevo_freesel_" + key}])
+            keyboard.append([{"text": "Done - push now", "callback_data": "brevo_freesel_done"}])
+            send(chat_id, "*Which lists for the Free email?*\n\nTap to select multiple. Pro email always goes to the Pro list separately.", keyboard)
+
+    elif data.startswith("brevo_freesel_") and data != "brevo_freesel_done":
+        key = data.replace("brevo_freesel_", "")
+        selected = state.get("brevo_selected_segs", [])
+        seg_id = BREVO_SEGMENTS.get(key, {}).get("id")
+        if seg_id:
+            if seg_id in selected:
+                selected.remove(seg_id)
+            else:
+                selected.append(seg_id)
+        state["brevo_selected_segs"] = selected
+        # Rebuild keyboard showing selections
+        free_seg_options = [
+            ("opened_30",       "Opened last 30 days"),
+            ("opened_60",       "Opened last 60 days"),
+            ("opened_90",       "Opened last 90 days"),
+            ("never_joined_30", "Never Opened - joined 30d"),
+            ("cancellers",      "Cancellers"),
+        ]
+        keyboard = []
+        for k, label in free_seg_options:
+            sid = BREVO_SEGMENTS.get(k, {}).get("id")
+            tick = "[x]" if sid in selected else "[ ]"
+            keyboard.append([{"text": tick + " " + label, "callback_data": "brevo_freesel_" + k}])
+        keyboard.append([{"text": "Done — " + str(len(selected)) + " list(s) selected", "callback_data": "brevo_freesel_done"}])
+        tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id,
+                                       "reply_markup": {"inline_keyboard": keyboard}})
+
+    elif data == "brevo_freesel_done":
+        selected = state.get("brevo_selected_segs", [])
+        if not selected:
+            send(chat_id, "Select at least one list first.")
+            return
+        state["brevo_free_segs"] = selected
+        which = state.get("brevo_push_which", "free")
+        if which == "both":
+            state["brevo_pro_segs"] = [BREVO_SEGMENTS["pro_users"]["id"]]
+        else:
+            state["brevo_pro_segs"] = []
+        _execute_brevo_push(chat_id)
 
     elif data in ("brevo_push_free", "brevo_push_pro", "brevo_push_both"):
-        emails = state.get("current_emails", {})
-        email_type = state.get("brevo_email_type", "mu")
-        seg_key = state.get("brevo_segment_key")
-        subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
-        preview = state.get("selected_hook", {}).get("preview", "")
-        seg_id = BREVO_SEGMENTS[seg_key]["id"] if seg_key and seg_key in BREVO_SEGMENTS else None
-        pushed = []
-        failed = []
-
-        def _push_one(email_variant, template_key, label):
-            body_text = extract_text(emails.get(email_variant, ""))
-            if not body_text:
-                failed.append(label + ": no content")
-                return
-            # Extract subject/preview from body if present
-            subj = subject
-            prev = preview
-            for line in body_text.split("\n")[:4]:
-                if line.lower().startswith("subject line:"):
-                    subj = line.split(":", 1)[1].strip()
-                elif line.lower().startswith("preview:"):
-                    prev = line.split(":", 1)[1].strip()
-            # Strip subject/preview lines from body
-            import re as _re
-            body_clean = _re.sub(r'^(Subject Line|Preview):.*\n?', '', body_text, flags=_re.IGNORECASE | _re.MULTILINE).strip()
-            template_id = BREVO_TEMPLATES[template_key]["id"]
-            html = build_cryptonary_email_html(subj, prev, body_clean)
-            campaign_name = "Draft: [" + email_type.upper() + " " + label + "] " + subj[:60]
-            draft_id, err = create_brevo_draft(
-                subject=subj,
-                preview_text=prev,
-                html_content=html,
-                list_ids=[seg_id] if seg_id else None,
-                template_id=None  # Use our generated HTML, not a Brevo template
-            )
-            if draft_id:
-                url = "https://app.brevo.com/campaign/email/" + str(draft_id) + "/edit"
-                pushed.append((label, draft_id, url))
-            else:
-                failed.append(label + ": " + (err or "unknown error"))
-
-        if data in ("brevo_push_free", "brevo_push_both"):
-            tkey = email_type + "_free"  # mu_free or md_free
-            if tkey in BREVO_TEMPLATES:
-                _push_one("free", tkey, "FREE")
-            else:
-                failed.append("FREE: template key " + tkey + " not found")
-
-        if data in ("brevo_push_pro", "brevo_push_both"):
-            tkey = email_type + "_premium"  # mu_premium or md_premium
-            if tkey in BREVO_TEMPLATES:
-                _push_one("pro", tkey, "PRO")
-            else:
-                failed.append("PRO: template key " + tkey + " not found")
-
-        state["brevo_draft_pushed"] = True
-
-        # Report results
-        if pushed:
-            msg = "Drafts created in Brevo:\n\n"
-            for label, draft_id, url in pushed:
-                msg += label + " draft (ID: " + str(draft_id) + ")\n" + url + "\n\n"
-            msg += "Open the link, review formatting, confirm segment, then send."
-            keyboard = [[{"text": "Session complete", "callback_data": "brevo_skip_push"}]]
-            send(chat_id, msg, keyboard)
-        if failed:
-            send(chat_id, "Some drafts failed:\n" + "\n".join(failed))
-        if not pushed and not failed:
-            send(chat_id, "Nothing to push.")
+        # Legacy handlers — redirect to new flow
+        state["brevo_push_which"] = data.replace("brevo_push_", "")
+        state["brevo_selected_segs"] = []
+        keyboard = [
+            [{"text": "Both emails (separate drafts)", "callback_data": "brevo_push_which_both"}],
+            [{"text": "Free email only", "callback_data": "brevo_push_which_free"}],
+            [{"text": "Pro email only", "callback_data": "brevo_push_which_pro"}],
+        ]
+        send(chat_id, "*Push to Brevo*\n\nWhich email(s)?", keyboard)
 
     elif data == "img_from_brief":
         # Must be BEFORE img_ startswith catch below
@@ -6511,6 +6408,8 @@ def handle_callback(cb):
     elif data == "vb_auto":
         # Auto-detect type from current content — skip picker
         social_type = state.get("current_social_type", "")
+        last_vb_type = state.get("last_visual_type", "")
+        # Determine content type from whatever is available
         if "Carousel" in social_type:
             state["img_engine"] = "claude"
             generate_visual_brief(chat_id, "carousel")
@@ -6523,10 +6422,21 @@ def handle_callback(cb):
             generate_visual_brief(chat_id, "story")
         elif state.get("current_emails"):
             generate_visual_brief(chat_id, "email")
-        elif state.get("current_ad"):
+        elif state.get("current_ad") or state.get("current_ad_output"):
             generate_visual_brief(chat_id, "ad_static")
+        elif last_vb_type:
+            # Reuse last known type
+            generate_visual_brief(chat_id, last_vb_type)
         else:
-            show_visual_brief_menu(chat_id)
+            # Fallback — ask which type
+            keyboard = [
+                [{"text": "Static post",      "callback_data": "vb_type_static"}],
+                [{"text": "Carousel",         "callback_data": "vb_type_carousel"}],
+                [{"text": "Story",            "callback_data": "vb_type_story"}],
+                [{"text": "Email thumbnail",  "callback_data": "vb_type_email"}],
+                [{"text": "Ad static",        "callback_data": "vb_type_ad_static"}],
+            ]
+            send(chat_id, "*Which type of visual?*", keyboard)
 
     elif data.startswith("vb_gen_opt_"):
         # User chose a specific thumbnail option — extract that option from brief and generate
@@ -6737,13 +6647,14 @@ def poll():
                                 "ie_concept_review",
                                 "idea_engine_idle"]
                             if stage in content_stages:
-                                if "pdf" in mime:
-                                    ftype = "pdf"
+                                if "video" in mime and stage == "awaiting_reel_upload":
+                                    handle_reel_analysis(chat_id, doc)
+                                elif "pdf" in mime:
+                                    handle_content_file(chat_id, doc, "pdf")
                                 elif "word" in mime or "docx" in mime or "officedocument" in mime:
-                                    ftype = "doc"
+                                    handle_content_file(chat_id, doc, "doc")
                                 else:
-                                    ftype = "doc"
-                                handle_content_file(chat_id, doc, ftype)
+                                    handle_content_file(chat_id, doc, "doc")
                             elif stage in ie_stages_doc or stage.startswith("ie_"):
                                 if "pdf" in mime:
                                     ftype = "pdf"
@@ -6760,17 +6671,18 @@ def poll():
                                 else:
                                     ftype = "image" if mime.startswith("image/") else "csv"
                                     handle_ds_file(chat_id, doc, ftype)
-                        elif "video" in msg:
+                        elif "video" in msg or "video_note" in msg or "animation" in msg:
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             stage = user_state[chat_id].get("stage", "idle")
-                            video = msg["video"]
+                            # Get the video object from whichever field is present
+                            video = msg.get("video") or msg.get("video_note") or msg.get("animation")
                             if stage == "awaiting_reel_upload":
                                 handle_reel_analysis(chat_id, video)
                             elif stage == "awaiting_ad_creative_upload":
-                                # Video creative for ad copy — treat as reel analysis then offer copy
                                 handle_reel_analysis(chat_id, video, mode="ad_copy")
                             else:
-                                send(chat_id, "Video received. To analyse it, go to Writing Studio → Reel Analysis first.")
+                                keyboard = [[{"text": "🔍 Analyse this reel", "callback_data": "mode_reel_analysis"}]]
+                                send(chat_id, "Video received. Tap below to analyse it, or go to Creative Studio → Reel Analysis first.", keyboard)
                         else:
                             handle_message(msg)
                     elif "callback_query" in update:
@@ -7259,20 +7171,24 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
             analysis_prompt = (
                 "You are a senior social media strategist analysing a short-form video for Cryptonary.\n\n"
                 f"VIDEO DETAILS: {video_meta}\n\n"
-                "Analyse this reel/video thoroughly. Structure your response EXACTLY as:\n\n"
-                "HOOK ANALYSIS (first 3 seconds)\n"
-                "[Rate 1-10. What does the hook do well? Does it stop the scroll? Is it specific enough?]\n\n"
-                "PACING AND STRUCTURE\n"
-                "[How does the video flow? Is the information density right? Does it hold attention?]\n\n"
-                "ON-SCREEN TEXT\n"
-                "[Quality of text overlays — clarity, timing, font size, information load]\n\n"
+                "Score and analyse this reel/video. Structure your response EXACTLY as:\n\n"
+                "SCORES\n"
+                "Hook (1-10): [score] — [one sentence why]\n"
+                "Pacing (1-10): [score] — [one sentence why]\n"
+                "On-screen text (1-10): [score] — [one sentence why]\n"
+                "Shareability (1-10): [score] — [one sentence why]\n"
+                "OVERALL: [X/10]\n\n"
+                "SCORING RUBRIC (apply this objectively):\n"
+                "Hook: 9-10=stops scroll instantly, curiosity or tension in <2s. 7-8=good but slightly slow. 5-6=needs work. <5=loses viewer.\n"
+                "Pacing: 9-10=tight, every second earns its place. 7-8=mostly tight. 5-6=some dead air. <5=too slow or rushed.\n"
+                "On-screen text: 9-10=clear, well-timed, adds not distracts. 7-8=mostly good. 5-6=cluttered or mistimed. <5=confusing.\n"
+                "Shareability: 9-10=people will forward this. 7-8=saves-worthy. 5-6=watches but doesn't share. <5=scrolls past.\n\n"
                 "WHAT'S WORKING\n"
                 "[2-3 specific strengths with reasons]\n\n"
                 "WHAT TO CHANGE\n"
                 "[2-3 specific improvements — be direct and actionable]\n\n"
                 "CRYPTONARY VERSION\n"
-                "[A specific concept that takes the best element of this video and adapts it for Cryptonary's brand and audience — include a hook line and angle]\n\n"
-                "Overall score: [X/10]\n\n"
+                "[A specific concept adapting the best element of this video for Cryptonary's brand — include the exact hook line you'd use]\n\n"
                 "Be direct. No fluff. Reference specific seconds where relevant."
             )
 
@@ -7335,6 +7251,71 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
 
     except Exception as e:
         send(chat_id, "Error analysing video: " + str(e))
+
+
+def _execute_brevo_push(chat_id):
+    """Execute the Brevo draft creation after all selections are made."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
+    emails = state.get("current_emails", {})
+    which = state.get("brevo_push_which", "free")
+    free_list_ids = state.get("brevo_free_segs", [])
+    pro_list_ids = state.get("brevo_pro_segs", [])
+    subject = state.get("selected_hook", {}).get("subject", "Cryptonary Update")
+    preview = state.get("selected_hook", {}).get("preview", "")
+    pushed = []
+    failed = []
+
+    import re as _re
+
+    def _push_variant(email_variant, list_ids, label):
+        body_text = extract_text(emails.get(email_variant, ""))
+        if not body_text:
+            failed.append(label + ": no content found")
+            return
+        subj = subject
+        prev = preview
+        for line in body_text.split("\n")[:5]:
+            if line.lower().startswith("subject line:"):
+                subj = line.split(":", 1)[1].strip()
+            elif line.lower().startswith("preview:"):
+                prev = line.split(":", 1)[1].strip()
+        body_clean = _re.sub(r'^(Subject Line|Preview):.*\n?', '', body_text,
+                              flags=_re.IGNORECASE | _re.MULTILINE).strip()
+        html = build_cryptonary_email_html(subj, prev, body_clean)
+        draft_id, err = create_brevo_draft(
+            subject=subj,
+            preview_text=prev,
+            html_content=html,
+            list_ids=list_ids if list_ids else None,
+            template_id=None
+        )
+        if draft_id:
+            url = "https://app.brevo.com/campaign/email/" + str(draft_id) + "/edit"
+            pushed.append((label, draft_id, url))
+        else:
+            failed.append(label + ": " + (err or "unknown error"))
+
+    send(chat_id, "Creating Brevo draft(s)...")
+
+    if which in ("free", "both"):
+        _push_variant("free", free_list_ids, "FREE")
+    if which in ("pro", "both"):
+        _push_variant("pro", pro_list_ids, "PRO")
+
+    state["brevo_draft_pushed"] = True
+
+    if pushed:
+        msg = "Drafts created in Brevo:\n\n"
+        for label, draft_id, url in pushed:
+            msg += label + " (ID: " + str(draft_id) + ")\n" + url + "\n\n"
+        msg += "Open the link, review, confirm segment, then send."
+        keyboard = [[{"text": "Session complete", "callback_data": "brevo_skip_push"}]]
+        send(chat_id, msg, keyboard)
+    if failed:
+        send(chat_id, "Failed:\n" + "\n".join(failed))
+    if not pushed and not failed:
+        send(chat_id, "Nothing to push.")
 
 
 def gen_ad_copy_for_creative(chat_id, creative_description):
@@ -7597,12 +7578,16 @@ def gen_social_hooks(chat_id):
         instruction = format_hook_instructions[fmt]
         label = format_labels.get(fmt, fmt)
         try:
-            raw = openai_gpt(  # GPT-4o for social hooks
-            
+            raw = openai_gpt(
                 "REPORT:\n" + report[:500] +
                 "\nANGLE: " + angle +
                 "\n\n" + instruction +
                 "\n\nFormat:\n1. [hook]\n2. [hook]\n3. [hook]\n4. [hook]\nNothing else.",
+                system="You are writing social media hooks for Cryptonary's Instagram. "
+                       "These are NOT emails. Do NOT use 'Gm Name' or any email-style openers. "
+                       "Hooks must be punchy, visual, scroll-stopping. "
+                       "No greeting, no salutation, no 'Good morning'. "
+                       "Start with the sharpest possible word or phrase.",
                 max_tokens=400
             )
             hooks = parse_numbered_list(raw, 4)
@@ -8464,14 +8449,9 @@ def start_ds_adverts(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     state["stage"] = "ds_ad_format_filter"
-    keyboard = []
-    if META_TOKEN and META_AD_ACCOUNT:
-        keyboard.append([{"text": "📊 Import from Meta Ads", "callback_data": "ds_meta_pull"}])
-    else:
-        keyboard.append([{"text": "📊 Import from Meta Ads", "callback_data": "ds_meta_setup"}])
-    keyboard += [
+    keyboard = [
         [{"text": "📁 Upload file (CSV / screenshot)", "callback_data": "ds_adverts_upload"}],
-        [{"text": "✏️ Paste numbers manually", "callback_data": "ds_adverts_manual"}],
+        [{"text": "✏️ Paste numbers manually",         "callback_data": "ds_adverts_manual"}],
     ]
     send(chat_id, "*Ad Performance Analysis*\n\nHow would you like to bring your data in?", keyboard)
 
@@ -8536,7 +8516,9 @@ def parse_ads_csv(csv_text):
             spend = float(r.get("Amount spent (GBP)", r.get("Amount spent", 0)) or 0)
             checkouts = float(r.get("Checkouts initiated", 0) or 0)
             cpc = float(r.get("CPC (cost per link click) (GBP)", r.get("CPC (GBP)", 0)) or 0)
-            ctr = float(r.get("Outbound CTR (click-through rate)", r.get("Outbound CTR", 0)) or 0)
+            ctr_raw = float(r.get("Outbound CTR (click-through rate)", r.get("Outbound CTR", 0)) or 0)
+            # Meta exports CTR as decimal (0.0207 = 2.07%) — convert to percentage
+            ctr = round(ctr_raw * 100, 2) if ctr_raw < 1.0 else round(ctr_raw, 2)
             purchases = float(r.get("Purchases", 0) or 0)
             cost_per_checkout = float(r.get("Cost per checkout initiated (GBP)", 0) or 0)
             if cost_per_checkout == 0 and checkouts > 0:
@@ -8553,8 +8535,10 @@ def parse_ads_csv(csv_text):
         total_purchases = int(sum(a["purchases"] for a in ads))
         ads_with_checkouts = [a for a in ads if a["checkouts"] > 0]
         avg_cost_per_checkout = round(total_spend / total_checkouts, 2) if total_checkouts > 0 else 0
+        ctrs = [a["ctr"] for a in ads if a["ctr"] > 0]
+        avg_ctr = round(sum(ctrs) / len(ctrs), 2) if ctrs else 0
+        max_ctr = round(max(ctrs), 2) if ctrs else 0
 
-        # Build verified data table for Claude
         lines = [
             "VERIFIED AD DATA — computed by Python (do not re-calculate, use these numbers exactly)",
             f"Total ads: {total_ads}",
@@ -8563,6 +8547,8 @@ def parse_ads_csv(csv_text):
             f"Total purchases: {total_purchases}",
             f"Ads with checkouts: {len(ads_with_checkouts)}",
             f"Avg cost per checkout: £{avg_cost_per_checkout}",
+            f"Average CTR: {avg_ctr}%",
+            f"Top CTR: {max_ctr}%",
             "",
             "ALL ADS (sorted by checkouts desc, then spend desc):",
             "Ad Name | Spend | Checkouts | Cost/Checkout | CTR | CPC",
@@ -10022,8 +10008,11 @@ RULES:
 - CRITICAL — NO PROMPT BLEED: Every text element rendered on the canvas must be actual content from the brief. NEVER render layout directives, font instructions, dimension specs, or any text from these instructions as visible content. If an instruction says "3-4 words per line" — apply it silently, never print those words. If an instruction mentions "Tungsten headline" — use that style, never write "Tungsten headline" on the canvas.
 - Include a print/screenshot note: <!-- Open in browser and screenshot for best results -->""")
 
+    # Carousels need more tokens — they have many slides
+    max_tok = 5000 if post_type == "carousel" else 3500
+
     try:
-        result = claude(prompt, max_tokens=3000)
+        result = claude(prompt, max_tokens=max_tok)
         import re as _re
         html_match = _re.search(r'(<!DOCTYPE[\s\S]*?</html>)', result, _re.IGNORECASE)
         html_out = None
@@ -10031,16 +10020,20 @@ RULES:
             html_out = html_match.group(1)
         elif result.strip().lower().startswith('<!doctype') or result.strip().startswith('<html'):
             html_out = result.strip()
+        # If no valid HTML found and result is long enough, it may have been truncated
+        if not html_out and len(result) > 1000:
+            # Try to close any open tags and salvage
+            if '<html' in result.lower() and '</html>' not in result.lower():
+                html_out = result + '\n</body>\n</html>'
         if html_out:
-            # Safety net: if logo should be there but isn't, inject it before </body>
+            # Safety net: inject logo if missing
             if post_type not in {"thumbnail", "report"}:
-                # Only inject if the bracket-C polygon points aren't already present
                 if 'points="94.87,21.96' not in html_out:
                     logo_div = get_logo_svg_tag(position="bottom-right", size=40, variant="white")
                     handle_div = '<div style="position:fixed;bottom:18px;left:16px;font-family:Inter,Arial,sans-serif;font-size:13px;color:white;z-index:999;opacity:0.9;">@Cryptonary</div>'
                     html_out = html_out.replace('</body>', logo_div + handle_div + '</body>')
             return html_out, None
-        return None, "Claude did not return valid HTML"
+        return None, "Claude did not return valid HTML — try again or use a different engine"
     except Exception as e:
         return None, str(e)
 
@@ -11879,9 +11872,10 @@ def show_idea_engine_menu(chat_id):
     keyboard = [
         [{"text": "💡 Generate ideas from scratch",  "callback_data": "ie_from_scratch"}],
         [{"text": "🔗 Generate from inspiration",    "callback_data": "ie_from_inspiration"}],
+        [{"text": "🎬 Storyboard Generator",         "callback_data": "mode_storyboard"}],
         [{"text": "🔍 Reel Analysis",                "callback_data": "mode_reel_analysis"}],
     ]
-    send(chat_id, "*Creative Studio*\n\nHow do you want to generate ideas?", keyboard)
+    send(chat_id, "*Creative Studio*\n\nWhat do you want to do?", keyboard)
 
 def show_ie_source_menu(chat_id, idea_type):
     """After type selection: pull from database or upload new inspiration."""
@@ -11951,27 +11945,38 @@ def generate_ie_concept(chat_id):
 
     try:
         prompt = "Generate 4 Instagram content concepts for Cryptonary.\n\n"
-        prompt += "MARKET: " + market_line + "\n"
+
+        # Force live market data to be used accurately
+        if market_line:
+            prompt += "LIVE MARKET DATA (use these EXACT numbers — do not invent alternatives):\n"
+            prompt += market_line + "\n"
+            prompt += "CRITICAL: Only reference Fear & Greed and BTC price using the numbers above. "
+            prompt += "Do NOT invent historical comparisons unless you are certain of the fact. "
+            prompt += "If you reference a past price level or date, it must be verifiable. "
+            prompt += "When in doubt, omit the comparison rather than guess.\n\n"
+
         if source_content:
-            prompt += "\nINSPIRATION SOURCE (" + source_label + "):\n" + source_content[:2000] + "\n"
-        prompt += "\nCRYPTONARY PROVEN POST PATTERNS (use as creative reference):\n" + BEST_POSTS[:1500] + "\n"
+            prompt += "INSPIRATION SOURCE (" + source_label + "):\n" + source_content[:2000] + "\n"
+            prompt += "Source each concept idea with [Source: X] at the end of the ANGLE line.\n\n"
+
+        prompt += "CRYPTONARY PROVEN POST PATTERNS (use as creative reference):\n" + BEST_POSTS[:1500] + "\n"
         prompt += ctx
 
         if prev_concepts:
             prompt += "\n\nPREVIOUSLY GENERATED - DO NOT REPEAT THESE ANGLES OR HOOKS:\n"
             for _pi, _batch in enumerate(prev_concepts):
                 prompt += "\nBatch " + str(_pi+1) + ":\n" + _batch[:600] + "\n"
-            prompt += "\nNew concepts MUST use completely different angles and emotional triggers. If previous used fear, use aspiration or social proof. No overlap in hook style.\n"
+            prompt += "\nNew concepts MUST use completely different angles and emotional triggers.\n"
 
         prompt += """
 
 Each concept is a distinct Instagram post idea — different angle, emotion, or narrative.
-Vary the emotional trigger across all 4: one fear-based, one aspiration, one social proof, one contrarian — no two should use the same emotional approach.
-Keep each entry SHORT. No fluff.
+Vary the emotional trigger across all 4: one fear-based, one aspiration, one social proof, one contrarian.
+Keep each entry SHORT. No fluff. No invented statistics.
 
 Format EXACTLY:
 1. CONCEPT: [One punchy line — the big idea]
-   ANGLE: [The emotional or argumentative approach — why this hits]
+   ANGLE: [The emotional approach — why this hits] [Source: name if applicable]
 
 2. CONCEPT: ...
    ANGLE: ...
@@ -11984,7 +11989,10 @@ Format EXACTLY:
 
 Nothing else."""
 
-        IE_SYSTEM = "You are a creative strategist for Cryptonary, a crypto research brand with 300K+ subscribers. Generate sharp, distinct Instagram content concepts. Be specific, data-led, and punchy. No filler."
+        IE_SYSTEM = ("You are a creative strategist for Cryptonary, a crypto research brand with 300K+ subscribers. "
+                     "Generate sharp, distinct Instagram content concepts. Be specific and data-led. "
+                     "NEVER invent price levels, dates, or statistics. Only use facts from the data provided. "
+                     "If you are not certain of a historical fact, remove it from the concept entirely.")
         raw = claude(prompt, max_tokens=1200, system=IE_SYSTEM)
         state["ie_concepts"] = raw
         state["stage"] = "ie_concept_review"
