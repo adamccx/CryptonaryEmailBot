@@ -2439,16 +2439,16 @@ def extract_text(v):
 
 def email_action_keyboard():
     return [
-        [{"text": "Quick Edit", "callback_data": "quick_edit"},
-         {"text": "Enhance", "callback_data": "enhance"},
-         {"text": "Approve", "callback_data": "approve_emails"}],
-        [{"text": "Subject Lines", "callback_data": "subject_ab"},
-         {"text": "Tone", "callback_data": "tone_menu"},
-         {"text": "Segments", "callback_data": "segments"}],
-        [{"text": "Length", "callback_data": "length_email"},
-         {"text": "Add Context", "callback_data": "add_context_email"},
-         {"text": "Critique", "callback_data": "critique_email"}],
-        [{"text": "✏️ Manual Edit", "callback_data": "manual_edit_email"}]
+        [{"text": "Quick Edit",   "callback_data": "quick_edit"},
+         {"text": "Enhance",      "callback_data": "enhance"},
+         {"text": "Approve",      "callback_data": "approve_emails"}],
+        [{"text": "🔄 Regenerate","callback_data": "regen_emails"},
+         {"text": "Subject Lines","callback_data": "subject_ab"},
+         {"text": "Tone",         "callback_data": "tone_menu"}],
+        [{"text": "Length",       "callback_data": "length_email"},
+         {"text": "Add Context",  "callback_data": "add_context_email"},
+         {"text": "Critique",     "callback_data": "critique_email"}],
+        [{"text": "✏️ Manual Edit","callback_data": "manual_edit_email"}]
     ]
 
 def ad_action_keyboard():
@@ -2469,10 +2469,11 @@ def format_action_keyboard(fmt_key, fmt_label):
     """Action keyboard for a specific format — encodes format in callback."""
     kb = [
         [{"text": "Quick Edit", "callback_data": "sfmt_edit_" + fmt_key},
-         {"text": "Enhance",    "callback_data": "sfmt_enhance_" + fmt_key},
-         {"text": "Approve",    "callback_data": "sfmt_approve_" + fmt_key}],
-        [{"text": "Critique",   "callback_data": "critique_social_" + fmt_key},
-         {"text": "Length",     "callback_data": "length_social"}],
+         {"text": "Enhance",    "callback_data": "sfmt_enhance_" + fmt_key}],
+        [{"text": "Approve",    "callback_data": "sfmt_approve_" + fmt_key}],
+        [{"text": "🔄 Regenerate", "callback_data": "sfmt_regen_" + fmt_key},
+         {"text": "Critique",  "callback_data": "critique_social_" + fmt_key},
+         {"text": "Length",    "callback_data": "length_social"}],
         [{"text": "🎨 Visual brief", "callback_data": "vb_auto"}],
         [{"text": "✏️ Manual Edit",  "callback_data": "manual_edit_social"}],
     ]
@@ -2480,12 +2481,14 @@ def format_action_keyboard(fmt_key, fmt_label):
 
 def social_action_keyboard():
     return [
-        [{"text": "Quick Edit", "callback_data": "social_quick_edit"},
-         {"text": "Enhance", "callback_data": "social_enhance"},
-         {"text": "Approve", "callback_data": "approve_social"}],
-        [{"text": "Length", "callback_data": "length_social"},
-         {"text": "Critique", "callback_data": "critique_social"}],
-        [{"text": "✏️ Manual Edit", "callback_data": "manual_edit_social"}]
+        [{"text": "Quick Edit",  "callback_data": "social_quick_edit"},
+         {"text": "Enhance",     "callback_data": "social_enhance"},
+         {"text": "Approve",     "callback_data": "approve_social"}],
+        [{"text": "🔄 Regenerate","callback_data": "gen_social_confirmed"},
+         {"text": "Length",      "callback_data": "length_social"},
+         {"text": "Critique",    "callback_data": "critique_social"}],
+        [{"text": "🎨 Visual brief", "callback_data": "vb_auto"},
+         {"text": "✏️ Manual Edit", "callback_data": "manual_edit_social"}],
     ]
 
 def mark_complete_keyboard():
@@ -4078,8 +4081,11 @@ def handle_message(msg):
     if stage == "awaiting_custom_social_angle":
         user_state[chat_id]["social_angle"] = text
         user_state[chat_id]["stage"] = "pick_social_formats"
-        user_state[chat_id]["selected_social_formats"] = []
-        show_standalone_social_menu(chat_id)
+        # If format already selected, go straight to hooks — don't reset and re-ask
+        if user_state[chat_id].get("selected_social_formats"):
+            gen_social_hooks(chat_id)
+        else:
+            show_standalone_social_menu(chat_id)
         return
 
     if stage == "awaiting_ad_existing_upload":
@@ -4341,26 +4347,37 @@ def handle_message(msg):
         send(chat_id, "Working on it...")
         try:
             totals = user_state[chat_id].get("ds_verified_totals", {})
+            ads = user_state[chat_id].get("ds_verified_ads", [])
             totals_prefix = ""
             if totals:
+                ctrs = [a["ctr"] for a in ads if a.get("ctr", 0) > 0] if ads else []
+                avg_ctr = round(sum(ctrs) / len(ctrs), 2) if ctrs else totals.get("avg_ctr", 0)
+                max_ctr = round(max(ctrs), 2) if ctrs else 0
                 totals_prefix = (
-                    f"VERIFIED TOTALS (always use these exact numbers, do not re-calculate):\n"
-                    f"- Total ads: {totals['total_ads']}\n"
-                    f"- Total spend: £{totals['total_spend']:,.2f}\n"
-                    f"- Total checkouts initiated: {totals['total_checkouts']}\n\n"
+                    "VERIFIED DATA — always use these exact numbers, do not re-calculate:\n"
+                    f"Total ads: {totals.get('total_ads', '?')}\n"
+                    f"Total spend: £{totals.get('total_spend', 0):,.2f}\n"
+                    f"Total checkouts initiated: {totals.get('total_checkouts', '?')}\n"
+                    f"Average CTR: {avg_ctr}%\n"
+                    f"Top CTR: {max_ctr}%\n"
                 )
+                if ads:
+                    totals_prefix += "\nALL ADS (name | spend | checkouts | CTR):\n"
+                    for a in sorted(ads, key=lambda x: -x.get("checkouts", 0))[:30]:
+                        totals_prefix += f"  {a['name']} | £{a['spend']:.2f} | {int(a.get('checkouts',0))} | {a.get('ctr',0):.2f}%\n"
+                totals_prefix += "\n"
             result = claude(
                 totals_prefix +
-                "Previous analysis:\n" + last_analysis[:3000] +
+                "Previous analysis:\n" + last_analysis[:2000] +
                 "\n\nFollow-up question: " + text +
-                "\n\nAnswer specifically based on the data. Use the VERIFIED TOTALS above for any aggregate numbers.",
+                "\n\nAnswer specifically and directly from the verified data above. Never say you cannot calculate something — the numbers are all there.",
                 max_tokens=1500,
                 system=DATA_STUDIO_SYSTEM
             )
             send_plain(chat_id, result)
             keyboard = [
                 [{"text": "Ask another follow-up", "callback_data": "ds_followup"}],
-                [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}]
+                [{"text": "Back to Data Studio",   "callback_data": "open_data_studio"}]
             ]
             send(chat_id, "Done.", keyboard)
         except Exception as e:
@@ -4557,15 +4574,31 @@ def handle_message(msg):
         revised = text.strip()
         if len(revised) > 50:
             save_voice_example(chat_id, revised[:800], "revised_approved_email")
-            # Also store as latest approved copy for reference
             state["last_approved_email_copy"] = revised[:800]
             keyboard = [
                 [{"text": "📱 Create social content", "callback_data": "social_yes"}],
-                [{"text": "✅ Mark complete", "callback_data": "mark_complete"}],
+                [{"text": "✅ Mark complete",          "callback_data": "mark_complete"}],
             ]
             send(chat_id, "Saved. This will inform the voice and style of future emails.", keyboard)
         else:
             send(chat_id, "That looks too short. Paste the full email body.")
+        return
+
+    if stage == "awaiting_revised_social":
+        # Save revised social copy to voice corpus for learning
+        revised = text.strip()
+        social_type = state.get("current_social_type", "social content")
+        if len(revised) > 20:
+            corpus_key = "revised_approved_" + social_type.lower().replace(" ", "_")
+            save_voice_example(chat_id, revised[:600], corpus_key)
+            state["last_approved_social_copy"] = revised[:600]
+            keyboard = [
+                [{"text": "Generate another format", "callback_data": "social_yes"}],
+                [{"text": "✅ Mark complete",         "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Saved. Your edits will inform future " + social_type.lower() + " generation.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full caption or script.")
         return
 
     if stage == "yt_awaiting_content":
@@ -5112,6 +5145,15 @@ def handle_callback(cb):
     elif data == "regen_emails":
         gen_emails(chat_id)
 
+    elif data == "regen_emails":
+        # Regenerate emails with same report/angle — skip back to generation
+        report = state.get("report", "")
+        if not report:
+            send(chat_id, "No report in session. Paste a new report to regenerate.")
+        else:
+            send(chat_id, "Regenerating emails...")
+            gen_emails(chat_id)
+
     elif data == "quick_edit":
         user_state[chat_id]["pre_edit_stage"] = "emails_ready"
         ask_quick_edit(chat_id, mode="email")
@@ -5145,6 +5187,12 @@ def handle_callback(cb):
             state["current_social_type"] = outputs[fmt_key]["type"]
             state["current_social_format"] = fmt_key
         gen_enhance(chat_id, mode="social")
+
+    elif data.startswith("sfmt_regen_"):
+        fmt_key = data.replace("sfmt_regen_", "")
+        # Regenerate this specific format with same angle/hooks
+        state["selected_social_formats"] = [fmt_key]
+        gen_social_selected(chat_id)
 
     elif data.startswith("sfmt_approve_"):
         fmt_key = data.replace("sfmt_approve_", "")
@@ -5304,6 +5352,11 @@ def handle_callback(cb):
         state["stage"] = "awaiting_revised_email"
         send(chat_id, "*Submit Revised Version*\n\nPaste your final edited email copy.\n\nThis will be saved as an approved writing example and used to improve future emails.\n\n_Paste just the body — no need to include subject line._")
 
+    elif data == "submit_revised_social":
+        state["stage"] = "awaiting_revised_social"
+        social_type = state.get("current_social_type", "social content")
+        send(chat_id, f"*Submit Revised {social_type}*\n\nPaste your final edited version.\n\nThis will be saved as an approved example and used to improve future {social_type.lower()} generation.\n\n_Paste the full caption/script._")
+
     elif data == "social_yes":
         state["selected_social_formats"] = []
         # Coming from approved email — report and angle already in state, skip straight to format picker
@@ -5407,21 +5460,24 @@ def handle_callback(cb):
         show_social_format_menu(chat_id)
 
     elif data.startswith("pick_fmt_"):
-        # New single-tap format selection — pick one format and go straight to angle/hook
+        # Single-tap format selection — pick one format and go straight to angle/hook
         fmt = data.replace("pick_fmt_", "")
+        # Preserve existing angle/report — only reset format-specific state
         state["selected_social_formats"] = [fmt]
-        state["social_angle"] = ""
-        state["selected_angle"] = ""
         state["social_hooks"] = {}
         state["selected_social_hooks"] = {}
-        state["social_framework"] = ""
-        # Auto-set framework for reels/stories (PAS works best), AIDA for static/carousel
+        # Auto-set framework
         if fmt in {"fmt_reel", "fmt_story_single", "fmt_story_multi"}:
             state["social_framework"] = "PAS"
         else:
             state["social_framework"] = "AIDA"
         state["stage"] = "pick_social_formats"
-        if state.get("social_angle") or state.get("selected_angle"):
+        # If angle already exists (e.g. coming from email flow or idea engine), skip to hooks
+        has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
+        if has_angle:
+            # Carry existing angle into social_angle so gen_social_hooks can use it
+            if not state.get("social_angle") and state.get("selected_angle"):
+                state["social_angle"] = state["selected_angle"]
             gen_social_hooks(chat_id)
         else:
             gen_social_angles(chat_id)
@@ -5447,6 +5503,7 @@ def handle_callback(cb):
         keyboard = [
             [{"text": "Generate another format",   "callback_data": "social_yes"}],
             [{"text": "🎨 Visual brief + image",   "callback_data": "vb_auto"}],
+            [{"text": "✏️ Submit revised version", "callback_data": "submit_revised_social"}],
             [{"text": "Mark Complete",             "callback_data": "mark_complete"}],
         ]
         send(chat_id, social_type + " approved.", keyboard)
@@ -5603,6 +5660,25 @@ def handle_callback(cb):
         state.pop("ds_csv_text", None)
         start_ds_adverts(chat_id)
 
+    elif data == "ds_landing_upload":
+        # Alias — route to landing page data studio
+        state["ds_images"] = []
+        start_ds_landing(chat_id)
+
+    elif data == "ds_social_upload":
+        # Alias — route to social data studio upload flow
+        state["ds_images"] = []
+        state["ds_social_filter"] = "all"
+        state["stage"] = "ds_awaiting_social_data"
+        send(chat_id, "Upload your Instagram screenshots or CSV:")
+
+    elif data == "ds_social_manual":
+        # Alias — route to social manual entry
+        state["ds_images"] = []
+        state["ds_social_filter"] = "all"
+        state["stage"] = "ds_awaiting_social_data"
+        send(chat_id, "Paste your Instagram performance numbers:")
+
     elif data == "ds_adverts_upload":
         # After choosing upload — ask which ad type filter then accept files
         keyboard = [
@@ -5729,7 +5805,9 @@ def handle_callback(cb):
         if err:
             notify_failure(chat_id, "brevo_campaigns", error=err)
         elif not campaigns:
-            send(chat_id, "No campaigns found.")
+            send(chat_id, "No sent campaigns found in Brevo. Campaigns must have status 'sent' to appear here — drafts and scheduled campaigns won't show.", [
+                [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
+            ])
         else:
             lines = ["BREVO EMAIL CAMPAIGNS — Last 30 sent\n"]
             lines.append("Name | Subject | Sent | Open Rate | CTR | Unsub Rate")
@@ -6030,6 +6108,19 @@ def handle_callback(cb):
         user_state[chat_id] = {"stage": "idea_engine_idle"}
         user_state[chat_id].update(preserved)
         show_idea_engine_menu(chat_id)
+
+    elif data == "ie_from_video":
+        user_state.setdefault(chat_id, {})
+        user_state[chat_id]["stage"] = "ie_awaiting_video_ideas"
+        send(chat_id, (
+            "*Generate Ideas from Video*\n\n"
+            "Upload a video (your own reel, a competitor's video, or any short-form content).\n\n"
+            "I'll watch it and generate 4 Cryptonary content ideas based on:\n"
+            "• What topic/angle is being covered\n"
+            "• What's working about the format\n"
+            "• What Cryptonary's version could look like\n\n"
+            "_Max 20MB. Works with reels, TikToks, YouTube Shorts._"
+        ))
 
     elif data == "ie_from_scratch":
         # Guard against double-tap
@@ -6975,7 +7066,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -6995,7 +7086,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -7004,8 +7095,11 @@ def poll():
                                 "ie_concept_review",
                                 "idea_engine_idle"]
                             if stage in content_stages:
-                                if "video" in mime and stage == "awaiting_reel_upload":
-                                    handle_reel_analysis(chat_id, doc)
+                                if "video" in mime and stage in ("awaiting_reel_upload", "ie_awaiting_video_ideas"):
+                                    if stage == "awaiting_reel_upload":
+                                        handle_reel_analysis(chat_id, doc)
+                                    else:
+                                        handle_video_idea_generation(chat_id, doc)
                                 elif "pdf" in mime:
                                     handle_content_file(chat_id, doc, "pdf")
                                 elif "word" in mime or "docx" in mime or "officedocument" in mime:
@@ -7035,11 +7129,16 @@ def poll():
                             video = msg.get("video") or msg.get("video_note") or msg.get("animation")
                             if stage == "awaiting_reel_upload":
                                 handle_reel_analysis(chat_id, video)
+                            elif stage == "ie_awaiting_video_ideas":
+                                handle_video_idea_generation(chat_id, video)
                             elif stage == "awaiting_ad_creative_upload":
                                 handle_reel_analysis(chat_id, video, mode="ad_copy")
                             else:
-                                keyboard = [[{"text": "🔍 Analyse this reel", "callback_data": "mode_reel_analysis"}]]
-                                send(chat_id, "Video received. Tap below to analyse it, or go to Creative Studio → Reel Analysis first.", keyboard)
+                                keyboard = [
+                                    [{"text": "🔍 Analyse this reel",    "callback_data": "mode_reel_analysis"}],
+                                    [{"text": "💡 Generate ideas from it","callback_data": "ie_from_video"}],
+                                ]
+                                send(chat_id, "Video received. What would you like to do with it?", keyboard)
                         else:
                             handle_message(msg)
                     elif "callback_query" in update:
@@ -7673,7 +7772,7 @@ def _execute_brevo_push(chat_id):
         notify_failure(chat_id, "brevo_push", error="\n".join(failed),
                       fallback_action="Details: " + "\n".join(failed))
     if not pushed and not failed:
-        send(chat_id, "Nothing to push.")
+        send(chat_id, "Nothing to push.", [[{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}]])
 
 
 def gen_ad_copy_for_creative(chat_id, creative_description):
@@ -7868,6 +7967,153 @@ def gen_yt_desc(chat_id):
 
 # ── STANDALONE SOCIAL FLOW ────────────────────────────────────────
 
+def handle_video_idea_generation(chat_id, video_obj):
+    """Generate Cryptonary content ideas from a video upload.
+    Downloads the video, extracts a frame, uses Claude vision to understand
+    the content, then generates 4 adapted ideas."""
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
+
+    send(chat_id, "Analysing video for content ideas...")
+
+    try:
+        # Download video metadata and first frame (same approach as reel analysis)
+        file_id = video_obj.get("file_id", "")
+        duration = video_obj.get("duration", 0)
+        width = video_obj.get("width", 0)
+        height = video_obj.get("height", 0)
+        video_meta = f"Duration: {duration}s | Resolution: {width}x{height}"
+
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            notify_failure(chat_id, "reel_analysis", error="No file_path from Telegram getFile")
+            return
+
+        # Try to get a frame for vision analysis
+        frame_b64 = None
+        try:
+            video_url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+            req = urllib.request.Request(video_url)
+            with urllib.request.urlopen(req, timeout=60) as r:
+                video_bytes = r.read()
+            import tempfile, subprocess, base64
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+                tmp.write(video_bytes)
+                tmp_path = tmp.name
+            frame_path = tmp_path + "_frame.jpg"
+            result = subprocess.run(
+                ["ffmpeg", "-i", tmp_path, "-ss", "00:00:02", "-frames:v", "1",
+                 "-q:v", "2", frame_path, "-y"],
+                capture_output=True, timeout=30
+            )
+            if result.returncode == 0:
+                import os
+                if os.path.exists(frame_path):
+                    with open(frame_path, "rb") as f:
+                        frame_b64 = base64.b64encode(f.read()).decode()
+                    os.unlink(frame_path)
+            try:
+                import os
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+        except Exception as e:
+            print("Video frame extraction failed:", e, flush=True)
+
+        # Build idea generation prompt
+        market = fetch_market_data()
+        market_line = ""
+        if market.get("btc_price") and not market.get("price_unavailable"):
+            market_line = "BTC: ${:,.0f} | Fear & Greed: {} ({})".format(
+                market["btc_price"], market.get("fng_value", "?"), market.get("fng_label", "?"))
+
+        ideas_prompt = (
+            "You are a creative strategist for Cryptonary (crypto research brand, 300K+ subscribers).\n\n"
+            f"VIDEO: {video_meta}\n"
+            + (f"LIVE MARKET: {market_line}\n" if market_line else "") +
+            "\nAnalyse this video and generate 4 Cryptonary content ideas inspired by it.\n\n"
+            "For each idea:\n"
+            "1. What is this video doing well? (one line — hook mechanism, format, angle)\n"
+            "2. The Cryptonary version — a specific adapted concept with:\n"
+            "   CONCEPT: [the big idea in one punchy line]\n"
+            "   HOOK: [first 3 seconds / cover slide text — exact words]\n"
+            "   ANGLE: [why this hits for Cryptonary's audience]\n"
+            "   FORMAT: [Reel / Carousel / Static / Story]\n\n"
+            "Rules:\n"
+            "- Ideas must be specific to crypto/markets — not generic finance\n"
+            "- Use live market data if relevant (exact numbers only, no invented stats)\n"
+            "- Each idea must use a different format\n"
+            "- Be direct. No filler. Each idea should be actionable immediately.\n\n"
+            "Format as:\n"
+            "IDEA 1\n[analysis + concept]\n\nIDEA 2\n...\n\nIDEA 3\n...\n\nIDEA 4\n..."
+        )
+
+        # Call Claude with or without vision
+        import json as _json
+        if frame_b64:
+            payload = {
+                "model": "claude-sonnet-4-5",
+                "max_tokens": 1500,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64",
+                                                      "media_type": "image/jpeg",
+                                                      "data": frame_b64}},
+                        {"type": "text", "text": ideas_prompt}
+                    ]
+                }]
+            }
+        else:
+            # No frame — text-only with just metadata
+            payload = {
+                "model": "claude-sonnet-4-5",
+                "max_tokens": 1500,
+                "messages": [{"role": "user", "content":
+                    ideas_prompt + "\n\n(No frame available — base ideas on the video metadata and market context.)"}]
+            }
+
+        body = _json.dumps(payload).encode()
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": ANTHROPIC_KEY,
+                "anthropic-version": "2023-06-01"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=90) as r:
+            result_data = _json.loads(r.read())
+        raw = result_data.get("content", [{}])[0].get("text", "")
+
+        if not raw:
+            send(chat_id, "Couldn't generate ideas from this video. Try uploading a clearer clip.")
+            return
+
+        state["ie_source_content"] = raw
+        state["ie_source_label"] = "Video upload"
+        state["ie_concepts"] = raw
+
+        send_plain(chat_id, "*IDEAS FROM YOUR VIDEO*\n\n" + clean_copy(raw))
+
+        keyboard = [
+            [{"text": "💡 Develop an idea",      "callback_data": "ie_develop"}],
+            [{"text": "🔍 Analyse the reel too", "callback_data": "mode_reel_analysis"}],
+            [{"text": "🔄 Generate more ideas",  "callback_data": "ie_from_video"}],
+            [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}],
+        ]
+        send(chat_id, "4 ideas generated. Tap to develop one or analyse the reel itself.", keyboard)
+        state["stage"] = "ie_concept_review"
+
+    except Exception as e:
+        print("Video idea generation error:", e, flush=True)
+        import traceback
+        print(traceback.format_exc(), flush=True)
+        notify_failure(chat_id, "reel_analysis", error=str(e))
+
+
 def gen_social_angles(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
@@ -7908,6 +8154,18 @@ def gen_social_hooks(chat_id):
     report = sanitise(state.get("report", ""))
     angle = state.get("social_angle", "")
     formats = state.get("selected_social_formats", [])
+
+    # Guard — if no formats selected, send back to format picker
+    if not formats:
+        send(chat_id, "Pick a format first:", [
+            [{"text": "Reel Script",           "callback_data": "pick_fmt_fmt_reel"}],
+            [{"text": "Carousel",              "callback_data": "pick_fmt_fmt_carousel"}],
+            [{"text": "Static Post + Caption", "callback_data": "pick_fmt_fmt_static"}],
+            [{"text": "Story — Single slide",  "callback_data": "pick_fmt_fmt_story_single"}],
+            [{"text": "Story — Multi slide",   "callback_data": "pick_fmt_fmt_story_multi"}],
+        ])
+        return
+
     send(chat_id, "Writing hooks for your selected formats...")
 
     format_hook_instructions = {
@@ -8929,7 +9187,11 @@ def analyse_ads(chat_id):
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
-        send(chat_id, "No data uploaded. Please send screenshots or a CSV file first.")
+        send(chat_id, "No data uploaded yet.", [
+            [{"text": "📁 Upload file", "callback_data": "ds_adverts_upload"}],
+            [{"text": "✏️ Paste manually", "callback_data": "ds_adverts_manual"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}],
+        ])
         return
     send(chat_id, "Analysing your ad data...")
     # Get content context and history
@@ -9027,7 +9289,11 @@ def analyse_social(chat_id):
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
-        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        send(chat_id, "No data uploaded yet.", [
+            [{"text": "📁 Upload file", "callback_data": "ds_social_upload"}],
+            [{"text": "✏️ Paste manually", "callback_data": "ds_social_manual"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}],
+        ])
         return
     send(chat_id, "Analysing your Instagram data...")
     try:
@@ -9197,7 +9463,11 @@ def analyse_emails(chat_id, split_var=None):
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
-        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        send(chat_id, "No data uploaded yet.", [
+            [{"text": "📁 Upload file", "callback_data": "ds_email_manual"}],
+            [{"text": "✏️ Paste manually", "callback_data": "ds_email_type_numbers"}],
+            [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
+        ])
         return
     ctx = get_content_context(chat_id)
     send(chat_id, "Analysing your email data...")
@@ -9337,7 +9607,10 @@ def analyse_landing(chat_id, split_var=None):
     images = state.get("ds_images", [])
     csv_text = state.get("ds_csv_text", "")
     if not images and not csv_text:
-        send(chat_id, "No data uploaded. Please send screenshots or a CSV first.")
+        send(chat_id, "No data uploaded yet.", [
+            [{"text": "📁 Upload file", "callback_data": "ds_landing_upload"}],
+            [{"text": "Back to Data Studio", "callback_data": "open_data_studio"}],
+        ])
         return
     ctx = get_content_context(chat_id)
     send(chat_id, "Analysing your landing page data...")
@@ -9864,6 +10137,7 @@ def handle_voice_message(chat_id, voice):
         "yt_awaiting_content", "yt_awaiting_existing",
         # Revised copy memory
         "awaiting_revised_email",
+        "awaiting_revised_social",
         # Quick ad creative
         "awaiting_ad_creative_upload",
     }
@@ -10364,6 +10638,8 @@ RULES:
 - Fully self-contained — all CSS inline in <style> tags
 - No external resources or CDN links
 - Professional, on-brand, clean design
+- CONTENT RULE: Use ONLY the actual text, headlines, data points, and copy from the BRIEF above. Do not invent placeholder text, generic crypto phrases, or filler copy. Every word on the canvas must come from the brief.
+- BRAND RULE: This is Cryptonary — dark, editorial, data-driven. Not generic crypto. Not colourful. Not friendly. Authoritative, analytical, premium.
 - CRITICAL — NO PROMPT BLEED: Every text element rendered on the canvas must be actual content from the brief. NEVER render layout directives, font instructions, dimension specs, or any text from these instructions as visible content. If an instruction says "3-4 words per line" — apply it silently, never print those words. If an instruction mentions "Tungsten headline" — use that style, never write "Tungsten headline" on the canvas.
 - Include a print/screenshot note: <!-- Open in browser and screenshot for best results -->""")
 
@@ -12669,6 +12945,7 @@ def show_idea_engine_menu(chat_id):
     keyboard = [
         [{"text": "💡 Generate ideas from scratch",  "callback_data": "ie_from_scratch"}],
         [{"text": "🔗 Generate from inspiration",    "callback_data": "ie_from_inspiration"}],
+        [{"text": "🎥 Generate from video",          "callback_data": "ie_from_video"}],
         [{"text": "🎬 Storyboard Generator",         "callback_data": "mode_storyboard"}],
         [{"text": "🔍 Reel Analysis",                "callback_data": "mode_reel_analysis"}],
     ]
