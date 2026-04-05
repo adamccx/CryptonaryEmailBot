@@ -2527,15 +2527,21 @@ def gen_angles(chat_id):
     report = sanitise(user_state[chat_id].get("report", ""))
     context = sanitise(user_state[chat_id].get("context", ""))
     perf = get_perf_context(chat_id)
+    # Track previously shown angles to force variety on regen
+    prev_angles = user_state[chat_id].get("angles", [])
     prompt = "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
     prompt += perf
-    prompt += "\n\nGenerate exactly 4 distinct content angles for this crypto update. Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). Different emotional lenses or hook strategies. Apply copywriting principles.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
+    if prev_angles:
+        prompt += "\n\nPREVIOUSLY SHOWN ANGLES — DO NOT REPEAT THESE, generate completely different ones:\n"
+        for i, a in enumerate(prev_angles, 1):
+            prompt += f"{i}. {a}\n"
+        prompt += "\n"
+    prompt += "Generate exactly 4 distinct content angles for this crypto update. Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). Different emotional lenses or hook strategies. Apply copywriting principles.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
     send(chat_id, "Finding angles...")
     try:
-        raw = openai_gpt(prompt, max_tokens=600)  # GPT-4o for angles
+        raw = openai_gpt(prompt, max_tokens=600)
         angles = parse_numbered_list(raw, 4)
-        # Store under both keys for compatibility
         user_state[chat_id]["angles"] = angles
         user_state[chat_id]["free_angles"] = angles
         user_state[chat_id]["pro_angles"] = angles
@@ -2546,7 +2552,7 @@ def gen_angles(chat_id):
             text += "*" + str(i+1) + ".* " + a + "\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "angle_" + str(i)}])
         keyboard.append([{"text": "✏️ Write my own angle", "callback_data": "custom_angle"}])
-        keyboard.append([{"text": "Regenerate angles", "callback_data": "regen_angles"}])
+        keyboard.append([{"text": "Regenerate angles",     "callback_data": "regen_angles"}])
         send(chat_id, text, keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -2559,19 +2565,25 @@ def gen_hooks(chat_id):
     context = sanitise(state.get("context", ""))
     perf = get_perf_context(chat_id)
     angle = state.get("selected_angle", state.get("selected_free_angle", ""))
+    prev_hooks = state.get("hooks", [])
 
     base = "REPORT:\n" + report
     if context: base += "\n\nEXTRA CONTEXT:\n" + context
     base += perf
 
+    avoid = ""
+    if prev_hooks:
+        avoid = "\n\nPREVIOUSLY SHOWN HOOKS — generate completely different subject lines:\n"
+        for i, h in enumerate(prev_hooks[:4], 1):
+            avoid += f"{i}. {h.get('subject','')}\n"
+
     send(chat_id, "Writing hooks...")
     try:
-        raw = openai_gpt(base + "\n\nANGLE: " + angle +
-            "\n\nWrite 4 subject line + preview text combos for this crypto email.\n" +
-            "Each hook should create a strong curiosity gap or bold data-led statement.\n\n" +
-            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)  # GPT-4o for hooks
+        raw = openai_gpt(base + "\n\nANGLE: " + angle + avoid +
+            "\n\nWrite 4 subject line + preview text combos for this crypto email.\n"
+            "Each hook should create a strong curiosity gap or bold data-led statement.\n\n"
+            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
         hooks = parse_hooks(raw)
-        # Store under all keys for compatibility
         state["free_hooks"] = hooks
         state["pro_hooks"] = hooks
         state["hooks"] = hooks
@@ -2581,11 +2593,14 @@ def gen_hooks(chat_id):
         for i, h in enumerate(hooks):
             text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "free_hook_" + str(i)}])
-        keyboard.append([{"text": "✏️ Write my own", "callback_data": "custom_free_hook"}])
-        keyboard.append([{"text": "Regenerate", "callback_data": "regen_free_hooks"}])
+        keyboard.append([{"text": "✏️ Write my own",  "callback_data": "custom_free_hook"}])
+        keyboard.append([{"text": "🔄 Regenerate",    "callback_data": "regen_free_hooks"}])
         send(chat_id, text, keyboard)
     except Exception as e:
-        send(chat_id, "Error: " + str(e))
+        send(chat_id, "Hook generation failed. Try again.", [
+            [{"text": "🔄 Try again", "callback_data": "regen_free_hooks"}],
+            [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+        ])
 
 def show_pro_angle_picker(chat_id):
     """Show Pro angle picker after Free angle is selected."""
@@ -2610,16 +2625,23 @@ def gen_pro_hooks(chat_id):
     context = sanitise(state.get("context", ""))
     perf = get_perf_context(chat_id)
     pro_angle = state.get("selected_pro_angle", state.get("selected_angle", ""))
+    prev_hooks = state.get("pro_hooks", [])
 
     base = "REPORT:\n" + report
     if context: base += "\n\nEXTRA CONTEXT:\n" + context
     base += perf
 
+    avoid = ""
+    if prev_hooks:
+        avoid = "\n\nPREVIOUSLY SHOWN HOOKS — generate completely different subject lines:\n"
+        for i, h in enumerate(prev_hooks[:4], 1):
+            avoid += f"{i}. {h.get('subject','')}\n"
+
     send(chat_id, "Writing hooks for the Pro email...")
     try:
-        raw = claude(base + "\n\nPRO EMAIL ANGLE: " + pro_angle +
-            "\n\nWrite 4 subject line + preview text combos for the PRO email.\n" +
-            "PRO hooks: Data-led, specific, authoritative. Paying members expect depth and directness.\n\n" +
+        raw = claude(base + "\n\nPRO EMAIL ANGLE: " + pro_angle + avoid +
+            "\n\nWrite 4 subject line + preview text combos for the PRO email.\n"
+            "PRO hooks: Data-led, specific, authoritative. Paying members expect depth and directness.\n\n"
             "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
         hooks = parse_hooks(raw)
         state["pro_hooks"] = hooks
@@ -2629,12 +2651,14 @@ def gen_pro_hooks(chat_id):
         for i, h in enumerate(hooks):
             text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "pro_hook_" + str(i)}])
-        keyboard.append([{"text": "✏️ Write my own", "callback_data": "custom_pro_hook"}])
-        keyboard.append([{"text": "Regenerate", "callback_data": "regen_pro_hooks"}])
+        keyboard.append([{"text": "✏️ Write my own",   "callback_data": "custom_pro_hook"}])
+        keyboard.append([{"text": "🔄 Regenerate",     "callback_data": "regen_pro_hooks"}])
         keyboard.append([{"text": "Same as Free hook", "callback_data": "pro_hook_same"}])
         send(chat_id, text, keyboard)
     except Exception as e:
-        send(chat_id, "Error: " + str(e))
+        send(chat_id, "Hook generation failed. Try again.", [
+            [{"text": "🔄 Try again", "callback_data": "regen_pro_hooks"}],
+        ])
 
 
 def ask_free_cta(chat_id):
@@ -4062,9 +4086,12 @@ def handle_message(msg):
         return
 
     if stage == "awaiting_custom_angle":
+        # Use the typed angle for BOTH free and pro emails — skip the pro angle picker
         user_state[chat_id]["selected_angle"] = text
         user_state[chat_id]["selected_free_angle"] = text
-        show_pro_angle_picker(chat_id)
+        user_state[chat_id]["selected_pro_angle"] = text
+        user_state[chat_id]["pro_angles"] = [text]
+        gen_hooks(chat_id)
         return
 
     if stage == "awaiting_custom_hook":
@@ -5061,7 +5088,27 @@ def handle_callback(cb):
         gen_angles(chat_id)
 
     elif data == "regen_pro_angles":
-        show_pro_angle_picker(chat_id)
+        # Regenerate pro angles fresh, avoiding previously shown ones
+        report = sanitise(state.get("report", ""))
+        context = sanitise(state.get("context", ""))
+        prev = state.get("pro_angles", [])
+        avoid = ""
+        if prev:
+            avoid = "\n\nPREVIOUSLY SHOWN — use completely different angles:\n" + "\n".join(f"{i+1}. {a}" for i, a in enumerate(prev))
+        send(chat_id, "Finding new angles...")
+        try:
+            raw = openai_gpt(
+                "REPORT:\n" + report +
+                ("\n\nEXTRA CONTEXT:\n" + context if context else "") +
+                avoid +
+                "\n\nGenerate exactly 4 distinct PRO email angles. Full analysis, data-led, complete conviction.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else.",
+                max_tokens=500
+            )
+            new_angles = parse_numbered_list(raw, 4)
+            state["pro_angles"] = new_angles
+            show_pro_angle_picker(chat_id)
+        except Exception as e:
+            send(chat_id, "Error regenerating angles: " + str(e))
 
     elif data == "custom_free_angle":
         state["stage"] = "awaiting_custom_free_angle"
@@ -5418,6 +5465,10 @@ def handle_callback(cb):
         if fmt_idx < len(formats):
             fmt = formats[fmt_idx]
             hooks = state.get("social_hooks", {})
+            # Store previous hooks for avoidance before clearing
+            prev = state.get("social_prev_hooks", {})
+            prev[fmt] = hooks.get(fmt, [])
+            state["social_prev_hooks"] = prev
             hooks.pop(fmt, None)
             state["social_hooks"] = hooks
         send(chat_id, "Generating new hooks...")
@@ -8119,17 +8170,25 @@ def gen_social_angles(chat_id):
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
     selected_formats = state.get("selected_social_formats", [])
-    format_labels = {"fmt_reel": "Reel", "fmt_carousel": "Carousel", "fmt_story_single": "Story (single)", "fmt_story_multi": "Story (multi)"}
+    format_labels = {"fmt_reel": "Reel", "fmt_carousel": "Carousel", "fmt_static": "Static Post",
+                     "fmt_story_single": "Story (single)", "fmt_story_multi": "Story (multi)"}
     formats_str = ", ".join([format_labels.get(f, f) for f in selected_formats]) if selected_formats else "social content"
+    # Track previously shown angles to force genuine variety on regen
+    prev_angles = state.get("social_angles", [])
     send(chat_id, "Finding angles...")
     try:
-        raw = openai_gpt(  # GPT-4o for social angles
-            
+        avoid_block = ""
+        if prev_angles:
+            avoid_block = "\n\nPREVIOUSLY SHOWN — DO NOT REPEAT THESE, use completely different angles:\n"
+            for i, a in enumerate(prev_angles, 1):
+                avoid_block += f"{i}. {a}\n"
+        raw = openai_gpt(
             "REPORT:\n" + report +
             "\n\nFORMAT(S) SELECTED: " + formats_str +
-            "\n\nGenerate exactly 4 distinct content angles for this crypto market update.\n" +
-            "Each angle should be different — emotional lens, hook style, or narrative approach.\n" +
-            "Make them specific to what works for " + formats_str + " format(s) on social media.\n\n" +
+            avoid_block +
+            "\n\nGenerate exactly 4 distinct content angles for this crypto market update.\n"
+            "Each angle must be different — different emotional lens, hook style, or narrative approach.\n"
+            "Make them specific to what works for " + formats_str + " format(s) on social media.\n\n"
             "Format:\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else.",
             max_tokens=500
         )
@@ -8141,8 +8200,8 @@ def gen_social_angles(chat_id):
         for i, a in enumerate(angles):
             text += str(i+1) + ". " + a + "\n\n"
             keyboard.append([{"text": str(i+1) + ". " + a[:50], "callback_data": "social_angle_" + str(i)}])
-        keyboard.append([{"text": "Write my own angle", "callback_data": "social_custom_angle"}])
-        keyboard.append([{"text": "Regenerate angles", "callback_data": "social_regen_angles"}])
+        keyboard.append([{"text": "Write my own angle",  "callback_data": "social_custom_angle"}])
+        keyboard.append([{"text": "Regenerate angles",   "callback_data": "social_regen_angles"}])
         send(chat_id, text, keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -8193,11 +8252,16 @@ def gen_social_hooks(chat_id):
             continue
         instruction = format_hook_instructions[fmt]
         label = format_labels.get(fmt, fmt)
+        prev_hooks = state.get("social_prev_hooks", {}).get(fmt, [])
+        avoid = ""
+        if prev_hooks:
+            avoid = "\n\nPREVIOUSLY SHOWN — generate completely different hooks:\n" + \
+                    "\n".join(f"{i+1}. {h}" for i, h in enumerate(prev_hooks))
         try:
             raw = openai_gpt(
                 "REPORT:\n" + report[:500] +
                 "\nANGLE: " + angle +
-                "\n\n" + instruction +
+                "\n\n" + instruction + avoid +
                 "\n\nFormat:\n1. [hook]\n2. [hook]\n3. [hook]\n4. [hook]\nNothing else.",
                 system="You are writing social media hooks for Cryptonary's Instagram. "
                        "These are NOT emails. Do NOT use 'Gm Name' or any email-style openers. "
@@ -13454,18 +13518,24 @@ def run_critique(chat_id, content_type):
     if content_type == "email":
         free_email = state.get("current_emails", {}).get("free", "")
         pro_email = state.get("current_emails", {}).get("pro", "")
-        # Use 1500 chars per email to ensure P.S. and sign-off are included
-        content_to_critique = "FREE EMAIL:\n" + free_email[:1500] + "\n\nPRO EMAIL:\n" + pro_email[:1500]
+        # Use full email content — truncation causes false critique flags (missing CTA, P.S. etc)
+        FREE_LIMIT = 4000
+        PRO_LIMIT = 4000
+        free_truncated = len(free_email) > FREE_LIMIT
+        pro_truncated = len(pro_email) > PRO_LIMIT
+        free_text = free_email[:FREE_LIMIT] + ("\n[...email continues beyond preview limit]" if free_truncated else "")
+        pro_text = pro_email[:PRO_LIMIT] + ("\n[...email continues beyond preview limit]" if pro_truncated else "")
+        content_to_critique = "FREE EMAIL:\n" + free_text + "\n\nPRO EMAIL:\n" + pro_text
         label = "emails"
     elif content_type == "ad":
-        content_to_critique = state.get("current_ad_output", "")[:1500]
+        content_to_critique = state.get("current_ad_output", "")[:3000]
         label = "ad copy"
     elif content_type == "social":
-        content_to_critique = state.get("current_social", "")[:1500]
+        content_to_critique = state.get("current_social", "")[:3000]
         social_type = state.get("current_social_type", "social content")
         label = social_type
     elif content_type == "lp":
-        content_to_critique = state.get("lp_content", "")[:1500]
+        content_to_critique = state.get("lp_content", "")[:3000]
         label = "landing page"
     else:
         content_to_critique = ""
@@ -13479,9 +13549,14 @@ def run_critique(chat_id, content_type):
 
     try:
         result = claude(
-            "Critique this " + label + ". IMPORTANT: Only flag issues that actually exist in the content below. "
-            "Read the ENTIRE content carefully before critiquing — do not flag missing P.S., sign-off, or CTA if they are present.\n\n" + content_to_critique,
-            max_tokens=1200,
+            "Critique this " + label + ".\n\n"
+            "CRITICAL RULES BEFORE YOU START:\n"
+            "1. Read the COMPLETE content below before writing any critique\n"
+            "2. Only flag issues that genuinely exist in what you can read\n"
+            "3. If the content ends mid-sentence with '[...email continues]', ignore anything after that marker — do NOT flag missing CTAs, P.S., or sign-offs that may exist beyond the preview\n"
+            "4. Do not invent problems. Only flag what is actually wrong\n\n"
+            "CONTENT TO CRITIQUE:\n\n" + content_to_critique,
+            max_tokens=1500,
             system=CRITIQUE_SYSTEM
         )
 
