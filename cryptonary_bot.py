@@ -2439,16 +2439,18 @@ def extract_text(v):
 
 def email_action_keyboard():
     return [
-        [{"text": "Quick Edit",   "callback_data": "quick_edit"},
-         {"text": "Enhance",      "callback_data": "enhance"},
-         {"text": "Approve",      "callback_data": "approve_emails"}],
-        [{"text": "🔄 Regenerate","callback_data": "regen_emails"},
-         {"text": "Subject Lines","callback_data": "subject_ab"},
-         {"text": "Tone",         "callback_data": "tone_menu"}],
-        [{"text": "Length",       "callback_data": "length_email"},
-         {"text": "Add Context",  "callback_data": "add_context_email"},
-         {"text": "Critique",     "callback_data": "critique_email"}],
-        [{"text": "✏️ Manual Edit","callback_data": "manual_edit_email"}]
+        [{"text": "Quick Edit",    "callback_data": "quick_edit"},
+         {"text": "Enhance",       "callback_data": "enhance"},
+         {"text": "Approve",       "callback_data": "approve_emails"}],
+        [{"text": "🔄 Regenerate", "callback_data": "regen_emails"},
+         {"text": "Subject Lines", "callback_data": "subject_ab"},
+         {"text": "Tone",          "callback_data": "tone_menu"}],
+        [{"text": "Length",        "callback_data": "length_email"},
+         {"text": "Add Context",   "callback_data": "add_context_email"},
+         {"text": "Critique",      "callback_data": "critique_email"}],
+        [{"text": "👁 View current version",       "callback_data": "view_current"}],
+        [{"text": "✏️ Submit revised version",     "callback_data": "submit_revised_email"}],
+        [{"text": "✏️ Manual Edit",                "callback_data": "manual_edit_email"}]
     ]
 
 def ad_action_keyboard():
@@ -2456,12 +2458,13 @@ def ad_action_keyboard():
         [{"text": "Quick Edit",           "callback_data": "ad_quick_edit"},
          {"text": "Enhance",              "callback_data": "ad_enhance"},
          {"text": "Approve",              "callback_data": "approve_ad"}],
+        [{"text": "🔄 Regenerate",        "callback_data": "ads_again"},
+         {"text": "Critique",             "callback_data": "critique_ad"},
+         {"text": "Length",               "callback_data": "length_ad"}],
         [{"text": "Different avatar",     "callback_data": "ad_diff_avatar"},
          {"text": "Different stage",      "callback_data": "ad_diff_stage"}],
         [{"text": "Different type",       "callback_data": "ad_diff_type"},
-         {"text": "Critique",             "callback_data": "critique_ad"}],
-        [{"text": "🎨 Visual brief",      "callback_data": "vb_type_ad_static"},
-         {"text": "Mark Complete",        "callback_data": "mark_complete"}],
+         {"text": "✏️ Submit revised",    "callback_data": "submit_revised_ad"}],
         [{"text": "✏️ Manual Edit",       "callback_data": "manual_edit_ad"}]
     ]
 
@@ -2474,21 +2477,24 @@ def format_action_keyboard(fmt_key, fmt_label):
         [{"text": "🔄 Regenerate", "callback_data": "sfmt_regen_" + fmt_key},
          {"text": "Critique",  "callback_data": "critique_social_" + fmt_key},
          {"text": "Length",    "callback_data": "length_social"}],
-        [{"text": "🎨 Visual brief", "callback_data": "vb_auto"}],
-        [{"text": "✏️ Manual Edit",  "callback_data": "manual_edit_social"}],
+        [{"text": "🎨 Visual brief",          "callback_data": "vb_auto"}],
+        [{"text": "✏️ Submit revised",        "callback_data": "submit_revised_social"}],
+        [{"text": "✏️ Manual Edit",           "callback_data": "manual_edit_social"}],
     ]
     return kb
 
 def social_action_keyboard():
     return [
-        [{"text": "Quick Edit",  "callback_data": "social_quick_edit"},
-         {"text": "Enhance",     "callback_data": "social_enhance"},
-         {"text": "Approve",     "callback_data": "approve_social"}],
+        [{"text": "Quick Edit",   "callback_data": "social_quick_edit"},
+         {"text": "Enhance",      "callback_data": "social_enhance"},
+         {"text": "Approve",      "callback_data": "approve_social"}],
         [{"text": "🔄 Regenerate","callback_data": "gen_social_confirmed"},
-         {"text": "Length",      "callback_data": "length_social"},
-         {"text": "Critique",    "callback_data": "critique_social"}],
-        [{"text": "🎨 Visual brief", "callback_data": "vb_auto"},
-         {"text": "✏️ Manual Edit", "callback_data": "manual_edit_social"}],
+         {"text": "Length",       "callback_data": "length_social"},
+         {"text": "Critique",     "callback_data": "critique_social"}],
+        [{"text": "🎨 Visual brief",          "callback_data": "vb_auto"},
+         {"text": "✏️ Submit revised",        "callback_data": "submit_revised_social"}],
+        [{"text": "👁 View current version",  "callback_data": "view_current"}],
+        [{"text": "✏️ Manual Edit",           "callback_data": "manual_edit_social"}],
     ]
 
 def mark_complete_keyboard():
@@ -2725,7 +2731,20 @@ def ask_quick_edit(chat_id, mode="email"):
 def apply_quick_edit(chat_id, instruction):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
+    # Determine mode from content in state, not just quick_edit_mode flag
+    # This prevents state drift when moving between email and social flows
+    has_emails = bool(state.get("current_emails", {}).get("free") or
+                      state.get("current_emails", {}).get("pro"))
+    has_social = bool(state.get("current_social", ""))
     mode = state.get("quick_edit_mode", "email")
+    # If mode says social but we only have emails, correct it
+    if mode == "social" and not has_social and has_emails:
+        mode = "email"
+        state["quick_edit_mode"] = "email"
+    # If mode says email but we only have social, correct it
+    if mode == "email" and not has_emails and has_social:
+        mode = "social"
+        state["quick_edit_mode"] = "social"
     if mode == "social":
         content = state.get("current_social", "")
         social_type = state.get("current_social_type", "social content")
@@ -2733,42 +2752,65 @@ def apply_quick_edit(chat_id, instruction):
         try:
             result = claude(
                 "Edit this Cryptonary " + social_type + " based on this instruction: " + instruction +
-                "\n\nKeep Adam's voice intact. Only change what the instruction specifies.\n\nCONTENT:\n" + content +
-                "\n\nReturn the edited content as a plain string, not JSON.",
+                "\n\nKeep Adam's voice intact. Only change what the instruction specifies. No em dashes.\n\nCONTENT:\n" + content[:3000] +
+                "\n\nReturn the edited content as plain text only.",
                 max_tokens=1500
             )
+            result = clean_copy(result)
             state["current_social"] = result
             state["stage"] = "social_ready"
             send_plain(chat_id, "*EDITED " + social_type.upper() + "*\n\n" + result)
             send(chat_id, "Edit applied.", social_action_keyboard())
         except Exception as e:
-            send(chat_id, "Error: " + str(e))
+            err = str(e)
+            if "429" in err or "rate" in err.lower():
+                send(chat_id, "Rate limit hit — the email is large. Try a shorter instruction or wait 30 seconds and try again.",
+                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
+            else:
+                send(chat_id, "Edit failed: " + err[:200],
+                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
             state["stage"] = "social_ready"
     else:
         emails = state.get("current_emails", {})
         free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
         pro_email = extract_text(emails.get("pro", "")) if "pro" in emails else ""
+        # Truncate to avoid rate limit — 3000 chars per email is enough for edit context
+        EMAIL_EDIT_LIMIT = 3000
         email_text = ""
-        if free_email: email_text += "FREE EMAIL:\n" + free_email + "\n\n"
-        if pro_email: email_text += "PRO EMAIL:\n" + pro_email
+        if free_email: email_text += "FREE EMAIL:\n" + free_email[:EMAIL_EDIT_LIMIT] + "\n\n"
+        if pro_email: email_text += "PRO EMAIL:\n" + pro_email[:EMAIL_EDIT_LIMIT]
         send(chat_id, "Applying edit...")
         try:
             raw = claude(
                 "Edit these Cryptonary emails based on this instruction: " + instruction +
-                "\n\nKeep Adam's voice intact. Only change what the instruction specifies.\n\nEMAILS:\n" + email_text +
-                "\n\nReturn the edited emails using this exact format. No JSON:\n\n===FREE EMAIL START===\n[edited free email]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\n[edited pro email]\n===PRO EMAIL END===",
+                "\n\nRules: Keep Adam's voice. Only change what is specified. No em dashes. No bold markdown.\n\n"
+                "EMAILS:\n" + email_text +
+                "\n\nReturn ONLY the edited emails in this exact format:\n\n"
+                "===FREE EMAIL START===\n[edited free email]\n===FREE EMAIL END===\n\n"
+                "===PRO EMAIL START===\n[edited pro email]\n===PRO EMAIL END===",
                 max_tokens=2500
             )
             edited = parse_delimited_emails(raw)
+            # Apply clean_copy to both emails
+            if "free" in edited:
+                edited["free"] = clean_copy(extract_text(edited["free"]))
+            if "pro" in edited:
+                edited["pro"] = clean_copy(extract_text(edited["pro"]))
             state["current_emails"] = edited
             state["stage"] = "emails_ready"
-            if "free" in edited:
-                send_plain(chat_id, "EDITED FREE EMAIL\n\n" + extract_text(edited["free"]))
-            if "pro" in edited:
-                send_plain(chat_id, "EDITED PRO EMAIL\n\n" + extract_text(edited["pro"]))
+            if edited.get("free"):
+                send_plain(chat_id, "EDITED FREE EMAIL\n\n" + edited["free"])
+            if edited.get("pro"):
+                send_plain(chat_id, "EDITED PRO EMAIL\n\n" + edited["pro"])
             send(chat_id, "Edit applied.", email_action_keyboard())
         except Exception as e:
-            send(chat_id, "Error: " + str(e))
+            err = str(e)
+            if "429" in err or "rate" in err.lower():
+                send(chat_id, "Rate limit hit — the email is large. Wait 30 seconds and try again, or break your edit into smaller steps.",
+                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
+            else:
+                send(chat_id, "Edit failed: " + err[:200],
+                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
             state["stage"] = "emails_ready"
 
 # ── ENHANCE ───────────────────────────────────────────────────────
@@ -2996,7 +3038,21 @@ def gen_social_selected(chat_id):
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     if not selected:
-        send(chat_id, "No formats selected. Tap the format names to select them first.")
+        # Before giving up — check if we're actually in an email flow
+        has_emails = bool(state.get("current_emails", {}).get("free") or
+                          state.get("current_emails", {}).get("pro"))
+        if has_emails:
+            # State drift: Regenerate was tapped but we're in email context
+            # Route to email regeneration instead
+            state["quick_edit_mode"] = "email"
+            send(chat_id, "Regenerating emails...")
+            gen_emails(chat_id)
+        else:
+            send(chat_id, "No formats selected. Tap a format first.", [
+                [{"text": "Reel Script",           "callback_data": "pick_fmt_fmt_reel"}],
+                [{"text": "Carousel",              "callback_data": "pick_fmt_fmt_carousel"}],
+                [{"text": "Static Post + Caption", "callback_data": "pick_fmt_fmt_static"}],
+            ])
         return
     # If coming from email flow, use the email angle directly — skip angle/hook pickers
     origin = state.get("social_origin", "")
@@ -3269,7 +3325,19 @@ def apply_length(chat_id, direction):
         except Exception as e:
             send(chat_id, "Error: " + str(e))
             state["stage"] = "social_ready"
-    else:
+    elif mode == "ad":
+        ad_content = state.get("current_ad_output", "") or state.get("current_ad", "")
+        send(chat_id, ("Extending" if direction == "extend" else "Shortening") + " ad copy...")
+        try:
+            result = claude(instruction + "\n\nAD COPY:\n" + ad_content[:3000] + "\n\nReturn as plain string.", max_tokens=1800)
+            result = clean_copy(result)
+            state["current_ad_output"] = result
+            state["current_ad"] = result
+            state["stage"] = "ads_ready"
+            send_plain(chat_id, "AD COPY — " + direction.upper() + "ED\n\n" + result)
+            send(chat_id, "Done.", ad_action_keyboard())
+        except Exception as e:
+            send(chat_id, "Error: " + str(e))
         emails = state.get("current_emails", {})
         free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
         pro_email = extract_text(emails.get("pro", "")) if "pro" in emails else ""
@@ -3379,12 +3447,20 @@ def gen_subject_ab(chat_id):
     current_preview = hook.get("preview", "")
     report = sanitise(state.get("report", ""))
     angle = state.get("selected_angle", "")
+    # Track previous alternatives to avoid repetition on regen
+    prev_alts = state.get("subject_alternatives", [])
+    avoid = ""
+    if prev_alts:
+        avoid = "\n\nPREVIOUSLY SHOWN — do not repeat these subject lines:\n"
+        for a in prev_alts:
+            avoid += f"- {a.get('subject','')}\n"
     send(chat_id, "Generating subject line alternatives...")
     try:
         raw = claude(
             "Generate 3 alternative subject lines for this Cryptonary email. Each uses a different copywriting principle.\n\nReport: " + report[:600] +
             "\nAngle: " + angle +
             "\nCurrent subject: " + current_subject +
+            avoid +
             "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nFormat each option as:\n1. PRINCIPLE: [principle name]\nSUBJECT: [subject line]\nPREVIEW: [preview text]\nREASON: [one sentence]\n\n2. PRINCIPLE: ...\nAnd so on for all 3. Nothing else.",
             max_tokens=700
         )
@@ -3402,7 +3478,8 @@ def gen_subject_ab(chat_id):
             text += a.get("reason","") + "\n\n"
             keyboard.append([{"text": "[ ] " + str(i+1) + ". " + a.get("subject","")[:40], "callback_data": "sel_sub_" + str(i)}])
         keyboard.append([{"text": "Done — apply selected", "callback_data": "apply_subjects"}])
-        keyboard.append([{"text": "Keep original only", "callback_data": "keep_subject"}])
+        keyboard.append([{"text": "🔄 Generate more options", "callback_data": "subject_ab"},
+                         {"text": "Keep original only",      "callback_data": "keep_subject"}])
         send(chat_id, text, keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -3484,17 +3561,23 @@ def apply_subjects(chat_id):
 # ── TONE VARIANTS ─────────────────────────────────────────────────
 
 TONE_DEFS = {
-    "standard": ("Standard", "Adam's default voice. Confident, direct, data-led. Short punchy sentences. Balanced urgency."),
-    "aggressive": ("Aggressive", "Bull market mode. High urgency, FOMO-driven. The opportunity is NOW. Stronger social proof. Reader will regret missing this. Shorter sentences. More bold statements. Commands not invitations."),
-    "empathetic": ("Empathetic", "Bear market mode. Reader is stressed, possibly down on portfolio. Adam is alongside them. Acknowledges the pain. Positions Cryptonary as steady hand in chaos. Calmer tone. Less urgency, more reassurance. CTA is a lifeline not a push.")
+    "standard":    ("Standard",    "Adam's default voice. Confident, direct, data-led. Short punchy sentences. Balanced urgency."),
+    "aggressive":  ("Aggressive",  "Bull market mode. High urgency, FOMO-driven. The opportunity is NOW. Stronger social proof. Reader will regret missing this. Shorter sentences. More bold statements. Commands not invitations."),
+    "empathetic":  ("Empathetic",  "Bear market mode. Reader is stressed, possibly down on portfolio. Adam is alongside them. Acknowledges the pain. Positions Cryptonary as steady hand in chaos. Calmer tone. Less urgency, more reassurance. CTA is a lifeline not a push."),
+    "urgent":      ("Urgent",      "Time pressure is the hook. Event is happening now or soon. Reader needs to act before the window closes. Every sentence drives toward the CTA. No tangents. No extra context. Clock is ticking."),
+    "contrarian":  ("Contrarian",  "Everyone else is wrong. Adam sees what the crowd is missing. Confident disagreement with consensus. Uses data to flip the narrative. The reader feels like they're getting the edge. Strong opinion, backed by specifics."),
+    "data":        ("Data-heavy",  "Numbers-first. Every claim has a stat behind it. Specific levels, percentages, dates, ratios. Minimal opinion — let the data speak. Reader feels analytically informed, not sold to. Dense but not dry."),
 }
 
 def show_tone_menu(chat_id):
     keyboard = [
-        [{"text": "Standard", "callback_data": "tone_standard"}],
-        [{"text": "Aggressive (bull / FOMO)", "callback_data": "tone_aggressive"}],
-        [{"text": "Empathetic (bear / stressed reader)", "callback_data": "tone_empathetic"}],
-        [{"text": "Cancel", "callback_data": "cancel_tone"}]
+        [{"text": "Standard",                        "callback_data": "tone_standard"}],
+        [{"text": "Aggressive (bull / FOMO)",        "callback_data": "tone_aggressive"}],
+        [{"text": "Empathetic (bear / stressed)",    "callback_data": "tone_empathetic"}],
+        [{"text": "Urgent (act now / time-sensitive)","callback_data": "tone_urgent"}],
+        [{"text": "Contrarian (against consensus)", "callback_data": "tone_contrarian"}],
+        [{"text": "Data-heavy (numbers-led)",        "callback_data": "tone_data"}],
+        [{"text": "Cancel",                          "callback_data": "cancel_tone"}]
     ]
     send(chat_id, "*Choose tone:*\n\nRewrites both emails in the selected tone. Same content, different emotional delivery.", keyboard)
 
@@ -3566,13 +3649,14 @@ def gen_segments(chat_id):
             if key in segments:
                 send_plain(chat_id, "*FREE EMAIL — " + label.upper() + "*\n\n" + extract_text(segments[key]))
         keyboard = [
-            [{"text": "Edit Hot", "callback_data": "seg_edit_hot"},
-             {"text": "Edit Warm", "callback_data": "seg_edit_warm"},
-             {"text": "Edit Cold", "callback_data": "seg_edit_cold"}],
-            [{"text": "Approve segments", "callback_data": "approve_segments"},
-             {"text": "Back to emails", "callback_data": "back_to_emails"}]
+            [{"text": "Edit Hot",   "callback_data": "seg_edit_hot"},
+             {"text": "Edit Warm",  "callback_data": "seg_edit_warm"},
+             {"text": "Edit Cold",  "callback_data": "seg_edit_cold"}],
+            [{"text": "🔄 Regenerate segments", "callback_data": "segments"},
+             {"text": "Back to emails",         "callback_data": "back_to_emails"}],
+            [{"text": "✅ Approve segments",     "callback_data": "approve_segments"}],
         ]
-        send(chat_id, "3 segment versions ready.", keyboard)
+        send(chat_id, "3 segment versions ready. Edit or approve.", keyboard)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
         state["stage"] = "emails_ready"
@@ -3759,12 +3843,37 @@ def handle_message(msg):
         return
     if text == "/briefing":
         user_state.setdefault(chat_id, {})
-        # Check if there's a previous briefing to recap
         last_brief = user_state[chat_id].get("last_briefing_summary", "")
         last_brief_date = user_state[chat_id].get("last_briefing_date", "")
         if last_brief and last_brief_date:
             user_state[chat_id]["include_recap"] = True
         generate_briefing(chat_id)
+        return
+
+    if text == "/view":
+        # Show whatever content is currently in state
+        user_state.setdefault(chat_id, {"stage": "idle"})
+        st = user_state[chat_id]
+        shown = False
+        emails = st.get("current_emails", {})
+        if emails.get("free"):
+            send_plain(chat_id, "FREE EMAIL (current version)\n\n" + clean_copy(extract_text(emails["free"])))
+            shown = True
+        if emails.get("pro"):
+            send_plain(chat_id, "PRO EMAIL (current version)\n\n" + clean_copy(extract_text(emails["pro"])))
+            shown = True
+        if st.get("current_social"):
+            social_type = st.get("current_social_type", "Social content")
+            send_plain(chat_id, social_type.upper() + " (current version)\n\n" + st["current_social"])
+            shown = True
+        if st.get("current_ad_output"):
+            send_plain(chat_id, "AD COPY (current version)\n\n" + st["current_ad_output"][:3000])
+            shown = True
+        if st.get("yt_output"):
+            send_plain(chat_id, "YOUTUBE DESCRIPTION (current version)\n\n" + st["yt_output"])
+            shown = True
+        if not shown:
+            send(chat_id, "Nothing in the current session yet. Generate content first.")
         return
 
     if text == "/imageprompt" or text.startswith("/imageprompt "):
@@ -4597,7 +4706,6 @@ def handle_message(msg):
         return
 
     if stage == "awaiting_revised_email":
-        # Save the revised copy as an approved writing example
         revised = text.strip()
         if len(revised) > 50:
             save_voice_example(chat_id, revised[:800], "revised_approved_email")
@@ -4609,6 +4717,113 @@ def handle_message(msg):
             send(chat_id, "Saved. This will inform the voice and style of future emails.", keyboard)
         else:
             send(chat_id, "That looks too short. Paste the full email body.")
+        return
+
+    if stage == "awaiting_revised_free_email":
+        revised = text.strip()
+        if len(revised) > 50:
+            save_voice_example(chat_id, revised[:800], "revised_approved_free_email")
+            # Update current_emails with the revised version
+            emails = state.get("current_emails", {})
+            emails["free"] = revised
+            state["current_emails"] = emails
+            state["last_approved_free_copy"] = revised[:800]
+            # If doing both, move to Pro next
+            if state.get("_revised_both"):
+                state["stage"] = "awaiting_revised_pro_email"
+                state.pop("_revised_both", None)
+                send(chat_id, "Free email saved. ✓\n\n*Submit Revised Pro Email (2 of 2)*\n\nNow paste your final edited Pro email body.")
+            else:
+                state["stage"] = "emails_ready"
+                keyboard = [
+                    [{"text": "Submit Pro email too",  "callback_data": "submit_revised_pro"}],
+                    [{"text": "📱 Create social",       "callback_data": "social_yes"}],
+                    [{"text": "✅ Mark complete",        "callback_data": "mark_complete"}],
+                ]
+                send(chat_id, "Free email saved. Updated version is now active.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full Free email body.")
+        return
+
+    if stage == "awaiting_revised_pro_email":
+        revised = text.strip()
+        if len(revised) > 50:
+            save_voice_example(chat_id, revised[:800], "revised_approved_pro_email")
+            emails = state.get("current_emails", {})
+            emails["pro"] = revised
+            state["current_emails"] = emails
+            state["last_approved_pro_copy"] = revised[:800]
+            state["stage"] = "emails_ready"
+            keyboard = [
+                [{"text": "📤 Push to Brevo",    "callback_data": "brevo_push_start"}],
+                [{"text": "📱 Create social",     "callback_data": "social_yes"}],
+                [{"text": "✅ Mark complete",      "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Both emails saved. ✓ Updated versions are now active.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full Pro email body.")
+        return
+
+    if stage == "awaiting_revised_ad":
+        revised = text.strip()
+        if len(revised) > 50:
+            save_voice_example(chat_id, revised[:800], "revised_approved_ad")
+            state["current_ad"] = revised
+            state["current_ad_output"] = revised
+            state["stage"] = "ads_ready"
+            keyboard = [
+                [{"text": "🎨 Visual brief", "callback_data": "vb_type_ad_static"}],
+                [{"text": "✅ Mark complete", "callback_data": "mark_complete"}],
+            ]
+            send(chat_id, "Ad copy saved. Updated version is now active.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full ad copy.")
+        return
+
+    if stage == "yt_awaiting_quick_edit":
+        content = state.get("yt_output", "")
+        if not content:
+            send(chat_id, "No description found. Generate one first.")
+            return
+        send(chat_id, "Applying edit...")
+        try:
+            result = claude(
+                "Edit this YouTube description based on this instruction: " + text +
+                "\n\nKeep Adam's voice. No em dashes. Only change what's specified.\n\nDESCRIPTION:\n" + content[:3000] +
+                "\n\nReturn the edited description as plain text.",
+                max_tokens=1800
+            )
+            result = clean_copy(result)
+            state["yt_output"] = result
+            state["stage"] = "yt_desc_ready"
+            send_plain(chat_id, "*EDITED YouTube Description*\n\n" + result)
+            keyboard = [
+                [{"text": "Quick Edit",             "callback_data": "yt_quick_edit"},
+                 {"text": "Regenerate",             "callback_data": "yt_regen"}],
+                [{"text": "🎬 Matching thumbnail",  "callback_data": "yt_gen_thumbnail"},
+                 {"text": "Critique",               "callback_data": "critique_yt"}],
+                [{"text": "✏️ Submit revised",      "callback_data": "submit_revised_yt"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ]
+            send(chat_id, "Edit applied.", keyboard)
+        except Exception as e:
+            send(chat_id, "Edit failed: " + str(e)[:100])
+            state["stage"] = "yt_desc_ready"
+        return
+
+    if stage == "awaiting_revised_yt":
+        revised = text.strip()
+        if len(revised) > 50:
+            save_voice_example(chat_id, revised[:800], "revised_approved_yt_description")
+            state["yt_output"] = revised
+            state["stage"] = "yt_desc_ready"
+            keyboard = [
+                [{"text": "🎬 Matching thumbnail",  "callback_data": "yt_gen_thumbnail"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ]
+            send(chat_id, "Saved. Your edits will improve future descriptions.", keyboard)
+        else:
+            send(chat_id, "That looks too short. Paste the full description.")
         return
 
     if stage == "awaiting_revised_social":
@@ -4854,6 +5069,26 @@ def handle_callback(cb):
 
     elif data == "yt_regen":
         gen_yt_desc(chat_id)
+
+    elif data == "yt_quick_edit":
+        state["stage"] = "yt_awaiting_quick_edit"
+        state["quick_edit_mode"] = "yt"
+        send(chat_id, "What would you like to change?\n\n_e.g. 'Make the hook more urgent', 'Add timestamps placeholder', 'Shorten to 150 words'_")
+
+    elif data == "critique_yt":
+        content = state.get("yt_output", "")
+        if not content:
+            send(chat_id, "No description to critique yet.")
+        else:
+            # Temporarily store as a critiqueable content type
+            state["critique_original"] = content
+            state["critique_content_type"] = "yt"
+            state["current_yt_for_critique"] = content
+            run_critique(chat_id, "yt")
+
+    elif data == "submit_revised_yt":
+        state["stage"] = "awaiting_revised_yt"
+        send(chat_id, "*Submit Revised YouTube Description*\n\nPaste your final edited version.\n\n_This will be saved as an approved example to improve future descriptions._")
 
     elif data == "yt_switch_edit":
         state["yt_mode"] = "edit"
@@ -5190,10 +5425,7 @@ def handle_callback(cb):
         gen_emails(chat_id)
 
     elif data == "regen_emails":
-        gen_emails(chat_id)
-
-    elif data == "regen_emails":
-        # Regenerate emails with same report/angle — skip back to generation
+        # Regenerate emails with same report/angle
         report = state.get("report", "")
         if not report:
             send(chat_id, "No report in session. Paste a new report to regenerate.")
@@ -5396,8 +5628,43 @@ def handle_callback(cb):
         send(chat_id, "*Create Ad*\n\nPaste your brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
 
     elif data == "submit_revised_email":
-        state["stage"] = "awaiting_revised_email"
-        send(chat_id, "*Submit Revised Version*\n\nPaste your final edited email copy.\n\nThis will be saved as an approved writing example and used to improve future emails.\n\n_Paste just the body — no need to include subject line._")
+        emails = state.get("current_emails", {})
+        has_free = bool(emails.get("free", ""))
+        has_pro = bool(emails.get("pro", ""))
+        if has_free and has_pro:
+            # Ask which to submit first — or both
+            keyboard = [
+                [{"text": "Submit Free email",       "callback_data": "submit_revised_free"}],
+                [{"text": "Submit Pro email",         "callback_data": "submit_revised_pro"}],
+                [{"text": "Submit both (one by one)", "callback_data": "submit_revised_both_start"}],
+            ]
+            send(chat_id, "*Submit Revised Version*\n\nWhich email would you like to submit your edited version for?", keyboard)
+        elif has_free:
+            state["stage"] = "awaiting_revised_free_email"
+            send(chat_id, "*Submit Revised Free Email*\n\nPaste your final edited Free email body.\n\n_This will be saved as an approved example to improve future Free emails._")
+        elif has_pro:
+            state["stage"] = "awaiting_revised_pro_email"
+            send(chat_id, "*Submit Revised Pro Email*\n\nPaste your final edited Pro email body.\n\n_This will be saved as an approved example to improve future Pro emails._")
+        else:
+            state["stage"] = "awaiting_revised_email"
+            send(chat_id, "*Submit Revised Email*\n\nPaste your final edited email body.")
+
+    elif data == "submit_revised_free":
+        state["stage"] = "awaiting_revised_free_email"
+        send(chat_id, "*Submit Revised Free Email*\n\nPaste your final edited Free email body.\n\n_This will be saved as an approved example to improve future Free emails._")
+
+    elif data == "submit_revised_pro":
+        state["stage"] = "awaiting_revised_pro_email"
+        send(chat_id, "*Submit Revised Pro Email*\n\nPaste your final edited Pro email body.\n\n_This will be saved as an approved example to improve future Pro emails._")
+
+    elif data == "submit_revised_both_start":
+        state["stage"] = "awaiting_revised_free_email"
+        state["_revised_both"] = True
+        send(chat_id, "*Submit Revised Free Email (1 of 2)*\n\nPaste your final edited Free email body first.")
+
+    elif data == "submit_revised_ad":
+        state["stage"] = "awaiting_revised_ad"
+        send(chat_id, "*Submit Revised Ad Copy*\n\nPaste your final edited ad copy.\n\n_This will be saved as an approved example to improve future ad generation._")
 
     elif data == "submit_revised_social":
         state["stage"] = "awaiting_revised_social"
@@ -5555,7 +5822,7 @@ def handle_callback(cb):
             [{"text": "Generate another format",   "callback_data": "social_yes"}],
             [{"text": "🎨 Visual brief + image",   "callback_data": "vb_auto"}],
             [{"text": "✏️ Submit revised version", "callback_data": "submit_revised_social"}],
-            [{"text": "Mark Complete",             "callback_data": "mark_complete"}],
+            [{"text": "✅ Mark complete",           "callback_data": "mark_complete"}],
         ]
         send(chat_id, social_type + " approved.", keyboard)
 
@@ -5575,7 +5842,7 @@ def handle_callback(cb):
 
     elif data.startswith("tone_") and data != "tone_menu":
         tone_key = data.replace("tone_", "")
-        if tone_key in ["standard", "aggressive", "empathetic"]:
+        if tone_key in ["standard", "aggressive", "empathetic", "urgent", "contrarian", "data"]:
             apply_tone(chat_id, tone_key)
 
     elif data == "cancel_tone":
@@ -5597,10 +5864,29 @@ def handle_callback(cb):
     elif data == "approve_segments":
         state["stage"] = "emails_approved"
         keyboard = [
-            [{"text": "Yes — create social content", "callback_data": "social_yes"}],
-            [{"text": "No — mark complete", "callback_data": "mark_complete"}]
+            [{"text": "📤 Push to Brevo",          "callback_data": "brevo_push_start"}],
+            [{"text": "📱 Create social content",   "callback_data": "social_yes"}],
+            [{"text": "✏️ Submit revised version",  "callback_data": "submit_revised_email"}],
+            [{"text": "✅ Mark complete",            "callback_data": "mark_complete"}],
         ]
-        send(chat_id, "Segments approved. Want to create social content?", keyboard)
+        send(chat_id, "Segments approved.", keyboard)
+
+    elif data == "view_current":
+        # Show current version of whatever is in state
+        shown = False
+        emails = state.get("current_emails", {})
+        if emails.get("free"):
+            send_plain(chat_id, "FREE EMAIL (current)\n\n" + clean_copy(extract_text(emails["free"])))
+            shown = True
+        if emails.get("pro"):
+            send_plain(chat_id, "PRO EMAIL (current)\n\n" + clean_copy(extract_text(emails["pro"])))
+            shown = True
+        if state.get("current_social") and not emails:
+            social_type = state.get("current_social_type", "Social content")
+            send_plain(chat_id, social_type.upper() + " (current)\n\n" + state["current_social"])
+            shown = True
+        if not shown:
+            send(chat_id, "Nothing to show yet.")
 
     elif data == "back_to_emails":
         state["stage"] = "emails_ready"
@@ -5618,6 +5904,12 @@ def handle_callback(cb):
 
     elif data == "length_social":
         show_length_menu(chat_id, mode="social")
+
+    elif data == "length_ad":
+        show_length_menu(chat_id, mode="ad")
+
+    elif data == "critique_ad":
+        run_critique(chat_id, "ad")
 
     elif data == "length_extend":
         apply_length(chat_id, "extend")
@@ -6631,7 +6923,8 @@ def handle_callback(cb):
             apply_critique_fixes(chat_id, selected)
 
     elif data == "apply_critique_all":
-        total = state.get("critique_fixes_available", 6)
+        blocks = state.get("critique_blocks", [])
+        total = len(blocks) if blocks else state.get("critique_fixes_available", 6)
         apply_critique_fixes(chat_id, list(range(1, total + 1)))
 
     elif data.startswith("apply_critique_"):
@@ -6973,13 +7266,14 @@ def handle_callback(cb):
         send(chat_id, "What to change in the brief?")
 
     elif data == "approve_ad":
-        ad_output = state.get("current_ad", "")
+        ad_output = state.get("current_ad", "") or state.get("current_ad_output", "")
         if ad_output:
             save_voice_example(chat_id, ad_output[:600], "approved_ad")
         keyboard = [
-            [{"text": "🎨 Visual brief + image", "callback_data": "vb_type_ad_static"}],
-            [{"text": "Generate another set",    "callback_data": "ads_again"}],
-            [{"text": "Mark Complete",           "callback_data": "mark_complete"}],
+            [{"text": "🎨 Visual brief + image",   "callback_data": "vb_type_ad_static"}],
+            [{"text": "Generate another set",       "callback_data": "ads_again"}],
+            [{"text": "✏️ Submit revised version",  "callback_data": "submit_revised_ad"}],
+            [{"text": "Mark Complete",              "callback_data": "mark_complete"}],
         ]
         send(chat_id, "Ad approved.", keyboard)
 
@@ -7117,7 +7411,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -7137,7 +7431,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -8003,14 +8297,15 @@ def gen_yt_desc(chat_id):
         state["yt_thumbnail_brief"] = (state.get("yt_content", "") or state.get("yt_existing", ""))[:800]
 
         keyboard = [
-            [{"text": "🎬 Generate matching thumbnail", "callback_data": "yt_gen_thumbnail"}],
-            [{"text": "Regenerate", "callback_data": "yt_regen"}],
-            [{"text": "Edit existing description instead", "callback_data": "yt_switch_edit"}],
-            [{"text": "Fresh from content", "callback_data": "yt_switch_fresh"}],
-            [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            [{"text": "Quick Edit",              "callback_data": "yt_quick_edit"},
+             {"text": "Regenerate",              "callback_data": "yt_regen"}],
+            [{"text": "🎬 Matching thumbnail",   "callback_data": "yt_gen_thumbnail"},
+             {"text": "Critique",                "callback_data": "critique_yt"}],
+            [{"text": "✏️ Submit revised",       "callback_data": "submit_revised_yt"}],
+            [{"text": "Back to Writing Studio",  "callback_data": "open_content_studio"}],
         ]
         send_plain(chat_id, "*YouTube Description*\n\n" + result)
-        send(chat_id, "Description ready. Add your timestamps where marked.", keyboard)
+        send(chat_id, "Description ready. Add timestamps where marked.", keyboard)
 
     except Exception as e:
         send(chat_id, "Error generating description: " + str(e))
@@ -10202,6 +10497,11 @@ def handle_voice_message(chat_id, voice):
         # Revised copy memory
         "awaiting_revised_email",
         "awaiting_revised_social",
+        "awaiting_revised_free_email",
+        "awaiting_revised_pro_email",
+        "awaiting_revised_ad",
+        "yt_awaiting_quick_edit",
+        "awaiting_revised_yt",
         # Quick ad creative
         "awaiting_ad_creative_upload",
     }
@@ -13537,6 +13837,10 @@ def run_critique(chat_id, content_type):
     elif content_type == "lp":
         content_to_critique = state.get("lp_content", "")[:3000]
         label = "landing page"
+    elif content_type == "yt":
+        content_to_critique = state.get("yt_output", "") or state.get("current_yt_for_critique", "")
+        content_to_critique = content_to_critique[:3000]
+        label = "YouTube description"
     else:
         content_to_critique = ""
         label = "content"
@@ -13574,6 +13878,8 @@ def run_critique(chat_id, content_type):
             # Fallback: split on double newlines  
             blocks = [b.strip() for b in result.strip().split('\n\n') if b.strip() and len(b.strip()) > 20]
         state["critique_blocks"] = blocks
+        state["critique_selected_fixes"] = []  # reset selection
+        state["critique_fixes_available"] = min(len(blocks), 6)  # for toggle rebuild
 
         # Display with numbers
         numbered = "CRITIQUE\n\n"
@@ -13581,20 +13887,16 @@ def run_critique(chat_id, content_type):
             numbered += str(i+1) + ". " + block + "\n\n"
         send_plain(chat_id, numbered.strip())
 
-        # Build fix buttons
+        # Build multi-select checkbox keyboard
         keyboard = []
-        row = []
         for i in range(min(len(blocks), 6)):
-            row.append({"text": "Fix " + str(i+1), "callback_data": "apply_critique_" + str(i+1)})
-            if len(row) == 3:
-                keyboard.append(row)
-                row = []
-        if row:
-            keyboard.append(row)
-        if len(blocks) > 1:
-            keyboard.append([{"text": "Apply all", "callback_data": "apply_all_critiques"}])
+            keyboard.append([{"text": "[ ] Fix " + str(i+1), "callback_data": "toggle_critique_" + str(i+1)}])
+        keyboard.append([
+            {"text": "Apply selected (0)", "callback_data": "apply_critique_selected"},
+            {"text": "Apply all",          "callback_data": "apply_all_critiques"},
+        ])
         keyboard.append([{"text": "Ignore all", "callback_data": "ignore_critique"}])
-        send(chat_id, "Tap a number to apply that fix:", keyboard)
+        send(chat_id, "Tap fixes to select, then Apply selected:", keyboard)
 
     except Exception as e:
         send(chat_id, "Critique error: " + str(e))
@@ -13618,21 +13920,28 @@ def apply_critique_fixes(chat_id, fix_numbers):
     try:
         fix_instruction = ("fixes " + fix_list) if len(fix_numbers) > 1 else ("fix " + fix_list)
         result = claude(
-            "ORIGINAL CONTENT:\n" + original[:1500] +
-            "\n\nCRITIQUE:\n" + critique[:1000] +
-            "\n\nApply ONLY " + fix_instruction + " from the critique above. " +
-            "Return the full revised content with those specific changes applied. " +
-            "Do not apply other changes. Do not explain what you changed.",
-            max_tokens=1500
+            "ORIGINAL CONTENT:\n" + original[:4000] +
+            "\n\nCRITIQUE:\n" + critique[:2000] +
+            "\n\nApply ONLY " + fix_instruction + " from the critique above. "
+            "Return the full revised content with those specific changes applied. "
+            "Do not apply other changes. Do not explain what you changed. "
+            "No em dashes. Keep Adam's voice.",
+            max_tokens=2500
         )
+        result = clean_copy(result)
 
         # Store previous version for revert
         state["critique_pre_fix"] = original
 
-        # Update state
+        # Update state with clean copy
         if content_type == "email":
             improved = parse_delimited_emails(result)
             if improved:
+                # Apply clean_copy to parsed emails
+                if "free" in improved:
+                    improved["free"] = clean_copy(extract_text(improved["free"]))
+                if "pro" in improved:
+                    improved["pro"] = clean_copy(extract_text(improved["pro"]))
                 state["current_emails"] = improved
             send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
         elif content_type == "ad":
@@ -13654,7 +13963,12 @@ def apply_critique_fixes(chat_id, fix_numbers):
         send(chat_id, "Fix applied. Revert if needed or proceed:", keyboard)
 
     except Exception as e:
-        send(chat_id, "Error applying fix: " + str(e))
+        err = str(e)
+        if "429" in err or "rate" in err.lower():
+            send(chat_id, "Rate limit hit — wait 30 seconds and try applying the fix again.",
+                 [[{"text": "Try again", "callback_data": "apply_critique_" + fix_list.replace(", ", "_")}]])
+        else:
+            send(chat_id, "Error applying fix: " + err[:200])
         print("Apply fix error:", e, flush=True)
 
 # Keep old single-fix function as alias for backward compat
