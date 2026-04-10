@@ -2748,6 +2748,7 @@ def apply_quick_edit(chat_id, instruction):
     if mode == "social":
         content = state.get("current_social", "")
         social_type = state.get("current_social_type", "social content")
+        fmt_key = state.get("current_social_format", "")
         send(chat_id, "Applying edit to " + social_type + "...")
         try:
             result = claude(
@@ -2759,16 +2760,28 @@ def apply_quick_edit(chat_id, instruction):
             result = clean_copy(result)
             state["current_social"] = result
             state["stage"] = "social_ready"
+            # Save back to social_outputs so format-specific view is updated
+            if fmt_key and "social_outputs" in state:
+                if fmt_key in state["social_outputs"]:
+                    state["social_outputs"][fmt_key]["content"] = result
             send_plain(chat_id, "*EDITED " + social_type.upper() + "*\n\n" + result)
-            send(chat_id, "Edit applied.", social_action_keyboard())
+            # Restore format-specific keyboard if edit came from a format view
+            if fmt_key:
+                fmt_labels = {"fmt_reel": "Reel Script", "fmt_carousel": "Carousel",
+                              "fmt_static": "Static Post", "fmt_story_single": "Story (single)",
+                              "fmt_story_multi": "Story (multi)"}
+                fmt_label = fmt_labels.get(fmt_key, social_type)
+                send(chat_id, "Edit applied.", format_action_keyboard(fmt_key, fmt_label))
+            else:
+                send(chat_id, "Edit applied.", social_action_keyboard())
         except Exception as e:
             err = str(e)
             if "429" in err or "rate" in err.lower():
-                send(chat_id, "Rate limit hit — the email is large. Try a shorter instruction or wait 30 seconds and try again.",
-                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
+                send(chat_id, "Rate limit hit — wait 30 seconds and try again.",
+                     [[{"text": "Try again", "callback_data": "social_quick_edit"}]])
             else:
                 send(chat_id, "Edit failed: " + err[:200],
-                     [[{"text": "Try again", "callback_data": "quick_edit"}]])
+                     [[{"text": "Try again", "callback_data": "social_quick_edit"}]])
             state["stage"] = "social_ready"
     else:
         emails = state.get("current_emails", {})
@@ -2907,6 +2920,7 @@ def apply_enhancements(chat_id):
     if mode == "social":
         content = state.get("current_social", "")
         social_type = state.get("current_social_type", "social content")
+        fmt_key = state.get("current_social_format", "")
         try:
             result = claude(
                 "Rewrite this Cryptonary " + social_type + " applying these improvements only:\n\n" + improvements +
@@ -2914,10 +2928,22 @@ def apply_enhancements(chat_id):
                 "\n\nReturn the improved content as a plain string, not JSON.",
                 max_tokens=1500
             )
+            result = clean_copy(result)
             state["current_social"] = result
             state["stage"] = "social_ready"
+            # Save back to social_outputs
+            if fmt_key and "social_outputs" in state and fmt_key in state["social_outputs"]:
+                state["social_outputs"][fmt_key]["content"] = result
             send_plain(chat_id, "*IMPROVED " + social_type.upper() + "*\n\n" + result)
-            send(chat_id, str(len(selected_ids)) + " improvements applied.", social_action_keyboard())
+            # Restore format-specific keyboard if came from format view
+            if fmt_key:
+                fmt_labels = {"fmt_reel": "Reel Script", "fmt_carousel": "Carousel",
+                              "fmt_static": "Static Post", "fmt_story_single": "Story (single)",
+                              "fmt_story_multi": "Story (multi)"}
+                send(chat_id, str(len(selected_ids)) + " improvements applied.",
+                     format_action_keyboard(fmt_key, fmt_labels.get(fmt_key, social_type)))
+            else:
+                send(chat_id, str(len(selected_ids)) + " improvements applied.", social_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
             state["stage"] = "social_ready"
@@ -3995,7 +4021,11 @@ def handle_message(msg):
                   "social_ready", "social_approved",
                   "emails_ready", "emails_approved"):
         # Voice/text edit arriving at active content stage — treat as quick edit
-        if stage in ("social_ready", "social_approved"):
+        if stage == "social_quick_edit":
+            # Came from sfmt_edit_ — keep current_social_format intact for keyboard restore
+            user_state[chat_id]["quick_edit_mode"] = "social"
+            user_state[chat_id]["pre_edit_stage"] = "social_ready"
+        elif stage in ("social_ready", "social_approved"):
             user_state[chat_id]["pre_edit_stage"] = stage
             user_state[chat_id]["quick_edit_mode"] = "social"
         elif stage in ("emails_ready", "emails_approved"):
@@ -5480,7 +5510,6 @@ def handle_callback(cb):
             state["current_social"] = outputs[fmt_key]["content"]
             state["current_social_type"] = outputs[fmt_key]["type"]
             state["current_social_format"] = fmt_key
-        # Save to voice corpus
         social_body = state.get("current_social", "")
         social_type = state.get("current_social_type", "social")
         if social_body:
@@ -5489,7 +5518,8 @@ def handle_callback(cb):
         keyboard = [
             [{"text": "Generate another format", "callback_data": "social_yes"}],
             [{"text": "🎨 Visual brief + image",  "callback_data": "vb_auto"}],
-            [{"text": "Mark Complete",             "callback_data": "mark_complete"}],
+            [{"text": "✏️ Submit revised version","callback_data": "submit_revised_social"}],
+            [{"text": "Mark Complete",            "callback_data": "mark_complete"}],
         ]
         send(chat_id, social_type + " approved.", keyboard)
 
@@ -5504,7 +5534,15 @@ def handle_callback(cb):
         mode = state.get("enhance_mode", "email")
         if mode == "social":
             state["stage"] = "social_ready"
-            send(chat_id, "Enhancement skipped.", social_action_keyboard())
+            fmt_key = state.get("current_social_format", "")
+            if fmt_key:
+                fmt_labels = {"fmt_reel": "Reel Script", "fmt_carousel": "Carousel",
+                              "fmt_static": "Static Post", "fmt_story_single": "Story (single)",
+                              "fmt_story_multi": "Story (multi)"}
+                send(chat_id, "Enhancement skipped.",
+                     format_action_keyboard(fmt_key, fmt_labels.get(fmt_key, "Social content")))
+            else:
+                send(chat_id, "Enhancement skipped.", social_action_keyboard())
         else:
             state["stage"] = "emails_ready"
             send(chat_id, "Enhancement skipped.", email_action_keyboard())
@@ -14078,6 +14116,13 @@ def handle_content_file(chat_id, file_info, file_type="image"):
 
         # Route based on current stage — same as if text was pasted
         if stage in ("awaiting_report", "buffering_report", "awaiting_email_report"):
+            # Clear stale angle/hook state from any previous session so prev_angles
+            # avoidance doesn't bleed into the new report
+            for key in ("angles", "free_angles", "pro_angles", "hooks", "free_hooks",
+                        "pro_hooks", "social_angles", "social_hooks", "social_prev_hooks",
+                        "selected_angle", "selected_free_angle", "selected_pro_angle",
+                        "selected_hook", "subject_alternatives"):
+                user_state[chat_id].pop(key, None)
             user_state[chat_id]["report"] = sanitise(extracted)
             user_state[chat_id]["stage"] = "awaiting_context_choice"
             keyboard = [
