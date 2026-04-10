@@ -2209,7 +2209,7 @@ def clean_copy(text):
     return text.strip()
 
 
-def claude(prompt, max_tokens=1500, system=None):
+def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2):
     payload = json.dumps({
         "model": "claude-sonnet-4-5",
         "max_tokens": max_tokens,
@@ -2221,14 +2221,29 @@ def claude(prompt, max_tokens=1500, system=None):
         data=payload,
         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"}
     )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            data = json.loads(r.read())
-            return "".join(c.get("text", "") for c in data["content"])
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="ignore")
-        print("Claude API error " + str(e.code) + ": " + body, flush=True)
-        raise Exception("API error " + str(e.code) + ": " + body[:200])
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read())
+                return "".join(c.get("text", "") for c in data["content"])
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")
+            print(f"Claude API error {e.code} (attempt {attempt+1}): {body[:200]}", flush=True)
+            if e.code in (500, 529) and attempt < retries:
+                time.sleep(5 * (attempt + 1))  # 5s, 10s backoff
+                last_err = Exception("API error " + str(e.code) + ": " + body[:200])
+                continue
+            raise Exception("API error " + str(e.code) + ": " + body[:200])
+        except Exception as e:
+            err_str = str(e)
+            print(f"Claude call error (attempt {attempt+1}): {err_str[:200]}", flush=True)
+            if ("timed out" in err_str.lower() or "timeout" in err_str.lower()) and attempt < retries:
+                time.sleep(3 * (attempt + 1))
+                last_err = e
+                continue
+            raise
+    raise last_err or Exception("Claude call failed after retries")
 
 def anthropic_vision(messages, max_tokens=1500, system=None):
     """Make a direct Anthropic API call with vision/multimodal content. Proper error logging."""
@@ -2700,11 +2715,10 @@ def gen_emails(chat_id):
     prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
-        raw = claude(prompt, max_tokens=2500)
+        raw = claude(prompt, max_tokens=2500, timeout=120, retries=2)
         emails = parse_delimited_emails(raw)
         state["current_emails"] = emails
         state["stage"] = "emails_ready"
-        # Store for voice learning on approve
         state["current_emails"]["free_raw"] = emails.get("free", "")
         state["current_emails"]["pro_raw"] = emails.get("pro", "")
         state["email_record"] = {
@@ -2719,7 +2733,18 @@ def gen_emails(chat_id):
             send_plain(chat_id, "PRO EMAIL\n\n" + clean_copy(extract_text(emails["pro"])))
         send(chat_id, "Emails ready. What would you like to do?", email_action_keyboard())
     except Exception as e:
-        send(chat_id, "Error: " + str(e))
+        err = str(e)
+        if "timed out" in err.lower() or "timeout" in err.lower():
+            msg = "Email generation timed out — the server took too long. Try again."
+        elif "500" in err or "internal" in err.lower():
+            msg = "Anthropic server error — this is temporary. Try again in a moment."
+        else:
+            msg = "Email generation failed: " + err[:150]
+        state["stage"] = "emails_ready" if state.get("current_emails") else "idle"
+        send(chat_id, msg, [
+            [{"text": "🔄 Try again",            "callback_data": "regen_emails"}],
+            [{"text": "Back to Writing Studio",  "callback_data": "open_content_studio"}],
+        ])
 
 # ── QUICK EDIT ────────────────────────────────────────────────────
 
@@ -12845,29 +12870,41 @@ def format_contact_list_message(data):
 def openai_gpt(prompt, system="", max_tokens=800):
     """Call OpenAI GPT-4o for hooks, angles, and ideation tasks."""
     if not OPENAI_KEY:
-        # Fall back to Claude if OpenAI not configured
         return claude(prompt, max_tokens=max_tokens, system=system)
-    try:
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
-        body = json.dumps({
-            "model": "gpt-4o",
-            "max_tokens": max_tokens,
-            "messages": messages
-        }).encode()
-        req = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
-            data=body,
-            headers={"Content-Type": "application/json", "Authorization": "Bearer " + OPENAI_KEY}
-        )
-        with urllib.request.urlopen(req, timeout=60) as r:
-            result = json.loads(r.read())
-        return result["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print("OpenAI error:", e, flush=True)
-        return claude(prompt, max_tokens=max_tokens, system=system)  # fallback
+    for attempt in range(3):
+        try:
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            body = json.dumps({
+                "model": "gpt-4o",
+                "max_tokens": max_tokens,
+                "messages": messages
+            }).encode()
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/chat/completions",
+                data=body,
+                headers={"Content-Type": "application/json", "Authorization": "Bearer " + OPENAI_KEY}
+            )
+            with urllib.request.urlopen(req, timeout=60) as r:
+                result = json.loads(r.read())
+            return result["choices"][0]["message"]["content"].strip()
+        except urllib.error.HTTPError as e:
+            body_txt = e.read().decode("utf-8", errors="ignore")
+            print(f"OpenAI error {e.code} (attempt {attempt+1}): {body_txt[:200]}", flush=True)
+            if e.code in (500, 503, 529) and attempt < 2:
+                time.sleep(4 * (attempt + 1))
+                continue
+            # Fall back to Claude on persistent OpenAI errors
+            return claude(prompt, max_tokens=max_tokens, system=system)
+        except Exception as e:
+            print(f"OpenAI error (attempt {attempt+1}): {e}", flush=True)
+            if attempt < 2 and ("timed out" in str(e).lower() or "timeout" in str(e).lower()):
+                time.sleep(3)
+                continue
+            return claude(prompt, max_tokens=max_tokens, system=system)
+    return claude(prompt, max_tokens=max_tokens, system=system)
 
 # Cache for market data — keyed by timestamp bucket (5 min intervals)
 _market_cache = {"data": {}, "fetched_at": 0}
