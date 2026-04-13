@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Adam AI — Cryptonary OS
+Adam AI - Cryptonary OS
 Writing Studio | Data Studio | Creative Studio
 - Emails, Social Content, Ad Copy, Landing Pages
 - Idea generation with live RSS + X tweet context
@@ -28,7 +28,7 @@ MIXPANEL_SECRET     = os.environ.get("MIXPANEL_SECRET", "") or os.environ.get("M
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # ── CRYPTONARY LOGOMARK SVGs (exact brand assets) ─────────────────
-# Two-polygon bracket C mark — white for dark backgrounds, blue/black for light
+# Two-polygon bracket C mark - white for dark backgrounds, blue/black for light
 CRYPTONARY_LOGO_SVG_W = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#FFFFFF" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#FFFFFF" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
 CRYPTONARY_LOGO_SVG_BLUE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#005FFF" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#005FFF" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
 CRYPTONARY_LOGO_SVG_B = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 97.76"><polygon fill="#000000" points="94.87,21.96 94.87,41.02 75.8,41.02 75.8,21.96 21.96,21.96 21.96,2.89 75.8,2.89"/><polygon fill="#000000" points="94.87,75.8 94.87,94.87 21.96,94.87 2.89,75.8 2.89,2.89 21.96,21.96 21.96,75.8 75.8,75.8 75.8,56.73"/></svg>'
@@ -47,7 +47,7 @@ def get_logo_svg_tag(position="bottom-right", size=40, variant="white"):
         pos_css = "top:16px;right:16px;"
     else:
         pos_css = "bottom:16px;right:16px;"
-    # Wrap in a div — keeps SVG contained and absolutely positioned reliably
+    # Wrap in a div - keeps SVG contained and absolutely positioned reliably
     wrapper = (
         '<div style="position:absolute;' + pos_css +
         'width:' + str(size) + 'px;height:' + str(size) + 'px;z-index:10;">' +
@@ -61,53 +61,53 @@ def get_logo_svg_tag(position="bottom-right", size=40, variant="white"):
 BOOK_KNOWLEDGE = """
 
 === DEEP COPYWRITING KNOWLEDGE BASE ===
-Applied specifically to Cryptonary — a crypto research and education brand.
+Applied specifically to Cryptonary - a crypto research and education brand.
 Every principle below should be actively applied when writing copy, not referenced passively.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CASHVERTISING — DREW ERIC WHITMAN
+CASHVERTISING - DREW ERIC WHITMAN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THE 8 LIFE FORCE DESIRES (LF8) — biological drives hardwired into every human. Cannot be suppressed or taught. The strongest motivators in advertising because they require no explanation.
+THE 8 LIFE FORCE DESIRES (LF8) - biological drives hardwired into every human. Cannot be suppressed or taught. The strongest motivators in advertising because they require no explanation.
 
 LF8-1: SURVIVAL, ENJOYMENT OF LIFE, LIFE EXTENSION
-People will do almost anything to stay alive and feel alive. Fear of death, illness, and decline are primal. The flip side is the desire to fully live — to experience, to thrive, not just survive.
-Cryptonary angle: "The portfolio you build now determines the life you get to live later. One missed cycle can cost a decade." Also: "This isn't gambling — it's how you ensure the next 10 years look different from the last 10."
+People will do almost anything to stay alive and feel alive. Fear of death, illness, and decline are primal. The flip side is the desire to fully live - to experience, to thrive, not just survive.
+Cryptonary angle: "The portfolio you build now determines the life you get to live later. One missed cycle can cost a decade." Also: "This isn't gambling - it's how you ensure the next 10 years look different from the last 10."
 
-LF8-2: ENJOYMENT OF FOOD AND DRINK — rarely applicable to Cryptonary
+LF8-2: ENJOYMENT OF FOOD AND DRINK - rarely applicable to Cryptonary
 
-LF8-3: FREEDOM FROM FEAR, PAIN, AND DANGER — the most powerful LF8 for financial content
-The anxiety of watching the market move while you're unpositioned is visceral. The pain of a liquidation or a missed call is real. This desire is about removing that anxiety — permanently.
-Cryptonary angle: "The feeling of watching a 40% run from the sidelines — knowing you saw it coming but didn't act — is one of the worst feelings in investing. Pro removes that." Also: "Stop waking up to market moves you didn't know were coming." Fear works on three conditions (see Fear Formula below). Lead with the specific fear, name the exact pain, then offer relief.
+LF8-3: FREEDOM FROM FEAR, PAIN, AND DANGER - the most powerful LF8 for financial content
+The anxiety of watching the market move while you're unpositioned is visceral. The pain of a liquidation or a missed call is real. This desire is about removing that anxiety - permanently.
+Cryptonary angle: "The feeling of watching a 40% run from the sidelines - knowing you saw it coming but didn't act - is one of the worst feelings in investing. Pro removes that." Also: "Stop waking up to market moves you didn't know were coming." Fear works on three conditions (see Fear Formula below). Lead with the specific fear, name the exact pain, then offer relief.
 
-LF8-4: SEXUAL COMPANIONSHIP — not relevant for Cryptonary
+LF8-4: SEXUAL COMPANIONSHIP - not relevant for Cryptonary
 
 LF8-5: COMFORTABLE LIVING CONDITIONS
-Financial comfort, the absence of money stress, the ability to live without counting. This is what investing is ultimately for — not charts, not calls, but a life where money isn't a daily source of anxiety.
+Financial comfort, the absence of money stress, the ability to live without counting. This is what investing is ultimately for - not charts, not calls, but a life where money isn't a daily source of anxiety.
 Cryptonary angle: "The research members who acted on the SOL call in 2021 aren't checking prices every hour anymore. They built a cushion. That cushion changes everything." Long-form copy: paint the picture of a life where the financial pressure is off.
 
-LF8-6: TO BE SUPERIOR, WIN, KEEP UP WITH THE JONESES — second most powerful for Cryptonary
+LF8-6: TO BE SUPERIOR, WIN, KEEP UP WITH THE JONESES - second most powerful for Cryptonary
 Humans are deeply competitive and status-driven. Not just wanting to win, but wanting to be seen as the one who wins. The one who knew first. The one who was positioned before the crowd.
-Cryptonary angle: "While retail panics at $25K, Pro members already know the $21,800 support level and have their orders set." Also: "Be the person in the room who already knew. Not the person asking what happened." This desire is also about NOT being behind — not being the last to know, not being the person who didn't see it coming.
+Cryptonary angle: "While retail panics at $25K, Pro members already know the $21,800 support level and have their orders set." Also: "Be the person in the room who already knew. Not the person asking what happened." This desire is also about NOT being behind - not being the last to know, not being the person who didn't see it coming.
 Tactical: Show what Pro members DO differently from regular investors. The contrast creates the superiority desire.
 
 LF8-7: CARE FOR AND PROTECTION OF LOVED ONES
 People will sacrifice more for their families than for themselves. The desire to provide, to protect, to leave something behind.
 Cryptonary angle: "Your portfolio isn't just your money. It's your family's options." Also in long-form: "The decisions you make in this cycle will determine what you're able to give your family in the next one."
 
-LF8-8: SOCIAL APPROVAL — third most powerful for Cryptonary
+LF8-8: SOCIAL APPROVAL - third most powerful for Cryptonary
 The need to be respected, accepted, and admired by peers. Being seen as smart, informed, ahead of the curve.
 Cryptonary angle: "Join the 300,000+ investors who decided being informed isn't optional." Also: "The investors in your circle who seem to always know what's happening? They're not smarter. They have better information." Social approval also works as belonging: "This is what serious investors do."
 
-HOW TO STACK LF8 DESIRES — most powerful copy triggers two simultaneously:
+HOW TO STACK LF8 DESIRES - most powerful copy triggers two simultaneously:
 • LF8-3 + LF8-8: Fear of being wrong + social approval of those who were right = "Don't be the last to know. 300K investors are already ahead of you."
 • LF8-6 + LF8-3: Superiority desire + fear of loss = "Smart money is positioned. Are you?"
 • LF8-7 + LF8-5: Family protection + comfortable living = "This isn't a trade. It's a decision about what your family's next 10 years looks like."
 Never force unnatural combinations. When two desires align naturally, the copy becomes effortlessly compelling.
 
-THE 9 SECONDARY WANTS (learned, not hardwired — real but weaker than LF8):
+THE 9 SECONDARY WANTS (learned, not hardwired - real but weaker than LF8):
 1. INFORMATION AND EDUCATION: "Here's what the chart is actually saying and why it matters"
-2. CURIOSITY: "The one indicator that called every major top since 2020 — and what it's showing right now"
+2. CURIOSITY: "The one indicator that called every major top since 2020 - and what it's showing right now"
 3. CLEANLINESS: not relevant
 4. EFFICIENCY AND TIME SAVING: "Full institutional-grade analysis in 5 minutes. Before the market opens."
 5. CONVENIENCE: "Everything you need, one daily email, no research required"
@@ -116,31 +116,31 @@ THE 9 SECONDARY WANTS (learned, not hardwired — real but weaker than LF8):
 8. ECONOMY AND PROFIT: "Pro pays for itself the first time you avoid a bad trade or act on a good one. The math is embarrassing."
 9. BARGAINS: "Founding member rates disappear when the next cohort opens. This is the last time you'll see this price."
 
-THE FEAR FORMULA — Whitman's most important principle, most often misused:
+THE FEAR FORMULA - Whitman's most important principle, most often misused:
 Fear copy ONLY works when all three conditions are simultaneously true:
 CONDITION 1: The threat must be real and documentable. Manufactured or exaggerated fear backfires. It must be something the reader can verify.
 CONDITION 2: The reader must feel personally vulnerable to this specific threat. Generic threats ("the market is volatile") don't create action. Personal threats do ("if you're earning stablecoin yield right now, you're in the crosshairs").
-CONDITION 3: A clear, specific, immediately actionable solution must be provided. Fear without a solution creates paralysis and resentment — both of which are directed at the brand that created the fear.
+CONDITION 3: A clear, specific, immediately actionable solution must be provided. Fear without a solution creates paralysis and resentment - both of which are directed at the brand that created the fear.
 
-Cryptonary Fear Formula in practice: "Regulators are actively targeting stablecoin yield programs — this is documented [REAL THREAT]. If you're earning on USDC, USDT, or DAI right now, your yield could be zero by Q2 [PERSONAL VULNERABILITY]. Pro members got the full repositioning playbook yesterday morning [SOLUTION]."
+Cryptonary Fear Formula in practice: "Regulators are actively targeting stablecoin yield programs - this is documented [REAL THREAT]. If you're earning on USDC, USDT, or DAI right now, your yield could be zero by Q2 [PERSONAL VULNERABILITY]. Pro members got the full repositioning playbook yesterday morning [SOLUTION]."
 
-BUCKET BRIGADE TECHNIQUE — the connective tissue that keeps readers reading:
+BUCKET BRIGADE TECHNIQUE - the connective tissue that keeps readers reading:
 The bucket brigade is a copywriting device from the era of chain-gang water passing. Each phrase "passes the bucket" of attention to the next paragraph. Without them, readers stop at natural break points.
-Power phrases: "But here's the thing..." / "Now here's where it gets interesting..." / "And that's not all..." / "Here's what most people miss..." / "But wait — there's a problem with this..." / "Let me explain what I mean..." / "Think about it this way..." / "Here's the bottom line..." / "Now consider this..." / "And here's the kicker..." / "But before I tell you that..."
-Application rule: Use one every 2-3 paragraphs. In short-form copy (social, emails), one per section is enough. They should feel like the natural speech pattern of someone telling an exciting story — not like a formula.
+Power phrases: "But here's the thing..." / "Now here's where it gets interesting..." / "And that's not all..." / "Here's what most people miss..." / "But wait - there's a problem with this..." / "Let me explain what I mean..." / "Think about it this way..." / "Here's the bottom line..." / "Now consider this..." / "And here's the kicker..." / "But before I tell you that..."
+Application rule: Use one every 2-3 paragraphs. In short-form copy (social, emails), one per section is enough. They should feel like the natural speech pattern of someone telling an exciting story - not like a formula.
 
-AD CREDIBILITY BUILDERS — Whitman's 22 Ad Secrets applied:
+AD CREDIBILITY BUILDERS - Whitman's 22 Ad Secrets applied:
 • SPECIFICITY: "300,412 investors" not "hundreds of thousands." "SOL at $23.14" not "early SOL." Specific numbers feel researched. Round numbers feel estimated.
-• TESTIMONIALS WITH CONTEXT: Not "great service" but "I got the alert at 6am, repositioned by 8am, avoided the 23% drawdown" — name, portfolio size range, specific outcome if possible.
+• TESTIMONIALS WITH CONTEXT: Not "great service" but "I got the alert at 6am, repositioned by 8am, avoided the 23% drawdown" - name, portfolio size range, specific outcome if possible.
 • TRACK RECORD AS PROOF: List specific calls with dates. This is the most powerful credibility builder for Cryptonary because it's verifiable and the record is strong.
 • MECHANISM NAMING: "Our 4-indicator confluence model" creates more belief than "our analysis." Named mechanisms feel proprietary and researched.
 • BEFORE/AFTER CONTRAST: "Before Pro: checking Twitter at 2am hoping for signals. After Pro: brief in inbox at 6am, levels set, plan clear. Done."
 • REASON WHY: Explain why you're making the offer. "We're opening Pro cohort 4 because the macro setup over the next 6 months is the most significant we've seen since 2020."
 
-DESIRE INTENSIFIERS — techniques to amplify want before the ask:
-1. VISUALISATION: Make the reader see themselves in the success scenario. "Imagine waking up to a market that moved 15% overnight — and already knowing exactly what it means for your position."
+DESIRE INTENSIFIERS - techniques to amplify want before the ask:
+1. VISUALISATION: Make the reader see themselves in the success scenario. "Imagine waking up to a market that moved 15% overnight - and already knowing exactly what it means for your position."
 2. CONTRAST: Show the gap between their current reality and the desired one. More powerful than just painting the dream.
-3. SOCIAL PROOF AS DESIRE: "47,000 Pro members got that alert before the move. Most acted. A few didn't." Doesn't attack — just implies.
+3. SOCIAL PROOF AS DESIRE: "47,000 Pro members got that alert before the move. Most acted. A few didn't." Doesn't attack - just implies.
 4. SCARCITY OF ACCESS: "This analysis doesn't exist anywhere else. Not on Twitter. Not on YouTube. Not on any newsletter." Creates perceived exclusivity.
 5. TIME COMPRESSION: Show how fast the result comes. "The analysis arrives before the London open. You have your thesis set before most investors are awake."
 
@@ -152,66 +152,66 @@ HEADLINE HIERARCHY (in order of power):
 AVOID: Clever/pun headlines that sacrifice clarity. Vague headlines that could apply to anyone. Negative headlines that repel before they attract.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INFLUENCE + PRE-SUASION — ROBERT CIALDINI
+INFLUENCE + PRE-SUASION - ROBERT CIALDINI
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THE 7 PRINCIPLES — mechanism, psychology, and Cryptonary application for each:
+THE 7 PRINCIPLES - mechanism, psychology, and Cryptonary application for each:
 
 1. RECIPROCITY
-Mechanism: Humans are hardwired to return favours. When something is given to us unexpectedly and without obvious strings, we feel a genuine psychological obligation to give back. The gift must feel personalised, unexpected, and meaningful — not promotional.
+Mechanism: Humans are hardwired to return favours. When something is given to us unexpectedly and without obvious strings, we feel a genuine psychological obligation to give back. The gift must feel personalised, unexpected, and meaningful - not promotional.
 Psychology: The reciprocity trigger is MORE powerful when the gift exceeds expectations. A free email that gives genuine institutional-grade analysis creates more obligation than one that teases without delivering.
-Cryptonary application: The free email must deliver real value — not a watered-down version of Pro, but a genuinely useful piece of analysis that stands alone. The reader then feels: "They gave me something real. The least I can do is see what Pro offers."
-Tactical implementation: End the free email value section with "This is free. What Pro members got this morning went further — here's one example: [specific thing]." The contrast activates reciprocity toward the brand that already gave first.
+Cryptonary application: The free email must deliver real value - not a watered-down version of Pro, but a genuinely useful piece of analysis that stands alone. The reader then feels: "They gave me something real. The least I can do is see what Pro offers."
+Tactical implementation: End the free email value section with "This is free. What Pro members got this morning went further - here's one example: [specific thing]." The contrast activates reciprocity toward the brand that already gave first.
 Common mistake: Giving something that feels promotional (a "free resource" that's clearly a sales funnel) kills the reciprocity trigger. It has to genuinely feel like a gift.
 
 2. COMMITMENT AND CONSISTENCY
-Mechanism: Once people commit to a position, identity, or course of action — verbally, in writing, or publicly — they feel compelled to act consistently with that commitment. Inconsistency creates psychological discomfort.
+Mechanism: Once people commit to a position, identity, or course of action - verbally, in writing, or publicly - they feel compelled to act consistently with that commitment. Inconsistency creates psychological discomfort.
 Psychology: The commitment must be active (chosen), public (visible to others), and effortful (harder = stronger) for maximum effect. Passive exposure doesn't create the commitment trigger.
-Cryptonary application: A free subscriber has already self-identified as someone who takes crypto seriously enough to seek out research. Pro upgrade is framed as CONSISTENT with that already-stated identity — not a new commitment, but the natural next step of the one they've already made.
+Cryptonary application: A free subscriber has already self-identified as someone who takes crypto seriously enough to seek out research. Pro upgrade is framed as CONSISTENT with that already-stated identity - not a new commitment, but the natural next step of the one they've already made.
 Tactical implementation: "You've been following this market closely enough to find Cryptonary. That tells me something about how seriously you take this. Pro is simply what happens when that seriousness meets the right tools."
 Foot-in-the-door technique: Small commitments escalate. "Click here to see today's full analysis" → email signup → free content consumption → upgrade. Each micro-commitment makes the next one more likely.
 
 3. SOCIAL PROOF
 Mechanism: In situations of uncertainty, people look to the behaviour of others as a guide to correct action. The more similar those others are to the observer, the stronger the influence.
-Psychology: The principle works in two directions — descriptive proof (what people do) and injunctive proof (what people approve of). Descriptive is more powerful. "47,000 investors subscribe" is descriptive. "Investors approve of Cryptonary" is injunctive and weaker.
-Cryptonary application: Don't say "300K subscribers" — say "300K investors who decided information asymmetry is an edge, not a buzzword." The qualifier makes the social group more similar to the target reader. Similarity is the multiplier.
+Psychology: The principle works in two directions - descriptive proof (what people do) and injunctive proof (what people approve of). Descriptive is more powerful. "47,000 investors subscribe" is descriptive. "Investors approve of Cryptonary" is injunctive and weaker.
+Cryptonary application: Don't say "300K subscribers" - say "300K investors who decided information asymmetry is an edge, not a buzzword." The qualifier makes the social group more similar to the target reader. Similarity is the multiplier.
 Types to use in order of power:
-• Expert proof: "Called by the team that predicted SOL at $23, ETH at $1,200, HYPE before launch" — track record as social proof
-• User proof: "47,312 Pro members got the alert before the 40% move" — numbers with specificity
-• Peer proof: "Investors managing between $50K and $500K who needed analysis they could actually act on" — demographic similarity
-• Crowd proof: "300,000+ subscribers" — volume without qualification (weakest but still works)
-Negative social proof warning: Never say "many investors miss signals" — this inadvertently normalises the very behaviour you're trying to change. Show what the successful group DOES, not what the unsuccessful group fails to do.
+• Expert proof: "Called by the team that predicted SOL at $23, ETH at $1,200, HYPE before launch" - track record as social proof
+• User proof: "47,312 Pro members got the alert before the 40% move" - numbers with specificity
+• Peer proof: "Investors managing between $50K and $500K who needed analysis they could actually act on" - demographic similarity
+• Crowd proof: "300,000+ subscribers" - volume without qualification (weakest but still works)
+Negative social proof warning: Never say "many investors miss signals" - this inadvertently normalises the very behaviour you're trying to change. Show what the successful group DOES, not what the unsuccessful group fails to do.
 
 4. AUTHORITY
-Mechanism: People defer to experts and established authorities, especially in uncertain domains. The more uncertain the domain, the stronger the authority influence. Crypto is deeply uncertain — authority triggers are therefore extremely powerful.
+Mechanism: People defer to experts and established authorities, especially in uncertain domains. The more uncertain the domain, the stronger the authority influence. Crypto is deeply uncertain - authority triggers are therefore extremely powerful.
 Psychology: Authority signals matter more than actual credentials in first impressions. What you wear, what you display, what others say about you creates perceived authority before your words do.
-Cryptonary application: The track record IS the authority. The specific calls with dates and prices — SOL at $23, ETH at $1,200, HYPE before mainstream, POPCAT, SPX — these are the authority signals. Never claim expertise without demonstrating it.
-Demonstrated vs claimed authority: "We provide expert analysis" (claimed — weak) vs "The team that called SOL before it ran 8x wants to show you what they're watching today" (demonstrated — strong). The reader draws the conclusion themselves, which is far more persuasive.
+Cryptonary application: The track record IS the authority. The specific calls with dates and prices - SOL at $23, ETH at $1,200, HYPE before mainstream, POPCAT, SPX - these are the authority signals. Never claim expertise without demonstrating it.
+Demonstrated vs claimed authority: "We provide expert analysis" (claimed - weak) vs "The team that called SOL before it ran 8x wants to show you what they're watching today" (demonstrated - strong). The reader draws the conclusion themselves, which is far more persuasive.
 Borrowed authority: Media mentions, partnerships, featured analysis, any third-party validation that isn't self-issued. "As covered in [publication]" immediately transfers credibility.
 
 5. LIKING
 Mechanism: People buy from people they like. Liking is produced by: similarity (we're alike), compliments (you noticed something good about me), familiarity (I've seen you before), and physical attractiveness (not always applicable).
-Psychology: Similarity is the strongest liking driver for written copy. When the reader feels "this person understands my situation — they've been where I am," liking spikes.
-Cryptonary application: Adam's voice — direct, occasionally self-deprecating, never corporate — builds liking through perceived similarity and authenticity. "I've been wrong about timing before. Everyone who's been in this market long enough has. What Pro changes is not whether you're wrong sometimes — it's how much it costs you when you are."
+Psychology: Similarity is the strongest liking driver for written copy. When the reader feels "this person understands my situation - they've been where I am," liking spikes.
+Cryptonary application: Adam's voice - direct, occasionally self-deprecating, never corporate - builds liking through perceived similarity and authenticity. "I've been wrong about timing before. Everyone who's been in this market long enough has. What Pro changes is not whether you're wrong sometimes - it's how much it costs you when you are."
 What builds liking in copy: acknowledging shared struggle, admitting past mistakes or limitations, using the same language the reader uses, expressing genuine opinions not safe corporate statements, caring about the outcome for the reader.
 
 6. SCARCITY
 Mechanism: Less available = more desirable. Works on two psychological axes: quantity scarcity (limited amount) and time scarcity (limited window). Both create urgency, but they work differently.
-Psychology: Scarcity triggers the loss aversion system — the same neural pathways that respond to actual danger. The threat of losing access to something feels like losing something already owned.
+Psychology: Scarcity triggers the loss aversion system - the same neural pathways that respond to actual danger. The threat of losing access to something feels like losing something already owned.
 Cryptonary application:
-• Information scarcity: "This analysis is in Pro, not in the free email." The information gap is the most authentic scarcity lever Cryptonary has — it's real.
-• Market window scarcity: "This setup is forming now. The window to position is measured in hours, not weeks." The market itself creates genuine scarcity — use it.
+• Information scarcity: "This analysis is in Pro, not in the free email." The information gap is the most authentic scarcity lever Cryptonary has - it's real.
+• Market window scarcity: "This setup is forming now. The window to position is measured in hours, not weeks." The market itself creates genuine scarcity - use it.
 • Price/access scarcity: "Founding member pricing ends [date]." Must be real to maintain trust.
-Critical warning: Manufactured scarcity that isn't real destroys trust permanently when the reader discovers it. The information gap is Cryptonary's honest scarcity — lean into it and don't need to manufacture other forms.
+Critical warning: Manufactured scarcity that isn't real destroys trust permanently when the reader discovers it. The information gap is Cryptonary's honest scarcity - lean into it and don't need to manufacture other forms.
 
 7. UNITY (added in Pre-Suasion, 2016)
-Mechanism: Shared identity — "we are the same kind of people" — is more powerful than liking because it operates at the identity level, not the preference level. People do far more for their tribe than for someone they merely like.
+Mechanism: Shared identity - "we are the same kind of people" - is more powerful than liking because it operates at the identity level, not the preference level. People do far more for their tribe than for someone they merely like.
 Psychology: The Unity principle is distinct from social proof (what people do) and liking (preference for a person). Unity is about belonging to the same group, sharing the same identity, facing the same challenges together.
 Cryptonary application: "Pro members aren't customers. They're the investors who decided that having an edge isn't optional." The identity frame: "We're the investors who don't settle for hope-based trading." Joining Pro becomes an identity statement, not a purchase.
 How to build unity in copy: shared enemies ("while hedge funds have had proprietary analysis for decades, retail investors have had Twitter"), shared values ("we believe information asymmetry should be democratised"), shared history ("if you've been in this market for more than a year, you've felt this before").
 
-PRE-SUASION — The Channel Matters as Much as the Message:
-Core insight: What you direct attention to immediately before the message changes how the message is received. The brain is primed by what precedes it. This is not subliminal manipulation — it's how attention works.
+PRE-SUASION - The Channel Matters as Much as the Message:
+Core insight: What you direct attention to immediately before the message changes how the message is received. The brain is primed by what precedes it. This is not subliminal manipulation - it's how attention works.
 
 ATTENTION AS PRE-SUADER: Whatever you make the reader focus on first becomes the lens through which everything that follows is evaluated.
 • If you lead with fear → they evaluate the upgrade through a lens of avoiding loss
@@ -219,21 +219,21 @@ ATTENTION AS PRE-SUADER: Whatever you make the reader focus on first becomes the
 • If you lead with community → they evaluate through a lens of belonging
 The opening 3 sentences of any piece of copy are pre-suading everything that follows.
 
-ASSOCIATION MANAGEMENT: What is associated with your brand pre-suades the reader's response to everything about your brand. The images you use, the language you choose, the topics you open with — all create an associative frame that persists through the entire piece.
+ASSOCIATION MANAGEMENT: What is associated with your brand pre-suades the reader's response to everything about your brand. The images you use, the language you choose, the topics you open with - all create an associative frame that persists through the entire piece.
 
-PRIVILEGED MOMENTS: There are specific moments when people are most open to influence. After consuming free value is a privileged moment — reciprocity is active, attention is given. The CTA that follows a genuinely valuable free email lands in a privileged moment. Place your asks there.
+PRIVILEGED MOMENTS: There are specific moments when people are most open to influence. After consuming free value is a privileged moment - reciprocity is active, attention is given. The CTA that follows a genuinely valuable free email lands in a privileged moment. Place your asks there.
 
 CRYPTONARY PRE-SUASION SEQUENCE:
 1. Open with a specific, recent, real market event [establishes relevance + primes urgency]
 2. Show the chart signal or data that called it [primes authority]
 3. Show what Pro members did with it [primes social proof + belonging desire]
-4. Make the upgrade ask [reader is pre-suaded — primed for authority, urgency, and belonging]
+4. Make the upgrade ask [reader is pre-suaded - primed for authority, urgency, and belonging]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-$100M OFFERS + $100M LEADS — ALEX HORMOZI
+$100M OFFERS + $100M LEADS - ALEX HORMOZI
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THE VALUE EQUATION — the most important formula in modern offer creation:
+THE VALUE EQUATION - the most important formula in modern offer creation:
 Value = (Dream Outcome × Perceived Likelihood of Achievement) ÷ (Time Delay × Effort and Sacrifice)
 
 Each variable explained:
@@ -262,16 +262,16 @@ Obstacle → Cryptonary Pro Solution mapping:
 • "I don't understand how macro affects my portfolio" → Weekly macro brief with direct portfolio implications
 • "I can't tell real signals from noise on social media" → Curated signal layer, noise filtered
 • "I've been burned by tips before and don't trust anyone" → Verifiable track record with dated calls
-Stack these explicitly: "You get X. You also get Y. But that's not all — you also get Z. And if that still weren't enough, we've added..."
+Stack these explicitly: "You get X. You also get Y. But that's not all - you also get Z. And if that still weren't enough, we've added..."
 
-VALUE STACKING LANGUAGE — Hormozi's exact copy structure:
-"[Deliverable 1] — which alone is worth [specific value/outcome]. But that's not all. [Deliverable 2] — which means [specific benefit]. And [Deliverable 3]. And [Deliverable 4]. And when you add it all up, the total value is [X]. But you're not paying [X]. You're not paying [lower X]. Today, your investment is just [actual price]."
+VALUE STACKING LANGUAGE - Hormozi's exact copy structure:
+"[Deliverable 1] - which alone is worth [specific value/outcome]. But that's not all. [Deliverable 2] - which means [specific benefit]. And [Deliverable 3]. And [Deliverable 4]. And when you add it all up, the total value is [X]. But you're not paying [X]. You're not paying [lower X]. Today, your investment is just [actual price]."
 
-THE PAIN/DREAM/FIX STRUCTURE — most reliable copy formula for cold-ish audiences:
-PAIN: Name the exact, specific, felt pain. Not category pain — their pain. Not "crypto is hard" but "you watched Bitcoin run 40% last month and you were either unpositioned or sold too early because you didn't know if the move had legs."
+THE PAIN/DREAM/FIX STRUCTURE - most reliable copy formula for cold-ish audiences:
+PAIN: Name the exact, specific, felt pain. Not category pain - their pain. Not "crypto is hard" but "you watched Bitcoin run 40% last month and you were either unpositioned or sold too early because you didn't know if the move had legs."
 Dream: Paint the specific outcome with sensory detail. Not "financial freedom" - "you wake up, the brief is already in your inbox, the levels are set, and you know exactly what you're watching and why. You act with conviction, not hope."
-Fix: Position Cryptonary as the bridge — not the destination. "Pro gives you the analysis. What you do with it is yours."
-The fix must be presented as the natural, obvious, inevitable solution to the pain. Not a pitch — a relief.
+Fix: Position Cryptonary as the bridge - not the destination. "Pro gives you the analysis. What you do with it is yours."
+The fix must be presented as the natural, obvious, inevitable solution to the pain. Not a pitch - a relief.
 
 HORMOZI'S PRICING PSYCHOLOGY:
 • Price should be anchored to value delivered, not cost to deliver. "It costs £X/month to run Pro" is irrelevant. "One avoided bad trade worth £5,000 makes the annual cost look ridiculous" is the right frame.
@@ -286,18 +286,18 @@ THE WARM OUTREACH / REACTIVATION FORMULA:
 4. Qualifier (creates scarcity + pre-qualifies): "This only makes sense if you're managing a portfolio where the analysis would cover the cost"
 5. Easy close (single clear action, no friction): "Reply 'yes' or click here"
 
-THE 4 GROWTH LEVERS — know which one you're writing for before you write:
-1. NEW CUSTOMERS: Acquisition copy — free email CTAs, social ads, landing pages
-2. HIGHER FREQUENCY: Engagement copy — email opens, click-through, daily habit formation
-3. HIGHER ORDER VALUE: Upgrade copy — free → Pro conversion, Pro → Inner Circle
-4. LONGER RETENTION: Retention copy — churn reduction, re-engagement, loyalty communications
+THE 4 GROWTH LEVERS - know which one you're writing for before you write:
+1. NEW CUSTOMERS: Acquisition copy - free email CTAs, social ads, landing pages
+2. HIGHER FREQUENCY: Engagement copy - email opens, click-through, daily habit formation
+3. HIGHER ORDER VALUE: Upgrade copy - free → Pro conversion, Pro → Inner Circle
+4. LONGER RETENTION: Retention copy - churn reduction, re-engagement, loyalty communications
 Each lever requires different copy strategy. Confusion between them produces weak copy.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OGILVY ON ADVERTISING — DAVID OGILVY
+OGILVY ON ADVERTISING - DAVID OGILVY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THE HEADLINE DOCTRINE — The most important principle in advertising:
+THE HEADLINE DOCTRINE - The most important principle in advertising:
 "On average, five times as many people read the headline as read the body copy. When you have written your headline, you have spent eighty cents out of your dollar."
 This means: spending 80% of copywriting time on the headline is not an exaggeration. The subject line in email IS the headline. The first line of a social caption IS the headline. The opening of a reel script IS the headline.
 
@@ -306,14 +306,14 @@ OGILVY'S 11 PROVEN HEADLINE TYPES (with Cryptonary applications):
    "Institutional Wallets Just Did Something They Haven't Done Since April 2020"
 2. HOW TO: People cannot resist "How to" + something they want
    "How to Position Before the Next Major Move Before It Happens"
-3. QUESTION: Must provoke genuine "yes" or "I don't know" — never rhetorical
+3. QUESTION: Must provoke genuine "yes" or "I don't know" - never rhetorical
    "Are You Trading News or Trading the Chart? There's a $40,000 Difference."
 4. COMMAND: Tell them to do something specific
    "Read This Before You Open Your Trading App on Monday"
 5. REASON WHY: Give them numbered reasons and they'll read all of them
    "7 Reasons Institutional Traders Are Quietly Accumulating While You're Reading Bear Cases"
 6. TESTIMONIAL: Real voice, specific outcome, first person
-   "'I Got the Alert at 6am, Repositioned by 8am, Avoided the 23% Drop' — Pro Member"
+   "'I Got the Alert at 6am, Repositioned by 8am, Avoided the 23% Drop' - Pro Member"
 7. SPECIFIC NUMBERS: Specific numbers are believed; round numbers are suspected
    "SOL at $23. ETH at $1,200. HYPE Pre-Launch. The Track Record Is the Argument."
 8. PROSPECT IDENTIFICATION: Speak directly to a narrow audience; they self-select in
@@ -325,113 +325,113 @@ OGILVY'S 11 PROVEN HEADLINE TYPES (with Cryptonary applications):
 11. WARNING/ALERT: Creates urgency without manufactured scarcity
     "Warning: This Setup Has Appeared Before Every Major Correction Since 2017"
 
-BODY COPY PRINCIPLES — what Ogilvy proved through research:
-• The reader is not stupid — "write as if you were writing a letter to a friend who happens to be your ideal customer"
+BODY COPY PRINCIPLES - what Ogilvy proved through research:
+• The reader is not stupid - "write as if you were writing a letter to a friend who happens to be your ideal customer"
 • Long copy outperforms short copy when the reader is interested. Interest justifies length. Boredom at 100 words is the same failure as boredom at 500 words.
-• Every paragraph must earn the right to the next. If a paragraph doesn't advance the argument, story, or desire — delete it without mercy.
+• Every paragraph must earn the right to the next. If a paragraph doesn't advance the argument, story, or desire - delete it without mercy.
 • Avoid corporate language. "We are pleased to announce" is the death of engagement. "I want to show you something I haven't seen since 2020" is alive.
 • Write in the first person. "I" creates connection. "We" creates distance.
-• Specifics always outperform generalities. "Our analysis is accurate" is dead copy. "SOL at $23 in November 2020 — here's the chart with the date stamp" is alive.
+• Specifics always outperform generalities. "Our analysis is accurate" is dead copy. "SOL at $23 in November 2020 - here's the chart with the date stamp" is alive.
 • The first sentence of every paragraph is the headline of that paragraph. If it doesn't compel reading, the paragraph dies there.
 
 THE P.S. DOCTRINE:
-"The P.S. is the second most-read element of any direct response letter — after the headline."
+"The P.S. is the second most-read element of any direct response letter - after the headline."
 In email: many readers go headline → P.S. → if both interest them, they read the body. This means the P.S. must be able to stand alone.
 P.S. formula for Cryptonary: "[Most compelling proof point in one sentence]. [Single CTA]."
-Example: "P.S. The last time this indicator flashed at this level was 72 hours before the 67% run in November 2020. The full breakdown — including exact levels — is in Pro this morning."
+Example: "P.S. The last time this indicator flashed at this level was 72 hours before the 67% run in November 2020. The full breakdown - including exact levels - is in Pro this morning."
 Never use P.S. for pleasantries, housekeeping, or second-tier information. It's prime real estate.
 
 VISUAL AND FORMAT RULES (Ogilvy on layout):
-• Captions are read by 2x as many people as body copy — every image needs a meaningful caption, not just a label
-• Editorial layouts (news article style) outperform "advertising" layouts — looks less like an ad
+• Captions are read by 2x as many people as body copy - every image needs a meaningful caption, not just a label
+• Editorial layouts (news article style) outperform "advertising" layouts - looks less like an ad
 • Before/after is the most powerful visual format in direct response
-• People read from left to right, top to bottom — put the most important element top-left, the second most important bottom-right (where the eye lands at the end)
-• Reverse type (white on black) reduces readership by up to 50% in body copy — use sparingly and only for impact
+• People read from left to right, top to bottom - put the most important element top-left, the second most important bottom-right (where the eye lands at the end)
+• Reverse type (white on black) reduces readership by up to 50% in body copy - use sparingly and only for impact
 
 BRAND CONSISTENCY DOCTRINE:
 Every advertisement is a long-term investment in brand image. A cheap short-term tactic that undermines the brand promise is net negative over the full period.
 Cryptonary brand promises: data-driven, verifiable track record, serious analysis, democratised information edge. Every piece of copy that contradicts these (hype, unverifiable claims, emotional manipulation without substance) is eroding brand equity.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BUILDING A STORYBRAND — DONALD MILLER
+BUILDING A STORYBRAND - DONALD MILLER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 THE CORE INSIGHT: Humans process information through story. Every story has a hero who wants something, encounters a problem, meets a guide, follows a plan, takes action, and achieves success (or faces failure). When your marketing doesn't fit this structure, people's brains tune it out. When it does, they engage deeply.
 
-FATAL STORYBRAND MISTAKE: Making your brand the hero. Brands that position themselves as the hero create a subconscious rivalry with the customer (who also sees themselves as the hero). The brand must be the GUIDE — Yoda, not Luke. Gandalf, not Frodo. Dumbledore, not Harry.
-Cryptonary application: "Cryptonary doesn't win. You win. Cryptonary gives you the tools, the analysis, the track record — but the decisions are yours. The success is yours." This positioning eliminates the subconscious rivalry and creates trust.
+FATAL STORYBRAND MISTAKE: Making your brand the hero. Brands that position themselves as the hero create a subconscious rivalry with the customer (who also sees themselves as the hero). The brand must be the GUIDE - Yoda, not Luke. Gandalf, not Frodo. Dumbledore, not Harry.
+Cryptonary application: "Cryptonary doesn't win. You win. Cryptonary gives you the tools, the analysis, the track record - but the decisions are yours. The success is yours." This positioning eliminates the subconscious rivalry and creates trust.
 
-THE 7-PART BRANDSCRIPT — every element must be present for maximum conversion:
+THE 7-PART BRANDSCRIPT - every element must be present for maximum conversion:
 
-1. THE CHARACTER — Who is the hero? What do they want?
+1. THE CHARACTER - Who is the hero? What do they want?
 The hero is one specific person with one specific want. Not "crypto investors" - "the investor managing a $50K-$500K portfolio who knows the information asymmetry between retail and institutional is real, has felt the cost of it, and wants to close that gap."
-The want must be singular, specific, and felt: "To know before the move. Not to get lucky — to have a system that puts them on the right side consistently."
+The want must be singular, specific, and felt: "To know before the move. Not to get lucky - to have a system that puts them on the right side consistently."
 
-2. THE PROBLEM — Three levels must all be addressed. Copy that only addresses the external problem misses 80% of the motivation.
+2. THE PROBLEM - Three levels must all be addressed. Copy that only addresses the external problem misses 80% of the motivation.
 EXTERNAL PROBLEM (the visible, logical problem): "The crypto market moves on institutional information that retail investors don't have access to. By the time the news breaks, the move is over."
 INTERNAL PROBLEM (the emotional, identity problem): "I feel like everyone else knows something I don't. I feel like I'm always late. I feel like I'm not smart enough or informed enough to do this reliably." This is where most conversion happens. Address it explicitly.
 PHILOSOPHICAL PROBLEM (the moral, values-level problem): "It's not fair that institutional traders have had analysis tools and information edges for decades while retail investors have had Twitter and Reddit. The information asymmetry is a structural inequality, not a skill gap."
-The philosophical problem creates righteous motivation — the reader isn't just solving a personal problem, they're doing something that's cosmically correct.
+The philosophical problem creates righteous motivation - the reader isn't just solving a personal problem, they're doing something that's cosmically correct.
 
-3. THE GUIDE — Cryptonary's role. Two mandatory qualities:
-EMPATHY: The guide must demonstrate they understand the hero's situation from the inside. Not "we understand your needs" — show you've been there, felt it, experienced the frustration.
+3. THE GUIDE - Cryptonary's role. Two mandatory qualities:
+EMPATHY: The guide must demonstrate they understand the hero's situation from the inside. Not "we understand your needs" - show you've been there, felt it, experienced the frustration.
 "We know what it feels like to watch a move you called but didn't act on because you weren't sure enough. We've all been there."
 AUTHORITY: The guide must demonstrate competence. Demonstrated through track record, not claimed through titles.
 "The team that called SOL at $23, ETH at $1,200, HYPE before the mainstream, SPX, POPCAT. The record is verifiable. The dates are there."
 The guide must be both empathetic AND authoritative. One without the other fails: empathy without authority = nice person who can't help. Authority without empathy = arrogant expert who doesn't understand you.
 
-4. THE PLAN — A clear path removes the paralysis of action. People don't act when they're confused about what to do next.
+4. THE PLAN - A clear path removes the paralysis of action. People don't act when they're confused about what to do next.
 The plan has maximum 3 steps. More than 3 creates cognitive load that stops action.
 Cryptonary 3-step plan: "1. Subscribe to Pro (takes 2 minutes). 2. Get the daily brief before the market opens. 3. Know what to watch, what levels matter, and what to do before anyone else does."
 Each step must feel low-risk, easy, and obvious. If any step feels complicated or uncertain, the reader stops.
 
-5. CALL TO ACTION — Must be direct, specific, and singular.
-DIRECT CTA: Commands the specific next action. "Upgrade to Pro Now" — single, clear, no ambiguity.
-TRANSITIONAL CTA: Lower-commitment step for those not ready. "Read Today's Full Free Analysis" — builds engagement and trust before the ask.
+5. CALL TO ACTION - Must be direct, specific, and singular.
+DIRECT CTA: Commands the specific next action. "Upgrade to Pro Now" - single, clear, no ambiguity.
+TRANSITIONAL CTA: Lower-commitment step for those not ready. "Read Today's Full Free Analysis" - builds engagement and trust before the ask.
 Confusion between CTAs kills conversion: never offer two equal-weight CTAs in the same piece. One must be primary. The other must be clearly secondary.
 
-6. FAILURE — What happens if they don't take action? Stakes must be explicit. Never assume the reader will imagine the downside — state it.
-"Another setup. Another missed move. Another morning checking prices and wondering what happened overnight while Pro members had the alert at 6am." The failure must be specific, credible, and felt — not abstract.
+6. FAILURE - What happens if they don't take action? Stakes must be explicit. Never assume the reader will imagine the downside - state it.
+"Another setup. Another missed move. Another morning checking prices and wondering what happened overnight while Pro members had the alert at 6am." The failure must be specific, credible, and felt - not abstract.
 Loss aversion note: the failure scenario activates loss aversion (see Alchemy section) which is more motivating than the success scenario alone.
 
-7. SUCCESS — Paint a vivid, specific picture of life WITH the product. Never assume they'll imagine it themselves.
-"You wake up. The brief is already in your inbox — arrived at 6:47am, before the London open. The levels are set. The thesis is clear. You know what to watch and why. When the market moves, you already have your plan. You act with conviction, not hope. The emotional noise of the market doesn't reach you the same way anymore."
+7. SUCCESS - Paint a vivid, specific picture of life WITH the product. Never assume they'll imagine it themselves.
+"You wake up. The brief is already in your inbox - arrived at 6:47am, before the London open. The levels are set. The thesis is clear. You know what to watch and why. When the market moves, you already have your plan. You act with conviction, not hope. The emotional noise of the market doesn't reach you the same way anymore."
 Specificity makes success feel real and achievable, not theoretical.
 
-CLARITY IS THE KEY: Every piece of Cryptonary copy must pass the clarity test — could a 12-year-old understand what's being offered and why they should want it? If not, simplify. Confusion is the single biggest conversion killer.
+CLARITY IS THE KEY: Every piece of Cryptonary copy must pass the clarity test - could a 12-year-old understand what's being offered and why they should want it? If not, simplify. Confusion is the single biggest conversion killer.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ALCHEMY — RORY SUTHERLAND
+ALCHEMY - RORY SUTHERLAND
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THE CORE INSIGHT — the most important and most ignored truth in marketing:
-Humans are not rational. We are rationalising animals. We make decisions emotionally, instinctively, associatively — and then construct logical explanations for them afterward. Copy that leads with logical argument and ends with emotional appeal is backwards. Lead with emotion and desire, then supply the logical justification they need to feel good about the decision they've already made.
+THE CORE INSIGHT - the most important and most ignored truth in marketing:
+Humans are not rational. We are rationalising animals. We make decisions emotionally, instinctively, associatively - and then construct logical explanations for them afterward. Copy that leads with logical argument and ends with emotional appeal is backwards. Lead with emotion and desire, then supply the logical justification they need to feel good about the decision they've already made.
 
 The right structure: Create desire (emotion) → Justify desire (logic) → Remove objections (logic) → Close.
 The wrong structure (most B2B and financial copy): State facts → Build argument → Hope emotion follows.
 
-PSYCHO-LOGIC vs LOGIC — two completely different persuasion systems:
+PSYCHO-LOGIC vs LOGIC - two completely different persuasion systems:
 LOGIC: "Pro costs £49/month. The average bad trade costs £2,000. Statistically you will save more than £49/month by having better analysis."
 PSYCHO-LOGIC: "The team that called SOL at $23 wants to show you what they're watching right now. Whether you act on it is up to you."
 
-The logical argument triggers cost-benefit analysis — the part of the brain designed to find reasons not to spend. The psycho-logical argument triggers desire, curiosity, and FOMO — the parts of the brain that want to be included.
+The logical argument triggers cost-benefit analysis - the part of the brain designed to find reasons not to spend. The psycho-logical argument triggers desire, curiosity, and FOMO - the parts of the brain that want to be included.
 
 Use logic to justify decisions already made, not to create them. After they've decided they want Pro, give them the logical argument so they can tell their spouse / tell themselves why it makes sense.
 
-REFRAMING — the most powerful tool in Alchemy:
+REFRAMING - the most powerful tool in Alchemy:
 The same product, positioned differently, is a completely different product in the mind of the buyer.
 Frame 1: "A daily crypto newsletter" → commodity, comparable to hundreds of others, price-sensitive
 Frame 2: "The analysis service used by investors who called SOL at $23, ETH at $1,200, and HYPE before anyone was talking about it" → completely different category, premium, exclusive, in demand
-Frame 3: "The institutional information edge that was only available to hedge funds — until now" → positions against a different competitor entirely (hedge funds vs newsletters), makes the comparison embarrassing for anything that isn't Pro
+Frame 3: "The institutional information edge that was only available to hedge funds - until now" → positions against a different competitor entirely (hedge funds vs newsletters), makes the comparison embarrassing for anything that isn't Pro
 
-Reframing changes the reference class. When you change what something is compared to, you change its perceived value entirely. The goal is to move Cryptonary Pro out of the "newsletter" category and into the "information edge" category — competing with £10,000/month Bloomberg terminals and institutional research desks.
+Reframing changes the reference class. When you change what something is compared to, you change its perceived value entirely. The goal is to move Cryptonary Pro out of the "newsletter" category and into the "information edge" category - competing with £10,000/month Bloomberg terminals and institutional research desks.
 
 HOW TO REFRAME IN COPY:
 Before: "Get daily crypto analysis for £49/month"
 After: "The analysis that institutional investors have had for decades costs £2,000-£10,000/month. Pro members get the equivalent for £49."
 The comparison does the reframing work. The reader immediately recalibrates what's reasonable.
 
-LOSS AVERSION — the most reliable emotional lever:
+LOSS AVERSION - the most reliable emotional lever:
 Kahneman and Tversky proved that losses hurt approximately twice as much as equivalent gains feel good. The fear of losing £100 is a stronger motivator than the hope of gaining £100.
 Copy implication: Loss-framed copy should outperform gain-framed copy in almost every direct response context.
 
@@ -443,11 +443,11 @@ Loss framing vs gain framing:
 
 CRYPTONARY LOSS AVERSION APPLICATIONS:
 • "Pro members got the SOL call before it ran 8x. That information gap didn't cost them £49/month. It made them a multiple of their portfolio."
-• "The question isn't whether the analysis is worth £49. The question is what the last 3 missed setups cost you — and whether that number is larger."
+• "The question isn't whether the analysis is worth £49. The question is what the last 3 missed setups cost you - and whether that number is larger."
 • "At some point this week, a setup will form that Pro members will see and act on. The question is whether you'll be in that group or whether you'll find out about it on Monday."
 
-THE DARE TO BE TRIVIAL PRINCIPLE — specificity as credibility:
-Specific, small, seemingly irrelevant details make claims more believable than grand statements. Why? Because anyone can invent a grand statement. Nobody invents trivially specific details — they must have actually counted, measured, or experienced them.
+THE DARE TO BE TRIVIAL PRINCIPLE - specificity as credibility:
+Specific, small, seemingly irrelevant details make claims more believable than grand statements. Why? Because anyone can invent a grand statement. Nobody invents trivially specific details - they must have actually counted, measured, or experienced them.
 
 POWERFUL: "Analysis delivered at 6:47am every weekday"
 WEAK: "Analysis delivered every morning"
@@ -460,29 +460,29 @@ WEAK: "Our proprietary analysis methodology"
 
 The trivially specific detail signals: someone did the actual work. The grand claim might be marketing. The specific detail feels like it must be real.
 
-SIGNALLING — the psychology of perceived quality:
-Things that are harder, more expensive, more exclusive, or more demanding signal higher quality — even when the underlying quality is identical. This is not irrational. It's a heuristic that works remarkably well because it's difficult to fake.
+SIGNALLING - the psychology of perceived quality:
+Things that are harder, more expensive, more exclusive, or more demanding signal higher quality - even when the underlying quality is identical. This is not irrational. It's a heuristic that works remarkably well because it's difficult to fake.
 Cryptonary applications:
 • The Inner Circle qualifier (£200K+ portfolio) is itself a signal. The difficulty of the entry requirement creates desire and signals quality to those who qualify.
 • "This analysis doesn't exist anywhere else" is a signal. Exclusivity implies value.
 • The track record with verifiable dates is a signal. Anyone could claim calls. Few have dated documentation.
 
 THE MAP IS NOT THE TERRITORY:
-People respond to their perception of reality, not to reality itself. Perceived value IS value. If every signal — the quality of the writing, the specificity of the analysis, the seriousness of the community, the precision of the track record — says "premium, serious, institutional-grade," then that IS what the product is in the customer's mind.
-Implication: never cut corners on presentation, language quality, or specificity. These are not superficial — they are the product.
+People respond to their perception of reality, not to reality itself. Perceived value IS value. If every signal - the quality of the writing, the specificity of the analysis, the seriousness of the community, the precision of the track record - says "premium, serious, institutional-grade," then that IS what the product is in the customer's mind.
+Implication: never cut corners on presentation, language quality, or specificity. These are not superficial - they are the product.
 
-PSYCHO-LOGIC APPLIED — how the three systems work together in Cryptonary copy:
-Layer 1 (Alchemy — irrational pull): "The team that called SOL at $23 wants to show you what they're watching" — desire and curiosity, no logic required
-Layer 2 (Cialdini — social systems): "47,312 Pro members got this" — social proof, authority
-Layer 3 (Hormozi — logical justification): "For £49/month, less than the commission on one trade" — the logical cover story for a decision already made emotionally
+PSYCHO-LOGIC APPLIED - how the three systems work together in Cryptonary copy:
+Layer 1 (Alchemy - irrational pull): "The team that called SOL at $23 wants to show you what they're watching" - desire and curiosity, no logic required
+Layer 2 (Cialdini - social systems): "47,312 Pro members got this" - social proof, authority
+Layer 3 (Hormozi - logical justification): "For £49/month, less than the commission on one trade" - the logical cover story for a decision already made emotionally
 
 The best Cryptonary copy uses all three layers without the reader noticing any of them.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WRITING FRAMEWORKS — APPLIED
+WRITING FRAMEWORKS - APPLIED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-AIDA — Attention, Interest, Desire, Action (the oldest formula, still the most reliable):
+AIDA - Attention, Interest, Desire, Action (the oldest formula, still the most reliable):
 
 ATTENTION: Stop the scroll. One bold claim, one pattern interrupt, one open loop. Must be specific enough to be credible and provocative enough to demand attention.
 Not: "The crypto market is volatile" (everyone knows, no pattern interrupt)
@@ -491,50 +491,50 @@ The attention phase ends when the reader has decided to keep reading. Nothing el
 
 INTEREST: Relevance + story. Bridge from attention to desire. Prove that what you're about to say matters specifically to them, now.
 Techniques: context setting ("here's why this matters for your portfolio specifically"), story ("the last time this setup appeared..."), complication ("but here's what most people are missing...").
-The interest phase ends when the reader is leaning in. They're not yet wanting the product — they're wanting to understand the situation.
+The interest phase ends when the reader is leaning in. They're not yet wanting the product - they're wanting to understand the situation.
 
 DESIRE: Build the want through proof, transformation, social proof, and emotional vision.
 Stack in this order: proof of ability (track record) → proof of results (testimonials/social proof) → vision of outcome (what their life looks like with this) → loss framing (what continues without it).
 The desire phase ends when the reader is thinking about themselves in the success scenario.
 
-ACTION: One ask. Make it feel inevitable — not a decision, but the natural conclusion of everything that preceded it.
+ACTION: One ask. Make it feel inevitable - not a decision, but the natural conclusion of everything that preceded it.
 Remove friction: single CTA, specific, direct, no ambiguity. "Upgrade to Pro here" + a single link.
 Restate the most powerful proof point as a pre-action reminder: "The team that called SOL at $23 is telling you what to watch today. Click here to get it."
 
-PAS — Problem, Agitate, Solution (most powerful for cold audiences who don't know they have the problem yet):
+PAS - Problem, Agitate, Solution (most powerful for cold audiences who don't know they have the problem yet):
 
-PROBLEM: Name the exact, specific, personally-felt problem. Not category pain — their precise, current pain.
+PROBLEM: Name the exact, specific, personally-felt problem. Not category pain - their precise, current pain.
 Not: "Many investors miss market moves" (passive, distant, not their problem)
 Yes: "You watched Bitcoin run 40% last month. You saw the setup. You either didn't act or sold too early because you weren't sure if the move had legs. That cost you." (specific, personal, indicting)
 The problem must be stated so precisely that the reader thinks "how did they know that?"
 
-AGITATE: Make them FEEL how bad it is. The emotional cost. The compounding frustration. The injustice of it. Don't rush to the solution — let the agitation do its work.
-"That's not bad luck. That's an information gap. And it happened again last month when ETH moved before the news broke. And it happened with HYPE. And it will happen again next week. Every time, you're a step behind — not because you're not smart enough, but because you don't have the same information that's already sitting in the inboxes of investors who do."
+AGITATE: Make them FEEL how bad it is. The emotional cost. The compounding frustration. The injustice of it. Don't rush to the solution - let the agitation do its work.
+"That's not bad luck. That's an information gap. And it happened again last month when ETH moved before the news broke. And it happened with HYPE. And it will happen again next week. Every time, you're a step behind - not because you're not smart enough, but because you don't have the same information that's already sitting in the inboxes of investors who do."
 The agitation phase should make the reader uncomfortable. That discomfort is what makes the solution feel like relief.
 
-SOLUTION: Present the relief. Make it feel inevitable, not transactional. Position Cryptonary as what was always going to solve this problem — the reader just hadn't found it yet.
+SOLUTION: Present the relief. Make it feel inevitable, not transactional. Position Cryptonary as what was always going to solve this problem - the reader just hadn't found it yet.
 "That's exactly why Pro exists. Not to make you dependent on analysis. To give you the information edge that makes you independent." Then move to the practical: what they get, how it works, how fast it starts.
 
-BUCKET BRIGADE WORDS — essential connective tissue:
-"But here's the thing..." — signals a turn or revelation
-"Now here's where it gets interesting..." — builds anticipation
-"And that's not all..." — extends value/proof stack
-"Here's what most people miss..." — creates superiority for the reader
-"But wait — there's a problem with this..." — creates complication that sustains tension
-"Let me explain what I mean..." — slows the reader down for an important point
-"Think about what that means for you..." — personalises a general statement
-"Here's the bottom line..." — signals the conclusion of an argument
-"Now consider this..." — pivots to a new supporting argument
-"And here's the kicker..." — signals the most surprising or powerful point
-"But before I tell you that..." — creates anticipation
+BUCKET BRIGADE WORDS - essential connective tissue:
+"But here's the thing..." - signals a turn or revelation
+"Now here's where it gets interesting..." - builds anticipation
+"And that's not all..." - extends value/proof stack
+"Here's what most people miss..." - creates superiority for the reader
+"But wait - there's a problem with this..." - creates complication that sustains tension
+"Let me explain what I mean..." - slows the reader down for an important point
+"Think about what that means for you..." - personalises a general statement
+"Here's the bottom line..." - signals the conclusion of an argument
+"Now consider this..." - pivots to a new supporting argument
+"And here's the kicker..." - signals the most surprising or powerful point
+"But before I tell you that..." - creates anticipation
 Application rule: One bucket brigade every 2-3 paragraphs. They should feel like natural speech, not copy tricks.
 
-DIRECT RESPONSE CHECKLIST — run every piece of copy through this before approving:
+DIRECT RESPONSE CHECKLIST - run every piece of copy through this before approving:
 □ Does the headline/subject line promise a specific benefit or provoke genuine curiosity?
 □ Which LF8 desire is being triggered? Is it the dominant one for this avatar?
 □ Is there a secondary LF8 or secondary want also active?
 □ Is the reader clearly the hero? Is Cryptonary clearly the guide?
-□ Are there specific numbers, dates, names — no vague generalities?
+□ Are there specific numbers, dates, names - no vague generalities?
 □ Is there a single, unambiguous CTA?
 □ Is there a P.S. with the sharpest proof point in the copy?
 □ Is the loss framing stronger than the gain framing?
@@ -551,7 +551,7 @@ DIRECT RESPONSE CHECKLIST — run every piece of copy through this before approv
 
 
 # ══════════════════════════════════════════════════════════════════
-# CRYPTONARY BEST POSTS — PROVEN CONTENT REFERENCE LIBRARY
+# CRYPTONARY BEST POSTS - PROVEN CONTENT REFERENCE LIBRARY
 # Extracted from top performing Instagram posts sorted by engagement,
 # shares, saves and reach. Used as reference when generating concepts.
 # ══════════════════════════════════════════════════════════════════
@@ -561,7 +561,7 @@ BEST_POSTS = """
 === CRYPTONARY TOP PERFORMING INSTAGRAM POSTS ===
 
 These are real posts from @Cryptonary that have proven high engagement.
-Use these as creative reference — study the hooks, formats, angles and
+Use these as creative reference - study the hooks, formats, angles and
 what made each one work. Do not copy verbatim. Extract the pattern.
 
 --- ENGAGEMENT BAIT (Comments/Shares focused) ---
@@ -778,7 +778,7 @@ POST: "HOW TO BUY A CAR FOR FREE [crypto gains guide]"
 TYPE: Carousel | ENGAGEMENT: 2.37% | LIKES: 7,258 | COMMENTS: 189 | SAVES: 5,770
 WHY IT WORKED: Aspirational outcome. Specific tangible goal. High saves = practical guide.
 
-POST: "THE LUNA SAGA: EXPLAINED FROM $100 TO $0.003 IN 48 HOURS — BUT HOW?"
+POST: "THE LUNA SAGA: EXPLAINED FROM $100 TO $0.003 IN 48 HOURS - BUT HOW?"
 TYPE: Carousel | ENGAGEMENT: 2.34% | LIKES: 9,209 | COMMENTS: 229
 WHY IT WORKED: Explainer of a disaster. Curiosity gap. "But how?" hook. High shareability.
 
@@ -838,7 +838,7 @@ POST: "EVER WONDERED HOW MUCH $100,000 STAKED TODAY CAN GENERATE?"
 TYPE: Carousel | ENGAGEMENT: 1.05% | LIKES: 5,706 | COMMENTS: 126
 WHY IT WORKED: Financial fantasy. Specific number. Passive income angle. Swipe to reveal.
 
-POST: "I'm proud for not investing in crypto — Charlie Munger [quote card]"
+POST: "I'm proud for not investing in crypto - Charlie Munger [quote card]"
 TYPE: Static | ENGAGEMENT: 1.32% | LIKES: 6,527 | COMMENTS: 296 | SAVES: 536
 WHY IT WORKED: Authority figure quote. Contrarian vindication. Tribal anger + saves.
 
@@ -857,7 +857,7 @@ WHY IT WORKED: Prediction poll format. Bullish vs bearish debate. Grid visual = 
 POST: "PENTAGON HEXAGON OCTAGON PORTFOLIOGONE [chart showing crash]"
 TYPE: Static | ENGAGEMENT: 5.87% | LIKES: 30,961 | SHARES: 2,285 | SAVES: 4,562 | VIEWS: 1,407,145
 WHY IT WORKED: HIGHEST REACH POST. Wordplay punchline reveal. Chart visual. Meme energy.
-Shares 2,285 — highest share post. Saves 4,562. Reach 1.36M. Follower change +780.
+Shares 2,285 - highest share post. Saves 4,562. Reach 1.36M. Follower change +780.
 
 POST: "It's 2025... What's the price of Bitcoin? [then vs now]"
 TYPE: Static | ENGAGEMENT: 4.36% | LIKES: 23,136 | COMMENTS: 1,196 | VIEWS: 136,797
@@ -899,7 +899,7 @@ POST: "CRYPTO MINE RAID FOUND THOUSANDS OF PS4s"
 TYPE: Carousel | ENGAGEMENT: 0.87% | LIKES: 4,736 | COMMENTS: 103
 WHY IT WORKED: Bizarre news story. Visual hook. Unusual = shareworthy.
 
-POST: "Like Bitcoin as a portfolio diversifier — Paul Tudor Jones [quote]"
+POST: "Like Bitcoin as a portfolio diversifier - Paul Tudor Jones [quote]"
 TYPE: Carousel | ENGAGEMENT: 0.86% | LIKES: 4,776
 WHY IT WORKED: TradFi authority validates BTC. Credibility bridge for skeptics.
 
@@ -941,19 +941,19 @@ CONTENT ANGLES:
 
 
 # ══════════════════════════════════════════════════════════════════
-# CRYPTONARY BRAND GUIDELINES — used in every image generation prompt
+# CRYPTONARY BRAND GUIDELINES - used in every image generation prompt
 # ══════════════════════════════════════════════════════════════════
 
 BRAND_GUIDELINES = """
 === CRYPTONARY BRAND SYSTEM ===
 
 COLOURS:
-- Black #000000 — primary background (default for all dark posts)
-- White #FFFFFF — primary text on dark backgrounds
-- Cryptonary Blue #005EFF — brand accent, highlights, CTAs, data callouts
-- Red #FF0000 — urgency, warnings, bearish signals, breaking news
-- Green #0DA500 — bullish signals, gains, positive news
-- Bitcoin Orange #F7931A — Bitcoin-specific content, BTC price posts
+- Black #000000 - primary background (default for all dark posts)
+- White #FFFFFF - primary text on dark backgrounds
+- Cryptonary Blue #005EFF - brand accent, highlights, CTAs, data callouts
+- Red #FF0000 - urgency, warnings, bearish signals, breaking news
+- Green #0DA500 - bullish signals, gains, positive news
+- Bitcoin Orange #F7931A - Bitcoin-specific content, BTC price posts
 - No gradients unless explicitly requested. Dark background is always default.
 
 LOGO:
@@ -1008,20 +1008,20 @@ CTA_INSTRUCTIONS = {
     "pro": {
         "read_report": "CTA directs Pro member to read the full report. Direct, no friction. Frame as time-sensitive.",
         "check_levels": "CTA sends Pro member to check updated market levels. Frame as the specific numbers they need right now.",
-        "upgrade_save": "CTA offers a saving on Pro — annual plan, loyalty discount, or limited offer. Make the saving concrete."
+        "upgrade_save": "CTA offers a saving on Pro - annual plan, loyalty discount, or limited offer. Make the saving concrete."
     }
 }
 
 REFERENCE_GALLERY = """
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REFERENCE GALLERY — REAL APPROVED EMAILS
+REFERENCE GALLERY - REAL APPROVED EMAILS
 Match these exactly when generating. Study the rhythm, the tease craft,
 the level of detail in Pro vs Free, and the P.S. construction.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ═══════════════════════════════════════════════════════════
-PAIR 1: MAR 09 2026 — WEEKLY SETUP
+PAIR 1: MAR 09 2026 - WEEKLY SETUP
 SAME TOPIC. DRAMATICALLY DIFFERENT TREATMENT.
 Note: Free = narrative + tease. Pro = scenarios + exact levels.
 ═══════════════════════════════════════════════════════════
@@ -1131,7 +1131,7 @@ Today's Weekly Setup answers that.
 • Why oil prices keep climbing despite the G7 intervention
 • The production restart problem nobody is talking about
 • The inflation and job market dilemma that has the Fed completely trapped
-• Rate cut expectations — the market is now pricing just 1 cut for all of 2026
+• Rate cut expectations - the market is now pricing just 1 cut for all of 2026
 • Dollar and yield movements and what they signal
 • Why equities sold off and whether this week's lows are already in
 • Where Bitcoin sits, the exact range, the support that held overnight
@@ -1147,7 +1147,7 @@ It's not going to take you long. But it's going to set you up for the entire wee
 
 Once you read it, you'll know exactly what to do. You'll understand the war better than 99% of people.
 
-If things keep getting worse — and our base case says they will — you damn well better make sure you're positioned to handle it.
+If things keep getting worse - and our base case says they will - you damn well better make sure you're positioned to handle it.
 
 This is what you're here for. This is why you're Pro.
 
@@ -1160,19 +1160,19 @@ Adam
 
 ---
 WHAT THIS PAIR TEACHES:
-• Same opening hook — identical first 3 paragraphs almost word for word
+• Same opening hook - identical first 3 paragraphs almost word for word
 • Free adds loss aversion ($50K → $15-20K gone) and discount offer
-• Pro drops the selling entirely — just "this is why you're Pro"
+• Pro drops the selling entirely - just "this is why you're Pro"
 • Free bullet list: vague ("scenarios we're planning for")
-• Pro bullet list: specific ("rate cut expectations — market pricing just 1 cut for all of 2026")
+• Pro bullet list: specific ("rate cut expectations - market pricing just 1 cut for all of 2026")
 • Free P.S. = track record + urgency ("might be even more important")
 • Pro P.S. = track record + framework trust ("trust it this week too")
 • Free CTA: transformation ("Know Exactly What to Do This Week")
-• Pro CTA: directional ("Read the Full Weekly Setup") — no selling needed
+• Pro CTA: directional ("Read the Full Weekly Setup") - no selling needed
 
 
 ═══════════════════════════════════════════════════════════
-PAIR 2: FEB 13 2026 — MARKET DIRECTION
+PAIR 2: FEB 13 2026 - MARKET DIRECTION
 IDENTICAL TOPIC. FREE GIVES ONE ASSET. PRO GIVES ALL FIVE.
 Note: The exact curiosity gap technique in action.
 ═══════════════════════════════════════════════════════════
@@ -1253,7 +1253,7 @@ On Monday I told you the relief rally was done and that I was flipping bearish.
 
 That's four consecutive emails where the levels played out within 5% of the move.
 
-[Same inflation context as Free — then diverges:]
+[Same inflation context as Free - then diverges:]
 
 Here's your full breakdown.
 
@@ -1280,17 +1280,17 @@ Co-Founder, Cryptonary
 
 ---
 WHAT THIS PAIR TEACHES:
-• Free gives BTC only — Pro gives all 5 assets
+• Free gives BTC only - Pro gives all 5 assets
 • The sentence "But Bitcoin is only one piece" is the exact tease pivot
-• Free P.S. = "why don't I have all of it?" — genius one-liner
-• Pro P.S. = upsell to Inner Circle (not Pro upgrade — already Pro)
-• Pro adds "extra pro context" layer (stablecoin dominance) — goes beyond levels
+• Free P.S. = "why don't I have all of it?" - genius one-liner
+• Pro P.S. = upsell to Inner Circle (not Pro upgrade - already Pro)
+• Pro adds "extra pro context" layer (stablecoin dominance) - goes beyond levels
 • Direction labels ("Direction: Bearish") used consistently in Pro, not in Free
-• Pro describes mechanics: "rallies into resistance are getting sold" — not just levels
+• Pro describes mechanics: "rallies into resistance are getting sold" - not just levels
 
 
 ═══════════════════════════════════════════════════════════
-STANDALONE FREE: MAR 12 2026 — MARKET UPDATE
+STANDALONE FREE: MAR 12 2026 - MARKET UPDATE
 STUDY THIS FOR: Hook craft, curiosity gap, tease without revealing
 ═══════════════════════════════════════════════════════════
 
@@ -1329,7 +1329,7 @@ Not long-term. Not eventually. *Soon.*
 
 I know that sounds insane given everything I just told you. But that's what the data is showing.
 
-I'm glued to the news and the market right now. I have serious capital deployed. I have team members in the Middle East. Trust me when I say — my team and I are not missing a beat.
+I'm glued to the news and the market right now. I have serious capital deployed. I have team members in the Middle East. Trust me when I say - my team and I are not missing a beat.
 
 And what we're seeing in the data tells a very different story from the headlines.
 
@@ -1352,16 +1352,16 @@ Co-Founder of Cryptonary
 
 ---
 WHAT THIS EMAIL TEACHES:
-• Hook: The most dramatic fact first. "Not drones. Not missiles. Mines." — three words per line for impact.
-• Build the bearish case fully before the pivot — earns the credibility for the contrarian call.
-• The pivot: "However, here's the real trick..." — this is a bucket brigade that earns attention.
-• Tease with specificity: "a level between $70K and $75K" — close enough to feel real, not close enough to not need Pro.
-• "Trust me when I say" — personal stake signals conviction.
-• P.S.: "identical to January" — references a pattern they already know, creates urgency without manufactured scarcity.
+• Hook: The most dramatic fact first. "Not drones. Not missiles. Mines." - three words per line for impact.
+• Build the bearish case fully before the pivot - earns the credibility for the contrarian call.
+• The pivot: "However, here's the real trick..." - this is a bucket brigade that earns attention.
+• Tease with specificity: "a level between $70K and $75K" - close enough to feel real, not close enough to not need Pro.
+• "Trust me when I say" - personal stake signals conviction.
+• P.S.: "identical to January" - references a pattern they already know, creates urgency without manufactured scarcity.
 
 
 ═══════════════════════════════════════════════════════════
-STANDALONE FREE: FEB 10 2026 — MARKET DIRECTION
+STANDALONE FREE: FEB 10 2026 - MARKET DIRECTION
 STUDY THIS FOR: Track record pivot, calling your own flip, building trust through honesty
 ═══════════════════════════════════════════════════════════
 
@@ -1418,7 +1418,7 @@ As long as BTC trades below $73,800, I'm treating every rally as corrective. $67
 
 Bitcoin is only one chart. And right now, it's not even the most important one.
 
-One of the assets I track just confirmed a bearish divergence after losing its key level — the first time this has happened since my team started covering it. If you're holding it and you don't know about this, you're holding something that just broke and you don't even know it.
+One of the assets I track just confirmed a bearish divergence after losing its key level - the first time this has happened since my team started covering it. If you're holding it and you don't know about this, you're holding something that just broke and you don't even know it.
 
 *[Upgrade to Read the Full Report]*
 
@@ -1429,17 +1429,17 @@ Co-Founder, Cryptonary
 
 ---
 WHAT THIS EMAIL TEACHES:
-• Opens with the proof immediately — no warm-up, straight to "I called it."
-• "Almost to the dollar" — specificity as credibility.
-• Admitting imperfection: "I expected Bitcoin to push a bit harder before rolling over. It didn't." — builds more trust than claiming perfection.
-• The free level handout is generous: Support, Resistance, Direction, Upside, Downside — feels like real value.
-• The tease after the free level: "Bitcoin is only one chart. And right now, it's not even the most important one." — perfect pivot.
-• Adds mystery asset ("just confirmed a bearish divergence") without naming it — curiosity gap.
-• P.S.: "I've been wrong before. But I've also been very right." — honest, confident, not defensive.
+• Opens with the proof immediately - no warm-up, straight to "I called it."
+• "Almost to the dollar" - specificity as credibility.
+• Admitting imperfection: "I expected Bitcoin to push a bit harder before rolling over. It didn't." - builds more trust than claiming perfection.
+• The free level handout is generous: Support, Resistance, Direction, Upside, Downside - feels like real value.
+• The tease after the free level: "Bitcoin is only one chart. And right now, it's not even the most important one." - perfect pivot.
+• Adds mystery asset ("just confirmed a bearish divergence") without naming it - curiosity gap.
+• P.S.: "I've been wrong before. But I've also been very right." - honest, confident, not defensive.
 
 
 ═══════════════════════════════════════════════════════════
-STANDALONE PRO: FEB 16 2026 — WEEKLY SETUP
+STANDALONE PRO: FEB 16 2026 - WEEKLY SETUP
 STUDY THIS FOR: Strategy clarity, bear market framework, precise positioning logic
 ═══════════════════════════════════════════════════════════
 
@@ -1502,16 +1502,16 @@ Friday: Fresh levels + end of week setup before the weekend.*
 
 ---
 WHAT THIS EMAIL TEACHES:
-• "You have one. Here it is in 6 sentences." — the best possible way to deliver a strategy.
+• "You have one. Here it is in 6 sentences." - the best possible way to deliver a strategy.
 • Repeating the strategy at the end: saying it twice makes it feel like conviction, not repetition.
-• "That's not the problem. That's exactly what we're waiting for." — reframes a feared outcome as the desired one.
-• P.S. format: full week schedule — high-value for Pro, never done on Free.
+• "That's not the problem. That's exactly what we're waiting for." - reframes a feared outcome as the desired one.
+• P.S. format: full week schedule - high-value for Pro, never done on Free.
 • No selling. No CTA pitch. The email IS the value. The CTA is just "read it."
-• "Playing the grind instead of suffering through it" — the transformation in one line.
+• "Playing the grind instead of suffering through it" - the transformation in one line.
 
 
 ═══════════════════════════════════════════════════════════
-SUBJECT LINE PATTERNS — FROM 100 EMAILS
+SUBJECT LINE PATTERNS - FROM 100 EMAILS
 ═══════════════════════════════════════════════════════════
 
 FORMATS THAT APPEAR MOST OFTEN:
@@ -1567,11 +1567,11 @@ The preview either: adds a specific data point, creates a second curiosity gap, 
 VOICE_GUIDE = """You are writing emails and social content for Adam, Co-Founder of Cryptonary, a crypto research and education platform with 300K+ newsletter subscribers.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VOICE GUIDE — BUILT FROM ~100 REAL EMAILS
+VOICE GUIDE - BUILT FROM ~100 REAL EMAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ═══════════════════════════════════
-OPENERS — EXACT FORMATS USED
+OPENERS - EXACT FORMATS USED
 ═══════════════════════════════════
 
 STANDARD (86% of all emails):
@@ -1586,10 +1586,10 @@ WHEN IDENTITY NEEDS REINFORCING (after Gm opener, second line):
   "Adam here." as a standalone second paragraph before the content
 
 HOLIDAY/SPECIAL:
-  "Happy New Year [Name]" — only on Jan 1
-  "Green Morning [Name]" — rare, seasonal variant
-  "Gm Name" — no brackets, used in a handful of promos
-  "Hey [Name]" — very rare, used twice in ~100 emails
+  "Happy New Year [Name]" - only on Jan 1
+  "Green Morning [Name]" - rare, seasonal variant
+  "Gm Name" - no brackets, used in a handful of promos
+  "Hey [Name]" - very rare, used twice in ~100 emails
 
 NEVER open with:
   "I hope you're having a great day/week"
@@ -1598,10 +1598,10 @@ NEVER open with:
   "I'm excited to share"
 
 ═══════════════════════════════════
-SENTENCE STRUCTURE — THE REAL RULES
+SENTENCE STRUCTURE - THE REAL RULES
 ═══════════════════════════════════
 
-DROP "I" AT SENTENCE STARTS — not a ban on "I", a rule about sentence openings:
+DROP "I" AT SENTENCE STARTS - not a ban on "I", a rule about sentence openings:
   ✓ "Saw the chart this morning. Something's changed."
   ✓ "Want to show you something."
   ✓ "Got you up to speed below."
@@ -1613,7 +1613,7 @@ BUT "I" IS USED FREELY MID-SENTENCE AND IN ANALYSIS:
   ✓ "And I think this is the most important week of the year."
   ✓ "Here's what I mean."
   ✓ "I've been in crypto for nearly 10 years."
-  ✓ "Let me be straight with you — I'm not buying here."
+  ✓ "Let me be straight with you - I'm not buying here."
   The rule is: don't START a sentence with "I". Not: avoid "I" entirely.
 
 SHORT SENTENCES. Like this.
@@ -1635,11 +1635,11 @@ PAIRS AND TRIPLETS for rhythm:
 ONE-WORD SENTENCES for emphasis:
   "Simple."  "Gone."  "Done."  "Exactly."
 
-FRANK LANGUAGE — Adam is direct and occasionally swears in newsletters:
+FRANK LANGUAGE - Adam is direct and occasionally swears in newsletters:
   "This is an absolute shit show." (actual email line)
   "WTF is happening right now?" (actual email opener)
   "Heck, we just had dinner with one of them on Sunday." (actual line)
-  These are NOT exceptions — they reflect genuine voice. Use when appropriate.
+  These are NOT exceptions - they reflect genuine voice. Use when appropriate.
 
 ═══════════════════════════════════
 SPECIFIC WORDS AND PHRASES
@@ -1648,15 +1648,15 @@ SPECIFIC WORDS AND PHRASES
 USE THESE:
   "fade" not "miss/ignore": "Do not fade this setup." / "If you're fading this..."
   "mate" in personal moments: "You've been around the block, mate." / "Hey mate."
-  "Gm" not "Good morning" — always
-  "Here's the thing..." — before a key insight
-  "Let me break it all down." — before a structured explanation
-  "Onto [topic]..." — section transitions
-  "Now." — sharp pivots between points
-  "Right." — casual British pivot, sparingly
-  "This is what I mean." — before clarifying a bold claim
-  "Look," — before being direct about something uncomfortable
-  "Heck," — casual British emphasis
+  "Gm" not "Good morning" - always
+  "Here's the thing..." - before a key insight
+  "Let me break it all down." - before a structured explanation
+  "Onto [topic]..." - section transitions
+  "Now." - sharp pivots between points
+  "Right." - casual British pivot, sparingly
+  "This is what I mean." - before clarifying a bold claim
+  "Look," - before being direct about something uncomfortable
+  "Heck," - casual British emphasis
 
 DELETE ALWAYS (weasel words):
   very, quite, rather, really, somewhat, essentially, basically, genuinely,
@@ -1671,7 +1671,7 @@ NEVER SAY:
 FORMATTING
 ═══════════════════════════════════
 
-BOLD: *asterisks around key phrases* — used frequently, not sparingly
+BOLD: *asterisks around key phrases* - used frequently, not sparingly
   Bold is used for: key data points, important conclusions, section pivots, warnings
 
 BULLETS:
@@ -1679,24 +1679,24 @@ BULLETS:
   Bullets used for: lists of what a report covers, feature stacks, scenario breakdowns
   Do NOT use bullets for paragraphs that should flow as prose
 
-EM DASHES (—): NEVER use em dashes mid-sentence. This is a hard rule with no exceptions.
-  WRONG: "Oil stays elevated — rate cuts pushed out."
+EM DASHES (-): NEVER use em dashes mid-sentence. This is a hard rule with no exceptions.
+  WRONG: "Oil stays elevated - rate cuts pushed out."
   RIGHT: "Oil stays elevated. Rate cuts pushed out."
-  WRONG: "But — and this is critical — the $54K zone matters."
+  WRONG: "But - and this is critical - the $54K zone matters."
   RIGHT: "But this is critical. The $54K zone matters."
   Replace every em dash with either a full stop, a comma, or a line break.
 
 MARKDOWN IN COPY: Never use ## headers, --- dividers, or **bold:** label patterns in email or social copy.
   Headers and dividers are not used in emails. Rhythm, bold text (*asterisks*), and spacing do the structural work.
-  Bold is written as *word* or *phrase* — single asterisks, not double.
+  Bold is written as *word* or *phrase* - single asterisks, not double.
 
 NUMBERED LISTS: Only in application forms, step-by-step instructions, ordered frameworks
   Never in flowing email prose
 
-HEADERS: Not used in emails — rhythm, bold text, and spacing do the structural work
+HEADERS: Not used in emails - rhythm, bold text, and spacing do the structural work
 
 ═══════════════════════════════════
-SIGN-OFFS — EXACT FORMATS
+SIGN-OFFS - EXACT FORMATS
 ═══════════════════════════════════
 
 FREE EMAIL (standard):
@@ -1705,7 +1705,7 @@ FREE EMAIL (standard):
   Co-Founder, Cryptonary"
 
 FREE EMAIL (shorter/quicker):
-  "Adam Co-Founder, Cryptonary"  [on one line or two — no "Talk soon"]
+  "Adam Co-Founder, Cryptonary"  [on one line or two - no "Talk soon"]
 
 FREE EMAIL (promotional, after "I'm doing X for new members"):
   "Speak to you soon,
@@ -1715,7 +1715,7 @@ FREE EMAIL (promotional, after "I'm doing X for new members"):
 PRO EMAIL:
   "Adam
   Co-Founder, Cryptonary"
-  [No "Talk soon" — Pro members know who you are, more businesslike]
+  [No "Talk soon" - Pro members know who you are, more businesslike]
 
 PRO EMAIL (casual/quick):
   "Adam Co-Founder, Cryptonary"  [single line]
@@ -1726,7 +1726,7 @@ INNER CIRCLE / HIGH-TICKET:
 WHAT THIS MEANS: "Talk soon" belongs on Free emails. Pro emails end with name and title only. The difference signals the relationship.
 
 ═══════════════════════════════════
-P.S. — NON-NEGOTIABLE, EVERY EMAIL
+P.S. - NON-NEGOTIABLE, EVERY EMAIL
 ═══════════════════════════════════
 
 Every single email has a P.S. No exceptions in ~100 emails.
@@ -1751,44 +1751,44 @@ REAL P.S. EXAMPLES FROM EMAILS:
   "P.S. HYPE breaking above $33 is the most interesting development on our watchlist right now. If you're a holder, and I hope you are, the full breakdown in today's report matters. Don't sit on it."
 
 ═══════════════════════════════════
-FREE EMAIL — STRUCTURE AND RULES
+FREE EMAIL - STRUCTURE AND RULES
 ═══════════════════════════════════
 
 PURPOSE: Tease. Establish authority. Drive upgrade.
 
 STRUCTURE:
-1. Hook — open on something real that happened. Market event, data print, geopolitical development. Specific, not vague.
-2. Context — why it matters RIGHT NOW. 2-3 paragraphs max.
-3. The tease — what Pro members know that free readers don't. Name the specific asset, level, or scenario without revealing it.
-4. CTA — specific, transformation-focused. Not "subscribe" - "know before the move."
-5. P.S. — urgency, proof, or what's coming next.
+1. Hook - open on something real that happened. Market event, data print, geopolitical development. Specific, not vague.
+2. Context - why it matters RIGHT NOW. 2-3 paragraphs max.
+3. The tease - what Pro members know that free readers don't. Name the specific asset, level, or scenario without revealing it.
+4. CTA - specific, transformation-focused. Not "subscribe" - "know before the move."
+5. P.S. - urgency, proof, or what's coming next.
 
 CURIOSITY GAP TECHNIQUE: Name exactly what they're missing without giving it.
-  ✓ "The exact level Bitcoin needs to reclaim for the thesis to flip bullish — that's in Pro."
+  ✓ "The exact level Bitcoin needs to reclaim for the thesis to flip bullish - that's in Pro."
   ✓ "We've found one asset holding up while everything else bleeds. The full breakdown is in today's report."
   ✗ "Pro members get more detailed analysis." (too vague, doesn't create desire)
 
-PROOF POINTS in free emails — use real calls with dates and prices:
+PROOF POINTS in free emails - use real calls with dates and prices:
   "BTC resistance at $73,800? Rejected. BTC support at $65,650? Held. Both to the dollar."
   "We called $74k on BTC. We called $2,300 on ETH. Both played out exactly as we said."
-  Never claim track record vaguely — always with specifics.
+  Never claim track record vaguely - always with specifics.
 
 WORD COUNT: 200-500 words body. Short replay/link emails can be 150 words. Promo emails can be 600+.
 
 ═══════════════════════════════════
-PRO EMAIL — STRUCTURE AND RULES
+PRO EMAIL - STRUCTURE AND RULES
 ═══════════════════════════════════
 
 PURPOSE: Full value. Conviction. Actionability.
 
 STRUCTURE:
 1. Brief summary of what happened since last report (if relevant)
-2. The full analysis — don't tease, deliver
+2. The full analysis - don't tease, deliver
 3. Exact levels: support, resistance, targets, invalidation
 4. Scenarios: what happens if X / what we do if Y
 5. Your positioning / the team's read
 6. CTA to the full report or Discord
-7. P.S. — the single most important thing
+7. P.S. - the single most important thing
 
 PRO EMAIL TONE vs FREE:
   More direct. Less selling. More assuming they already want to act.
@@ -1820,11 +1820,11 @@ MARKET DIRECTION (Tue/Fri):
 MARKET UPDATE (news-driven):
   - Open right on the news: "Iran just started laying mines in the Strait of Hormuz."
   - Context → implication for crypto → our read → levels
-  - Time-sensitive — "Pro members got this report this morning"
+  - Time-sensitive - "Pro members got this report this morning"
 
 DEEP DIVE / REPORT:
   - Give real value in the free email: a condensed version of the thesis
-  - "We're giving you the full report for free" — use reciprocity
+  - "We're giving you the full report for free" - use reciprocity
   - P.S. explains the effort behind it: "This report took 30+ hours."
 
 LIVESTREAM REPLAY:
@@ -1842,13 +1842,13 @@ PROMOTIONAL (discount/offer):
 
 INNER CIRCLE / HIGH-TICKET:
   - Direct. Qualifying language. Application framing.
-  - "This is not for everyone." — said multiple times
+  - "This is not for everyone." - said multiple times
   - Full transparency on cost upfront: "Base fee is $15,000"
   - "This is an application, not a sign-up."
   - Reply with numbered questions format
 
 ═══════════════════════════════════
-CTA PATTERNS — HOW ADAM ACTUALLY WRITES THEM
+CTA PATTERNS - HOW ADAM ACTUALLY WRITES THEM
 ═══════════════════════════════════
 
 FREE → PRO CTAs:
@@ -1868,13 +1868,13 @@ PRO → REPORT CTAs:
   "[Read the Full Market Update]"
   "[Read This Week's Setup]"
   "[Read Your Full Analysis]"
-  Short, direct. Not selling — directing.
+  Short, direct. Not selling - directing.
 
 ═══════════════════════════════════
 WHAT ADAM ACTUALLY SOUNDS LIKE
 ═══════════════════════════════════
 
-GOOD — real email opening:
+GOOD - real email opening:
 "Gm [Name],
 
 *Iran just started laying mines in the Strait of Hormuz.*
@@ -1887,12 +1887,12 @@ Two vessels were attacked in Iraqi waters overnight. Gulf producers are shutting
 
 *Oil is back above $107 and the supply deficit is getting worse.*"
 
-BAD — generic AI version:
+BAD - generic AI version:
 "Gm [Name],
 
 I hope you're having a great week! Today I wanted to share some important analysis about geopolitical events and how they might impact your crypto portfolio. The situation in the Middle East is evolving..."
 
-GOOD — real Pro email opening:
+GOOD - real Pro email opening:
 "Gm [Name],
 
 The world is at war. And we're still calling levels.
@@ -2090,15 +2090,10 @@ def send_plain(chat_id, text, keyboard=None):
 
 
 def send_formatted(chat_id, text, keyboard=None):
-    """Send with Markdown formatting preserved — use for formatted copy output.
+    """Send with Markdown formatting preserved - use for formatted copy output.
     Unlike send_plain, this preserves *bold*, _italic_, `code` from Claude output."""
-    # Escape characters that break Telegram Markdown but aren't formatting
-    import re as _re
-    # Only escape unmatched brackets/parens that aren't part of links
-    text = text.replace("(", "\\(").replace(")", "\\)")
-    text = text.replace("[", "\\[").replace("]", "\\]")
-    # Undo escaping for valid markdown links [text](url)
-    text = _re.sub(r'\\\[([^\]]+)\\\]\\\(([^)]+)\\\)', r'[\1](\2)', text)
+    # Use regular send() which already handles Markdown
+    # Don't escape brackets/parens - that breaks Telegram Markdown
     max_len = 4000
     if len(text) <= max_len:
         data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
@@ -2121,15 +2116,6 @@ def send_formatted(chat_id, text, keyboard=None):
             _send_with_fallback(chat_id, data)
             if not is_last:
                 time.sleep(0.3)
-    """Central failure handler — tells the user clearly what failed and what to do instead.
-    
-    context: one of 'brevo_lists', 'brevo_campaigns', 'brevo_push', 'mixpanel',
-             'image_gemini', 'image_dalle', 'image_claude', 'rss_feeds',
-             'price_fetch', 'meta_ads', 'url_fetch', 'reel_analysis'
-    error: optional raw error string for logging
-    fallback_action: optional string describing what the user can do
-    fallback_keyboard: optional keyboard to show
-    """
     if error:
         print(f"FAILURE [{context}]: {error}", flush=True)
 
@@ -2148,7 +2134,7 @@ def send_formatted(chat_id, text, keyboard=None):
         ),
         "mixpanel": (
             "Mixpanel returned no data.",
-            "Check your event names in Mixpanel → Events. Common names vary by setup — look for events like 'Page View', '$mp_web_page_view', 'Checkout Started', or 'Subscription Created'. Once you know your exact event names, let me know and I'll update the connection."
+            "Check your event names in Mixpanel → Events. Common names vary by setup - look for events like 'Page View', '$mp_web_page_view', 'Checkout Started', or 'Subscription Created'. Once you know your exact event names, let me know and I'll update the connection."
         ),
         "image_gemini": (
             "Gemini image generation failed.",
@@ -2220,14 +2206,23 @@ def clean_copy(text):
     import re as _re
     if not text:
         return text
-    # Em dashes — never in Adam's copy
-    text = text.replace(" \u2014 ", ", ")
-    text = text.replace("\u2014 ", "")
-    text = text.replace(" \u2014", "")
-    text = text.replace("\u2014", "-")
+    # Em dashes - never in Adam's copy. Catch every variant.
+    text = text.replace(" \u2014 ", ", ")   # spaced em dash → comma
+    text = text.replace("\u2014 ", " ")      # leading em dash
+    text = text.replace(" \u2014", ",")      # trailing em dash
+    text = text.replace("\u2014", "-")       # bare em dash → hyphen
+    text = text.replace(" \u2013 ", ", ")   # en dash spaced
+    text = text.replace("\u2013 ", " ")
+    text = text.replace(" \u2013", ",")
+    text = text.replace("\u2013", "-")
+    # Also catch " - " written as literal HTML/text entity
+    text = text.replace("&mdash;", "-")
+    text = text.replace("&ndash;", "-")
+    # If any remain (e.g. from weird encodings), catch with regex
+    text = _re.sub(r'\s*[\u2014\u2013]\s*', ', ', text)
     # Markdown headers
     text = _re.sub(r'^#{1,6}\s+', '', text, flags=_re.MULTILINE)
-    # Bold/italic — strip markers, keep text
+    # Bold/italic - strip markers, keep text
     text = _re.sub(r'\*\*([^*\n]+)\*\*', r'\1', text)
     text = _re.sub(r'\*([^*\n]+)\*', r'\1', text)
     # Horizontal rules / dividers
@@ -2242,7 +2237,7 @@ def clean_copy(text):
 
 def strip_ui_text(text):
     """Strip emojis and markdown from angles, hooks, subjects shown in picker UI.
-    Keeps copy clean in buttons and message lists — not applied to email body copy."""
+    Keeps copy clean in buttons and message lists - not applied to email body copy."""
     import re as _re
     if not text:
         return text
@@ -2508,7 +2503,7 @@ def extract_text(v):
 
 def email_action_keyboard():
     return [
-        # Per-email editing — surgical
+        # Per-email editing - surgical
         [{"text": "✏️ Edit Free email",  "callback_data": "quick_edit_free"},
          {"text": "✏️ Edit Pro email",   "callback_data": "quick_edit_pro"}],
         [{"text": "✏️ Edit both emails", "callback_data": "quick_edit"}],
@@ -2547,7 +2542,7 @@ def ad_action_keyboard():
     ]
 
 def format_action_keyboard(fmt_key, fmt_label):
-    """Action keyboard for a specific format — encodes format in callback."""
+    """Action keyboard for a specific format - encodes format in callback."""
     kb = [
         [{"text": "Quick Edit", "callback_data": "sfmt_edit_" + fmt_key},
          {"text": "Enhance",    "callback_data": "sfmt_enhance_" + fmt_key}],
@@ -2602,8 +2597,8 @@ def get_perf_context(chat_id):
 def ask_context(chat_id):
     user_state[chat_id]["stage"] = "awaiting_context_choice"
     keyboard = [
-        [{"text": "Yes — I have extra context", "callback_data": "context_yes"}],
-        [{"text": "No — just the report", "callback_data": "context_no"}]
+        [{"text": "Yes - I have extra context", "callback_data": "context_yes"}],
+        [{"text": "No - just the report", "callback_data": "context_no"}]
     ]
     send(chat_id, "*Any extra context to factor in?*\n\n_Promos, discounts, Inner Circle open, upcoming events, factoids, PSAs..._", keyboard)
 
@@ -2612,21 +2607,38 @@ def gen_angles(chat_id):
     report = sanitise(user_state[chat_id].get("report", ""))
     context = sanitise(user_state[chat_id].get("context", ""))
     perf = get_perf_context(chat_id)
-    # Track previously shown angles to force variety on regen
     prev_angles = user_state[chat_id].get("angles", [])
+
+    # Guard: if report is empty, stop and ask for it
+    if not report or len(report.strip()) < 20:
+        user_state[chat_id]["stage"] = "awaiting_email_report"
+        send(chat_id, "No report found. Please paste your market update or analysis first:")
+        return
+
     prompt = "REPORT:\n" + report
-    if context: prompt += "\n\nEXTRA CONTEXT:\n" + context
+    if context: prompt += "\n\nEXTRA CONTEXT (weave in where relevant):\n" + context
     prompt += perf
     if prev_angles:
-        prompt += "\n\nPREVIOUSLY SHOWN ANGLES — DO NOT REPEAT THESE, generate completely different ones:\n"
+        prompt += "\n\nPREVIOUSLY SHOWN ANGLES - generate completely different ones:\n"
         for i, a in enumerate(prev_angles, 1):
             prompt += f"{i}. {a}\n"
-        prompt += "\n"
-    prompt += "Generate exactly 4 distinct content angles for this crypto update. Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). Different emotional lenses or hook strategies. Apply copywriting principles.\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
+    prompt += (
+        "\n\nGenerate exactly 4 distinct content angles based ONLY on the report above. "
+        "Each angle must be directly about the specific market data, events, and thesis in that report. "
+        "Do NOT write generic crypto topics. Do NOT use placeholder text like 'Alternative angle N'. "
+        "Each angle will be used to write both a Free email (curiosity/tease) and a Pro email (full analysis). "
+        "Different emotional lenses or hook strategies.\n"
+        "1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else."
+    )
     send(chat_id, "Finding angles...")
     try:
         raw = openai_gpt(prompt, max_tokens=600)
         angles = parse_numbered_list(raw, 4)
+        # Validate - if GPT returned placeholders, fall back to Claude
+        placeholder_signs = ["alternative angle", "angle 1", "angle 2", "angle 3", "angle 4"]
+        if any(any(p in a.lower() for p in placeholder_signs) for a in angles):
+            raw = claude(prompt, max_tokens=600)
+            angles = parse_numbered_list(raw, 4)
         user_state[chat_id]["angles"] = angles
         user_state[chat_id]["free_angles"] = angles
         user_state[chat_id]["pro_angles"] = angles
@@ -2640,10 +2652,10 @@ def gen_angles(chat_id):
         keyboard.append([{"text": "Regenerate angles",     "callback_data": "regen_angles"}])
         send(chat_id, text, keyboard)
     except Exception as e:
-        send(chat_id, "Error: " + str(e))
+        send(chat_id, "Error generating angles: " + str(e))
 
 def gen_hooks(chat_id):
-    """Generate hooks — one set used for both Free and Pro emails."""
+    """Generate hooks - one set used for both Free and Pro emails."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
@@ -2652,23 +2664,38 @@ def gen_hooks(chat_id):
     angle = state.get("selected_angle", state.get("selected_free_angle", ""))
     prev_hooks = state.get("hooks", [])
 
+    # Guard: if report is empty, stop
+    if not report or len(report.strip()) < 20:
+        state["stage"] = "awaiting_email_report"
+        send(chat_id, "No report found. Please paste your market update first:")
+        return
+
     base = "REPORT:\n" + report
     if context: base += "\n\nEXTRA CONTEXT:\n" + context
     base += perf
 
     avoid = ""
     if prev_hooks:
-        avoid = "\n\nPREVIOUSLY SHOWN HOOKS — generate completely different subject lines:\n"
+        avoid = "\n\nPREVIOUSLY SHOWN HOOKS - generate completely different subject lines:\n"
         for i, h in enumerate(prev_hooks[:4], 1):
             avoid += f"{i}. {h.get('subject','')}\n"
 
+    prompt = (
+        base + "\n\nANGLE: " + angle + avoid +
+        "\n\nWrite 4 subject line + preview text combos for this specific Cryptonary email. "
+        "Each hook must be directly about the content in the report above - specific data, specific events. "
+        "Do NOT write generic crypto hooks. Do NOT use placeholder text.\n\n"
+        "Format exactly as:\n1. SUBJECT: [subject line]\nPREVIEW: [preview text]\n\n(repeat for all 4)"
+    )
+
     send(chat_id, "Writing hooks...")
     try:
-        raw = openai_gpt(base + "\n\nANGLE: " + angle + avoid +
-            "\n\nWrite 4 subject line + preview text combos for this crypto email.\n"
-            "Each hook should create a strong curiosity gap or bold data-led statement.\n\n"
-            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
+        raw = openai_gpt(prompt, max_tokens=400)
         hooks = parse_hooks(raw)
+        # Validate - if hooks look generic/placeholder, fall back to Claude
+        if not hooks or len(hooks) < 2:
+            raw = claude(prompt, max_tokens=400)
+            hooks = parse_hooks(raw)
         state["free_hooks"] = hooks
         state["pro_hooks"] = hooks
         state["hooks"] = hooks
@@ -2693,7 +2720,7 @@ def show_pro_angle_picker(chat_id):
     state = user_state[chat_id]
     pro_angles = state.get("pro_angles", [])
     state["stage"] = "pick_pro_angle"
-    text = "*PRO EMAIL — Pick an angle:*\n_(Full analysis, data-led, complete conviction)_\n\n"
+    text = "*PRO EMAIL - Pick an angle:*\n_(Full analysis, data-led, complete conviction)_\n\n"
     keyboard = []
     for i, a in enumerate(pro_angles):
         text += "*" + str(i+1) + ".* " + strip_ui_text(a) + "\n\n"
@@ -2703,7 +2730,7 @@ def show_pro_angle_picker(chat_id):
     send(chat_id, text, keyboard)
 
 def gen_pro_hooks(chat_id):
-    """Generate Pro email hooks — called after Free hook selected."""
+    """Generate Pro email hooks - called after Free hook selected."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
@@ -2718,7 +2745,7 @@ def gen_pro_hooks(chat_id):
 
     avoid = ""
     if prev_hooks:
-        avoid = "\n\nPREVIOUSLY SHOWN HOOKS — generate completely different subject lines:\n"
+        avoid = "\n\nPREVIOUSLY SHOWN HOOKS - generate completely different subject lines:\n"
         for i, h in enumerate(prev_hooks[:4], 1):
             avoid += f"{i}. {h.get('subject','')}\n"
 
@@ -2731,7 +2758,7 @@ def gen_pro_hooks(chat_id):
         hooks = parse_hooks(raw)
         state["pro_hooks"] = hooks
         state["stage"] = "pick_pro_hook"
-        text = "*PRO EMAIL — Pick a hook:*\n_(Data-led, authoritative, specific)_\n\n"
+        text = "*PRO EMAIL - Pick a hook:*\n_(Data-led, authoritative, specific)_\n\n"
         keyboard = []
         for i, h in enumerate(hooks):
             text += "*" + str(i+1) + ".* " + strip_ui_text(h["subject"]) + "\n_" + strip_ui_text(h["preview"]) + "_\n\n"
@@ -2749,11 +2776,13 @@ def gen_pro_hooks(chat_id):
 def ask_free_cta(chat_id):
     user_state[chat_id]["stage"] = "pick_free_cta"
     keyboard = [[{"text": v, "callback_data": "cta_free_" + k}] for k, v in CTA_OPTIONS["free"].items()]
+    keyboard.append([{"text": "✏️ Write my own CTA", "callback_data": "cta_free_custom"}])
     send(chat_id, "*Free email CTA:*", keyboard)
 
 def ask_pro_cta(chat_id):
     user_state[chat_id]["stage"] = "pick_pro_cta"
     keyboard = [[{"text": v, "callback_data": "cta_pro_" + k}] for k, v in CTA_OPTIONS["pro"].items()]
+    keyboard.append([{"text": "✏️ Write my own CTA", "callback_data": "cta_pro_custom"}])
     send(chat_id, "*Pro email CTA:*", keyboard)
 
 def gen_emails(chat_id):
@@ -2765,6 +2794,9 @@ def gen_emails(chat_id):
     hook = state.get("selected_hook", {})
     free_cta = state.get("free_cta", "upgrade")
     pro_cta = state.get("pro_cta", "read_report")
+    # Use custom CTA instruction if provided
+    free_cta_instruction = state.get("free_cta_custom", "") if free_cta == "custom" else CTA_INSTRUCTIONS["free"].get(free_cta, "")
+    pro_cta_instruction = state.get("pro_cta_custom", "") if pro_cta == "custom" else CTA_INSTRUCTIONS["pro"].get(pro_cta, "")
     voice_examples = get_voice_corpus_context(chat_id)
     prompt = "Write BOTH a Free email and a Pro email for Cryptonary. Apply all copywriting principles.\n\n"
     if voice_examples:
@@ -2774,13 +2806,18 @@ def gen_emails(chat_id):
     prompt += "\n\nAngle: " + angle
     prompt += "\nSubject: " + hook.get("subject", "")
     prompt += "\nPreview: " + hook.get("preview", "")
-    prompt += "\n\nFREE EMAIL CTA: " + CTA_INSTRUCTIONS["free"].get(free_cta, "")
-    prompt += "\nPRO EMAIL CTA: " + CTA_INSTRUCTIONS["pro"].get(pro_cta, "")
-    prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
+    prompt += "\n\nFREE EMAIL CTA: " + free_cta_instruction
+    prompt += "\nPRO EMAIL CTA: " + pro_cta_instruction
+    prompt += "\n\nCRITICAL RULES: No em dashes (- or –) anywhere. Use commas or short sentences instead. No markdown bold. British-casual voice.\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
         raw = claude(prompt, max_tokens=2500, timeout=120, retries=2)
         emails = parse_delimited_emails(raw)
+        # Apply clean_copy at storage time to catch any em dashes that slip through
+        if "free" in emails:
+            emails["free"] = clean_copy(extract_text(emails["free"]))
+        if "pro" in emails:
+            emails["pro"] = clean_copy(extract_text(emails["pro"]))
         state["current_emails"] = emails
         state["stage"] = "emails_ready"
         state["current_emails"]["free_raw"] = emails.get("free", "")
@@ -2799,9 +2836,9 @@ def gen_emails(chat_id):
     except Exception as e:
         err = str(e)
         if "timed out" in err.lower() or "timeout" in err.lower():
-            msg = "Email generation timed out — the server took too long. Try again."
+            msg = "Email generation timed out - the server took too long. Try again."
         elif "500" in err or "internal" in err.lower():
-            msg = "Anthropic server error — this is temporary. Try again in a moment."
+            msg = "Anthropic server error - this is temporary. Try again in a moment."
         else:
             msg = "Email generation failed: " + err[:150]
         state["stage"] = "emails_ready" if state.get("current_emails") else "idle"
@@ -2866,7 +2903,7 @@ def apply_quick_edit(chat_id, instruction):
         except Exception as e:
             err = str(e)
             if "429" in err or "rate" in err.lower():
-                send(chat_id, "Rate limit hit — wait 30 seconds and try again.",
+                send(chat_id, "Rate limit hit - wait 30 seconds and try again.",
                      [[{"text": "Try again", "callback_data": "social_quick_edit"}]])
             else:
                 send(chat_id, "Edit failed: " + err[:200],
@@ -2898,7 +2935,7 @@ def apply_quick_edit(chat_id, instruction):
                 send(chat_id, "Free email updated. Review and edit the Pro email or approve.", email_action_keyboard())
             except Exception as e:
                 err = str(e)
-                msg = "Rate limit hit — wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
+                msg = "Rate limit hit - wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
                 send(chat_id, msg, [[{"text": "Try again", "callback_data": "quick_edit_free"}]])
                 state["stage"] = "emails_ready"
 
@@ -2921,12 +2958,12 @@ def apply_quick_edit(chat_id, instruction):
                 send(chat_id, "Pro email updated. Review and edit the Free email or approve.", email_action_keyboard())
             except Exception as e:
                 err = str(e)
-                msg = "Rate limit hit — wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
+                msg = "Rate limit hit - wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
                 send(chat_id, msg, [[{"text": "Try again", "callback_data": "quick_edit_pro"}]])
                 state["stage"] = "emails_ready"
 
         else:
-            # Edit both — original behaviour
+            # Edit both - original behaviour
             email_text = ""
             if free_email: email_text += "FREE EMAIL:\n" + free_email[:EMAIL_EDIT_LIMIT] + "\n\n"
             if pro_email:  email_text += "PRO EMAIL:\n"  + pro_email[:EMAIL_EDIT_LIMIT]
@@ -2956,7 +2993,7 @@ def apply_quick_edit(chat_id, instruction):
                 send(chat_id, "Both emails updated.", email_action_keyboard())
             except Exception as e:
                 err = str(e)
-                msg = "Rate limit hit — wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
+                msg = "Rate limit hit - wait 30s and try again." if ("429" in err or "rate" in err.lower()) else "Edit failed: " + err[:150]
                 send(chat_id, msg, [[{"text": "Try again", "callback_data": "quick_edit"}]])
                 state["stage"] = "emails_ready"
 
@@ -2980,7 +3017,7 @@ def gen_enhance(chat_id, mode="email"):
             state["selected_enhancements"] = []
             state["enhance_mode"] = "social"
             state["stage"] = "enhance_select"
-            # Show all detail in the message — buttons are just number selectors
+            # Show all detail in the message - buttons are just number selectors
             text = "*Improvement suggestions:*\n_(Tap numbers to select, then Apply)_\n\n"
             for s in suggestions:
                 text += "*" + str(s["id"]) + ". [" + s["principle"] + "]*\n"
@@ -3022,7 +3059,7 @@ def gen_enhance(chat_id, mode="email"):
             state["selected_enhancements"] = []
             state["enhance_mode"] = "email"
             state["stage"] = "enhance_select"
-            # Show all detail in the message — buttons are just number selectors
+            # Show all detail in the message - buttons are just number selectors
             text = "*Improvement suggestions:*\n_(Tap numbers to select, then Apply)_\n\n"
             for s in suggestions:
                 text += "*" + str(s["id"]) + ". [" + s["principle"] + "]*\n"
@@ -3157,11 +3194,11 @@ def show_social_source_menu(chat_id):
     if "pro" in emails:
         keyboard.append([{"text": "Pro email", "callback_data": "src_pro"}])
     if "hot" in segments:
-        keyboard.append([{"text": "Free — Hot segment", "callback_data": "src_hot"}])
+        keyboard.append([{"text": "Free - Hot segment", "callback_data": "src_hot"}])
     if "warm" in segments:
-        keyboard.append([{"text": "Free — Warm segment", "callback_data": "src_warm"}])
+        keyboard.append([{"text": "Free - Warm segment", "callback_data": "src_warm"}])
     if "cold" in segments:
-        keyboard.append([{"text": "Free — Cold segment", "callback_data": "src_cold"}])
+        keyboard.append([{"text": "Free - Cold segment", "callback_data": "src_cold"}])
     keyboard.append([{"text": "Cancel", "callback_data": "back_to_done"}])
     send(chat_id, "*Which email should social content be based on?*", keyboard)
 
@@ -3173,8 +3210,8 @@ def show_social_format_menu(chat_id):
         ("Reel Script (45-60s)",  "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
         ("Static Post + Caption", "fmt_static"),
-        ("Story — Single slide",  "fmt_story_single"),
-        ("Story — Multi slide",   "fmt_story_multi"),
+        ("Story - Single slide",  "fmt_story_single"),
+        ("Story - Multi slide",   "fmt_story_multi"),
     ]
     keyboard = []
     for label, cb in formats:
@@ -3200,8 +3237,8 @@ def toggle_social_format(chat_id, fmt_cb, message_id):
         ("Reel Script (45-60s)",  "fmt_reel"),
         ("Carousel (5-8 slides)", "fmt_carousel"),
         ("Static Post + Caption", "fmt_static"),
-        ("Story — Single slide",  "fmt_story_single"),
-        ("Story — Multi slide",   "fmt_story_multi"),
+        ("Story - Single slide",  "fmt_story_single"),
+        ("Story - Multi slide",   "fmt_story_multi"),
     ]
     keyboard = []
     for label, cb in formats:
@@ -3230,7 +3267,7 @@ def gen_social_selected(chat_id):
     state = user_state[chat_id]
     selected = state.get("selected_social_formats", [])
     if not selected:
-        # Before giving up — check if we're actually in an email flow
+        # Before giving up - check if we're actually in an email flow
         has_emails = bool(state.get("current_emails", {}).get("free") or
                           state.get("current_emails", {}).get("pro"))
         if has_emails:
@@ -3246,7 +3283,7 @@ def gen_social_selected(chat_id):
                 [{"text": "Static Post + Caption", "callback_data": "pick_fmt_fmt_static"}],
             ])
         return
-    # If coming from email flow, use the email angle directly — skip angle/hook pickers
+    # If coming from email flow, use the email angle directly - skip angle/hook pickers
     origin = state.get("social_origin", "")
     if origin == "email" and not state.get("social_angle"):
         # Pull angle from the email flow
@@ -3257,7 +3294,7 @@ def gen_social_selected(chat_id):
     if not state.get("social_angle"):
         gen_social_angles(chat_id)
         return
-    # Always regenerate hooks when formats change — prevents stale hook state causing freeze
+    # Always regenerate hooks when formats change - prevents stale hook state causing freeze
     existing_hooks = state.get("social_hooks", {})
     needs_hooks = any(f not in existing_hooks for f in selected)
     if needs_hooks:
@@ -3265,7 +3302,7 @@ def gen_social_selected(chat_id):
         state["selected_social_hooks"] = {}
         gen_social_hooks(chat_id)
         return
-    # Framework is auto-set by pick_fmt_ — no longer asks user
+    # Framework is auto-set by pick_fmt_ - no longer asks user
     report = sanitise(state.get("report", ""))
     context = sanitise(state.get("context", ""))
     angle = state.get("selected_angle", "")
@@ -3329,7 +3366,7 @@ def gen_reel(chat_id):
         state["current_social_type"] = "Reel Script"
         state["stage"] = "social_ready"
         other_fw = "PAS" if framework == "AIDA" else "AIDA"
-        send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s) — " + framework + "*\n\n" + result)
+        send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s) - " + framework + "*\n\n" + result)
         reel_kb = format_action_keyboard("fmt_reel", "Reel Script")
         reel_kb.append([{"text": "Switch to " + other_fw, "callback_data": "social_switch_fw"}])
         send(chat_id, "Reel script ready.", reel_kb)
@@ -3346,7 +3383,7 @@ def gen_carousel(chat_id):
     source_email = get_social_source_text(chat_id)[:500]
     hook = state.get("selected_social_hooks", {}).get("fmt_carousel", "")
     voice_examples = get_voice_corpus_context(chat_id)
-    # Scale max_tokens with slide count — more slides needs more output budget
+    # Scale max_tokens with slide count - more slides needs more output budget
     carousel_tokens = max(900, slide_count * 160)
     try:
         result = claude(
@@ -3355,7 +3392,7 @@ def gen_carousel(chat_id):
             ("COVER SLIDE HEADLINE (use this): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report[:1500] + ("\nContext: " + context[:300] if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Write ONLY the text/copy for each slide — no visual directions, no brackets, no design notes\n- Format: SLIDE N:\\n[headline max 8 words]\\n[body text if needed, max 2 lines]\n- Mix bold statement slides, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more CTA\n\nReturn as plain string.",
+            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Write ONLY the text/copy for each slide - no visual directions, no brackets, no design notes\n- Format: SLIDE N:\\n[headline max 8 words]\\n[body text if needed, max 2 lines]\n- Mix bold statement slides, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more CTA\n\nReturn as plain string.",
             max_tokens=carousel_tokens
         )
         result = clean_copy(result)
@@ -3373,7 +3410,7 @@ def gen_carousel(chat_id):
 
 
 def gen_static(chat_id):
-    """Generate a static Instagram post — limited on-screen text + full caption."""
+    """Generate a static Instagram post - limited on-screen text + full caption."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     report = sanitise(state.get("report", ""))
@@ -3389,31 +3426,20 @@ def gen_static(chat_id):
             ("HOOK (use as the main on-screen text): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            """
-
-RULES:
-ON-SCREEN TEXT (max 10 words total — this is what appears on the image):
-- Headline: [bold, punchy, max 6 words — think newspaper front page]
-- Subtext: [supporting line, max 4 words] (optional)
-- Keep it minimal — most of the content lives in the caption
-
-CAPTION (this is the full post text under the image):
-- Open with a hook that expands on the headline
-- 3-5 short punchy paragraphs
-- Data, insight or story in the body
-- End with a question or CTA to drive comments
-- Adam's voice: direct, data-led, no fluff
-- 150-250 words
-
-Format EXACTLY:
-ON-SCREEN TEXT:
-Headline: [max 6 words]
-Subtext: [max 4 words or leave blank]
-
-CAPTION:
-[full caption here]
-
-Return as plain string.""",
+            "\n\nRULES:\nON-SCREEN TEXT (max 10 words total):\n"
+            "- Headline: [bold, punchy, max 6 words]\n"
+            "- Subtext: [supporting line, max 4 words] (optional)\n"
+            "- Keep it minimal - caption carries the content\n\n"
+            "CAPTION (full post text under the image):\n"
+            "- Open with a hook that expands on the headline\n"
+            "- 3-5 short punchy paragraphs\n"
+            "- Data, insight or story in the body\n"
+            "- End with a question or CTA to drive comments\n"
+            "- Adam voice: direct, data-led, no fluff\n"
+            "- 150-250 words\n\n"
+            "Format EXACTLY:\nON-SCREEN TEXT:\nHeadline: [max 6 words]\n"
+            "Subtext: [max 4 words or leave blank]\n\nCAPTION:\n[full caption here]\n\n"
+            "Return as plain string.",
             max_tokens=700
         )
         result = clean_copy(result)
@@ -3444,7 +3470,7 @@ def gen_story(chat_id, multi=False):
             ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            "\n\nRULES:\n- Write ONLY the text/copy for each slide — no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 30 words — enough to land the point with full context]\n- Each slide should carry ONE complete thought or insight — don't truncate ideas to hit a word count\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') — the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
+            "\n\nRULES:\n- Write ONLY the text/copy for each slide - no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 30 words - enough to land the point with full context]\n- Each slide should carry ONE complete thought or insight - don't truncate ideas to hit a word count\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') - the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
             max_tokens=700
         )
         social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
@@ -3486,7 +3512,7 @@ def show_length_menu(chat_id, mode="email"):
             current = user_state[chat_id].get("story_slides", 3)
             social_type = user_state[chat_id].get("current_social_type", "")
             if "single" in social_type.lower() or current == 1:
-                # Single slide — adjust text length not slide count
+                # Single slide - adjust text length not slide count
                 keyboard.append([{"text": "Longer (add more detail)", "callback_data": "length_extend"}])
                 keyboard.append([{"text": "Shorter (tighten text)", "callback_data": "length_shorten"}])
             else:
@@ -3526,7 +3552,7 @@ def apply_length(chat_id, direction):
             state["current_ad_output"] = result
             state["current_ad"] = result
             state["stage"] = "ads_ready"
-            send_plain(chat_id, "AD COPY — " + direction.upper() + "ED\n\n" + result)
+            send_plain(chat_id, "AD COPY - " + direction.upper() + "ED\n\n" + result)
             send(chat_id, "Done.", ad_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -3547,9 +3573,9 @@ def apply_length(chat_id, direction):
             state["current_emails"] = adjusted
             state["stage"] = "emails_ready"
             if "free" in adjusted:
-                send_plain(chat_id, "FREE EMAIL — " + direction.upper() + "ED\n\n" + extract_text(adjusted["free"]))
+                send_plain(chat_id, "FREE EMAIL - " + direction.upper() + "ED\n\n" + extract_text(adjusted["free"]))
             if "pro" in adjusted:
-                send_plain(chat_id, "PRO EMAIL — " + direction.upper() + "ED\n\n" + extract_text(adjusted["pro"]))
+                send_plain(chat_id, "PRO EMAIL - " + direction.upper() + "ED\n\n" + extract_text(adjusted["pro"]))
             send(chat_id, "Done.", email_action_keyboard())
         except Exception as e:
             send(chat_id, "Error: " + str(e))
@@ -3643,7 +3669,7 @@ def gen_subject_ab(chat_id):
     prev_alts = state.get("subject_alternatives", [])
     avoid = ""
     if prev_alts:
-        avoid = "\n\nPREVIOUSLY SHOWN — do not repeat these subject lines:\n"
+        avoid = "\n\nPREVIOUSLY SHOWN - do not repeat these subject lines:\n"
         for a in prev_alts:
             avoid += f"- {a.get('subject','')}\n"
     send(chat_id, "Generating subject line alternatives...")
@@ -3669,7 +3695,7 @@ def gen_subject_ab(chat_id):
             text += "_" + a.get("preview","") + "_\n"
             text += a.get("reason","") + "\n\n"
             keyboard.append([{"text": "[ ] " + str(i+1) + ". " + a.get("subject","")[:40], "callback_data": "sel_sub_" + str(i)}])
-        keyboard.append([{"text": "Done — apply selected", "callback_data": "apply_subjects"}])
+        keyboard.append([{"text": "Done - apply selected", "callback_data": "apply_subjects"}])
         keyboard.append([{"text": "🔄 Generate more options", "callback_data": "subject_ab"},
                          {"text": "Keep original only",      "callback_data": "keep_subject"}])
         send(chat_id, text, keyboard)
@@ -3692,7 +3718,7 @@ def toggle_subject_select(chat_id, idx, message_id):
         is_sel = i in selected
         label = ("[x] " if is_sel else "[ ] ") + str(i+1) + ". " + a.get("subject","")[:40]
         keyboard.append([{"text": label, "callback_data": "sel_sub_" + str(i)}])
-    keyboard.append([{"text": "Done — apply selected (" + str(len(selected)) + ")", "callback_data": "apply_subjects"}])
+    keyboard.append([{"text": "Done - apply selected (" + str(len(selected)) + ")", "callback_data": "apply_subjects"}])
     keyboard.append([{"text": "Keep original only", "callback_data": "keep_subject"}])
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
@@ -3758,7 +3784,7 @@ TONE_DEFS = {
     "empathetic":  ("Empathetic",  "Bear market mode. Reader is stressed, possibly down on portfolio. Adam is alongside them. Acknowledges the pain. Positions Cryptonary as steady hand in chaos. Calmer tone. Less urgency, more reassurance. CTA is a lifeline not a push."),
     "urgent":      ("Urgent",      "Time pressure is the hook. Event is happening now or soon. Reader needs to act before the window closes. Every sentence drives toward the CTA. No tangents. No extra context. Clock is ticking."),
     "contrarian":  ("Contrarian",  "Everyone else is wrong. Adam sees what the crowd is missing. Confident disagreement with consensus. Uses data to flip the narrative. The reader feels like they're getting the edge. Strong opinion, backed by specifics."),
-    "data":        ("Data-heavy",  "Numbers-first. Every claim has a stat behind it. Specific levels, percentages, dates, ratios. Minimal opinion — let the data speak. Reader feels analytically informed, not sold to. Dense but not dry."),
+    "data":        ("Data-heavy",  "Numbers-first. Every claim has a stat behind it. Specific levels, percentages, dates, ratios. Minimal opinion - let the data speak. Reader feels analytically informed, not sold to. Dense but not dry."),
 }
 
 def show_tone_menu(chat_id):
@@ -3796,9 +3822,9 @@ def apply_tone(chat_id, tone_key):
         state["current_emails"] = toned
         state["stage"] = "emails_ready"
         if "free" in toned:
-            send_plain(chat_id, "*FREE EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["free"]))
+            send_plain(chat_id, "*FREE EMAIL - " + tone_label.upper() + "*\n\n" + extract_text(toned["free"]))
         if "pro" in toned:
-            send_plain(chat_id, "*PRO EMAIL — " + tone_label.upper() + "*\n\n" + extract_text(toned["pro"]))
+            send_plain(chat_id, "*PRO EMAIL - " + tone_label.upper() + "*\n\n" + extract_text(toned["pro"]))
         send(chat_id, tone_label + " tone applied.", email_action_keyboard())
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -3839,7 +3865,7 @@ def gen_segments(chat_id):
         state["stage"] = "segments_ready"
         for key, (label, _) in SEG_DEFS.items():
             if key in segments:
-                send_plain(chat_id, "*FREE EMAIL — " + label.upper() + "*\n\n" + extract_text(segments[key]))
+                send_plain(chat_id, "*FREE EMAIL - " + label.upper() + "*\n\n" + extract_text(segments[key]))
         keyboard = [
             [{"text": "Edit Hot",   "callback_data": "seg_edit_hot"},
              {"text": "Edit Warm",  "callback_data": "seg_edit_warm"},
@@ -3903,14 +3929,14 @@ def handle_message(msg):
         show_main_menu(chat_id)
         return
 
-    # URL detection — drop any link, route based on current flow
+    # URL detection - drop any link, route based on current flow
     url_match = URL_PATTERN.search(text)
     if url_match and len(text.strip()) < 500 and text.strip().startswith("http"):
         url = url_match.group(0)
         user_state.setdefault(chat_id, {"stage": "idle"})
         current_stage = user_state[chat_id].get("stage", "idle")
 
-        # EMAIL FLOW — if in email mode, fetch URL content and treat as report
+        # EMAIL FLOW - if in email mode, fetch URL content and treat as report
         email_stages = {"awaiting_email_report", "awaiting_report", "buffering_report"}
         if current_stage in email_stages or user_state[chat_id].get("mode") == "email":
             send(chat_id, "Fetching content from link...")
@@ -3921,7 +3947,7 @@ def handle_message(msg):
                 # Show summary so Adam can confirm the right content was fetched
                 try:
                     summary = claude(
-                        "Summarise this in 2-3 sentences — what it is, main topic, key points.\n\n" + fetched[:3000],
+                        "Summarise this in 2-3 sentences - what it is, main topic, key points.\n\n" + fetched[:3000],
                         max_tokens=150,
                         system="You are a concise research assistant. Be specific. No fluff."
                     )
@@ -3934,7 +3960,7 @@ def handle_message(msg):
                 send(chat_id, "Could not read content from that link. Paste the text directly instead.")
             return
 
-        # SOCIAL FLOW — if in social mode, fetch and use as report
+        # SOCIAL FLOW - if in social mode, fetch and use as report
         social_stages = {"awaiting_social_report"}
         if current_stage in social_stages:
             send(chat_id, "Fetching content from link...")
@@ -3945,7 +3971,7 @@ def handle_message(msg):
                 user_state[chat_id]["social_source_label"] = url.split("/")[2] if "/" in url else url[:40]
                 try:
                     summary = claude(
-                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        "Summarise this in 2-3 sentences - what it is, main topic, key insight.\n\n" + fetched[:3000],
                         max_tokens=150,
                         system="You are a concise research assistant. Be specific. No fluff."
                     )
@@ -3957,19 +3983,19 @@ def handle_message(msg):
                 send(chat_id, "Could not read content from that link. Paste the text directly instead.")
             return
 
-        # IDEA ENGINE INSPIRATION FLOW — awaiting_inspiration handles URL directly
+        # IDEA ENGINE INSPIRATION FLOW - awaiting_inspiration handles URL directly
         if current_stage == "ie_awaiting_inspiration":
             analyse_url(chat_id, url, mode="ideas")
             return
 
-        # AD FLOW — fetch URL as ad theme
+        # AD FLOW - fetch URL as ad theme
         if current_stage == "awaiting_ad_theme":
             send(chat_id, "Fetching content from link...")
             fetched = fetch_url_content(url, detect_url_type(url))
             if fetched and len(fetched.strip()) > 50:
                 try:
                     summary = claude(
-                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        "Summarise this in 2-3 sentences - what it is, main topic, key insight.\n\n" + fetched[:3000],
                         max_tokens=150,
                         system="You are a concise research assistant. Be specific. No fluff."
                     )
@@ -3983,14 +4009,14 @@ def handle_message(msg):
                 send(chat_id, "Could not read that link. Paste the content directly instead.")
             return
 
-        # YT DESC FLOW — fetch URL as video content
+        # YT DESC FLOW - fetch URL as video content
         if current_stage == "yt_awaiting_content":
             send(chat_id, "Fetching content from link...")
             fetched = fetch_url_content(url, detect_url_type(url))
             if fetched and len(fetched.strip()) > 50:
                 try:
                     summary = claude(
-                        "Summarise this in 2-3 sentences — what it is, main topic, key insight.\n\n" + fetched[:3000],
+                        "Summarise this in 2-3 sentences - what it is, main topic, key insight.\n\n" + fetched[:3000],
                         max_tokens=150,
                         system="You are a concise research assistant. Be specific. No fluff."
                     )
@@ -4004,7 +4030,7 @@ def handle_message(msg):
                 send(chat_id, "Could not read that link. Paste the content directly instead.")
             return
 
-        # DEFAULT — route to ideas
+        # DEFAULT - route to ideas
         mode = "critique" if current_stage == "ie_awaiting_screenshot_critique" else "ideas"
         user_state[chat_id]["stage"] = "idea_engine_idle"
         analyse_url(chat_id, url, mode=mode)
@@ -4040,7 +4066,7 @@ def handle_message(msg):
         return
 
     if text == "/view":
-        # Show whatever content is currently in state
+        # Show whatever content is currently in state, always restore action keyboard
         user_state.setdefault(chat_id, {"stage": "idle"})
         st = user_state[chat_id]
         shown = False
@@ -4051,10 +4077,36 @@ def handle_message(msg):
         if emails.get("pro"):
             send_plain(chat_id, "PRO EMAIL (current version)\n\n" + clean_copy(extract_text(emails["pro"])))
             shown = True
+        if emails.get("free") or emails.get("pro"):
+            send(chat_id, "Current version shown above.", email_action_keyboard())
+            return
         if st.get("current_social"):
             social_type = st.get("current_social_type", "Social content")
             send_plain(chat_id, social_type.upper() + " (current version)\n\n" + st["current_social"])
+            send(chat_id, "Current version shown above.", social_action_keyboard())
             shown = True
+            return
+        if st.get("current_ad_output"):
+            send_plain(chat_id, "AD COPY (current version)\n\n" + st["current_ad_output"][:3000])
+            send(chat_id, "Current version shown above.", ad_action_keyboard())
+            shown = True
+            return
+        if st.get("yt_output"):
+            send_plain(chat_id, "YOUTUBE DESCRIPTION (current version)\n\n" + st["yt_output"])
+            keyboard = [
+                [{"text": "Quick Edit", "callback_data": "yt_quick_edit"},
+                 {"text": "Regenerate", "callback_data": "yt_regen"}],
+                [{"text": "🎬 Matching thumbnail", "callback_data": "yt_gen_thumbnail"},
+                 {"text": "Critique",              "callback_data": "critique_yt"}],
+                [{"text": "✏️ Submit revised",     "callback_data": "submit_revised_yt"}],
+                [{"text": "Back to Writing Studio","callback_data": "open_content_studio"}],
+            ]
+            send(chat_id, "Current version shown above.", keyboard)
+            shown = True
+            return
+        if not shown:
+            send(chat_id, "Nothing in the current session yet. Generate content first.")
+        returnue
         if st.get("current_ad_output"):
             send_plain(chat_id, "AD COPY (current version)\n\n" + st["current_ad_output"][:3000])
             shown = True
@@ -4069,7 +4121,7 @@ def handle_message(msg):
         # Apply Telegram formatting to current content on request
         # Usage: /format bold the key numbers
         #        /format add italics to the P.S.
-        #        /format — shows formatting reference
+        #        /format - shows formatting reference
         instruction = text.replace("/format", "").strip()
         user_state.setdefault(chat_id, {"stage": "idle"})
         st = user_state[chat_id]
@@ -4078,8 +4130,8 @@ def handle_message(msg):
                  "*Telegram Formatting Guide*\n\n"
                  "*bold text* — wrap in \\*asterisks\\*\n"
                  "_italic text_ — wrap in \\_underscores\\_\n"
-                 "`inline code` — wrap in \\`backticks\\`\n"
-                 "```code block``` — wrap in \\`\\`\\`triple backticks\\`\\`\\`\n\n"
+                 "`code` — wrap in \\`backticks\\`\n\n"
+                 "_Note: underline is not supported in standard Telegram Markdown mode._\n\n"
                  "*To apply formatting to your current copy:*\n"
                  "`/format bold all the price levels`\n"
                  "`/format italicise the P.S.`\n"
@@ -4113,7 +4165,7 @@ def handle_message(msg):
                 "- Italic: _text_\n"
                 "- Only format what the instruction specifies\n"
                 "- Do not add formatting that wasn't requested\n"
-                "- Do not change the copy itself — only add/adjust formatting markers\n\n"
+                "- Do not change the copy itself - only add/adjust formatting markers\n\n"
                 f"CONTENT:\n{content_to_format}\n\nReturn the formatted content as plain text with Telegram markdown markers.",
                 max_tokens=2000
             )
@@ -4132,77 +4184,6 @@ def handle_message(msg):
                 send_formatted(chat_id, "FORMATTED " + content_label.upper() + "\n\n" + result)
             send(chat_id, "Formatting applied. Use /view to see current version.",
                  [[{"text": "Back to email tools", "callback_data": "back_to_emails"}]] if content_label == "emails" else None)
-        except Exception as e:
-            send(chat_id, "Formatting failed: " + str(e)[:150])
-        return
-
-    if text.startswith("/format") or text.lower().startswith("format this:") or text.lower().startswith("apply formatting:"):
-        # Format the current content with Telegram markdown
-        user_state.setdefault(chat_id, {"stage": "idle"})
-        st = user_state[chat_id]
-        instruction = text.replace("/format", "").replace("format this:", "").replace("Format this:", "").replace("apply formatting:", "").strip()
-        # Get current content
-        emails = st.get("current_emails", {})
-        social = st.get("current_social", "")
-        ad = st.get("current_ad_output", "")
-        yt = st.get("yt_output", "")
-        content = ""
-        label = ""
-        if emails.get("free") or emails.get("pro"):
-            # Default to free email for formatting
-            content = emails.get("free", emails.get("pro", ""))
-            label = "email"
-        elif social:
-            content = social
-            label = "social content"
-        elif ad:
-            content = ad
-            label = "ad copy"
-        elif yt:
-            content = yt
-            label = "YouTube description"
-        if not content:
-            send(chat_id, "No content in session to format. Generate something first.")
-            return
-        if not instruction:
-            send(chat_id,
-                 "*Format command:*\n\n"
-                 "Use `/format` followed by your instruction:\n\n"
-                 "_/format bold all the price levels_\n"
-                 "_/format add italic on the P.S._\n"
-                 "_/format make the CTA bold_\n\n"
-                 "Telegram supports: `*bold*` `_italic_` `__underline__` `~strikethrough~` `` `code` ``")
-            return
-        send(chat_id, "Applying formatting...")
-        try:
-            result = claude(
-                "Apply the following Telegram markdown formatting to this " + label + ".\n\n"
-                "Instruction: " + instruction + "\n\n"
-                "Telegram formatting syntax:\n"
-                "- Bold: *text*\n"
-                "- Italic: _text_\n"
-                "- Underline: __text__\n"
-                "- Strikethrough: ~text~\n"
-                "- Monospace/code: `text`\n\n"
-                "IMPORTANT: Only apply formatting where the instruction specifies. "
-                "Do not change any copy — only add markdown syntax.\n\n"
-                "CONTENT:\n" + content[:3000] +
-                "\n\nReturn the formatted content only. No explanation.",
-                max_tokens=2000
-            )
-            # Store back
-            if label == "email":
-                emails["free"] = result
-                st["current_emails"] = emails
-            elif label == "social content":
-                st["current_social"] = result
-            elif label == "ad copy":
-                st["current_ad_output"] = result
-            elif label == "YouTube description":
-                st["yt_output"] = result
-            # Send with formatting preserved
-            send_formatted(chat_id, "*FORMATTED " + label.upper() + ":*\n\n" + result)
-            send(chat_id, "Formatting applied. The copy in your session is updated.")
         except Exception as e:
             send(chat_id, "Formatting failed: " + str(e)[:150])
         return
@@ -4237,7 +4218,7 @@ def handle_message(msg):
         if not examples:
             send(chat_id, "*Voice Memory*\n\nNo approved content stored yet.\n\nApprove content using the Approve button to build your voice corpus.")
             return
-        lines = ["*Voice Memory — " + str(len(examples)) + " approved examples*\n"]
+        lines = ["*Voice Memory - " + str(len(examples)) + " approved examples*\n"]
         by_type = {}
         for ex in examples:
             t = ex.get("source_type", "unknown")
@@ -4265,7 +4246,7 @@ def handle_message(msg):
         return
 
     if text == "/help":
-        send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Brevo commands:*\n/listhealth — pull live segment sizes + trends\n\n*Email commands:*\n/logemail — log open rate + CTR\n/emailreport — analyse all logged emails\n\n*Ad commands:*\n/logad — log video or static ad results\n/adreport — analyse all logged ads\n\n/start — return to main menu")
+        send(chat_id, "*Writing Studio V9*\n\nFrom /start choose: Emails, Ads, or Social\n\n*Brevo commands:*\n/listhealth - pull live segment sizes + trends\n\n*Email commands:*\n/logemail - log open rate + CTR\n/emailreport - analyse all logged emails\n\n*Ad commands:*\n/logad - log video or static ad results\n/adreport - analyse all logged ads\n\n/start - return to main menu")
         return
 
     if text == "/listhealth":
@@ -4297,7 +4278,7 @@ def handle_message(msg):
         user_state[chat_id]["stage"] = "context_preview"
         # Show what was understood and ask to confirm before angles
         keyboard = [
-            [{"text": "✅ Yes — find angles",    "callback_data": "context_confirmed"}],
+            [{"text": "✅ Yes - find angles",    "callback_data": "context_confirmed"}],
             [{"text": "✏️ Edit context",         "callback_data": "context_edit"}],
             [{"text": "🗑 Remove context",        "callback_data": "context_no"}],
         ]
@@ -4333,7 +4314,7 @@ def handle_message(msg):
                 "- Italic: _text_\n"
                 "- Underline: __text__\n"
                 "- Strikethrough: ~text~\n\n"
-                "IMPORTANT: Only add formatting markers — do NOT change any copy. "
+                "IMPORTANT: Only add formatting markers - do NOT change any copy. "
                 "Only format what the instruction specifies.\n\n"
                 "CONTENT:\n" + content[:3000] +
                 "\n\nReturn the formatted content only.",
@@ -4386,9 +4367,9 @@ def handle_message(msg):
     if stage in ("awaiting_quick_edit", "social_quick_edit",
                   "social_ready", "social_approved",
                   "emails_ready", "emails_approved"):
-        # Voice/text edit arriving at active content stage — treat as quick edit
+        # Voice/text edit arriving at active content stage - treat as quick edit
         if stage == "social_quick_edit":
-            # Came from sfmt_edit_ — keep current_social_format intact for keyboard restore
+            # Came from sfmt_edit_ - keep current_social_format intact for keyboard restore
             user_state[chat_id]["quick_edit_mode"] = "social"
             user_state[chat_id]["pre_edit_stage"] = "social_ready"
         elif stage in ("social_ready", "social_approved"):
@@ -4426,7 +4407,7 @@ def handle_message(msg):
         send_plain(chat_id, "*UPDATED VERSION RECEIVED*\n\n" + text[:2000])
         keyboard = [
             [{"text": "Quick Edit", "callback_data": "lp_quick_edit"},
-             {"text": "Approve — Generate Design Brief", "callback_data": "lp_approve_copy"}],
+             {"text": "Approve - Generate Design Brief", "callback_data": "lp_approve_copy"}],
             [{"text": "Critique", "callback_data": "critique_lp"},
              {"text": "Revert", "callback_data": "lp_revert"}]
         ]
@@ -4447,7 +4428,7 @@ def handle_message(msg):
             state["current_lp"] = result
             send_plain(chat_id, result[:3000])
             keyboard = [
-                [{"text": "Approve — Generate Design Brief", "callback_data": "lp_approve_copy"}],
+                [{"text": "Approve - Generate Design Brief", "callback_data": "lp_approve_copy"}],
                 [{"text": "More adjustments", "callback_data": "lp_length"},
                  {"text": "Revert", "callback_data": "lp_revert"}]
             ]
@@ -4523,7 +4504,7 @@ def handle_message(msg):
         import re as _rei
         url_match = _rei.search(r"https?://\S+", text)
         if url_match:
-            # It's a link — use analyse_url
+            # It's a link - use analyse_url
             url = url_match.group(0)
             user_state[chat_id]["ie_idea_type"] = "instagram"
             analyse_url(chat_id, url, mode="ideas")
@@ -4563,6 +4544,22 @@ def handle_message(msg):
         apply_critique_fix(chat_id, text.strip())
         return
 
+    if stage == "awaiting_custom_free_cta":
+        # Store the custom CTA instruction and proceed to Pro CTA
+        user_state[chat_id]["free_cta"] = "custom"
+        user_state[chat_id]["free_cta_custom"] = text.strip()
+        send(chat_id, "Free CTA saved. Now pick the Pro email CTA:")
+        ask_pro_cta(chat_id)
+        return
+
+    if stage == "awaiting_custom_pro_cta":
+        # Store the custom CTA instruction and generate emails
+        user_state[chat_id]["pro_cta"] = "custom"
+        user_state[chat_id]["pro_cta_custom"] = text.strip()
+        send(chat_id, "Pro CTA saved. Generating emails...")
+        gen_emails(chat_id)
+        return
+
     if stage == "awaiting_custom_free_angle":
         user_state[chat_id]["selected_free_angle"] = text
         user_state[chat_id]["selected_angle"] = text
@@ -4591,7 +4588,7 @@ def handle_message(msg):
         return
 
     if stage == "awaiting_custom_angle":
-        # Use the typed angle for BOTH free and pro emails — skip the pro angle picker
+        # Use the typed angle for BOTH free and pro emails - skip the pro angle picker
         user_state[chat_id]["selected_angle"] = text
         user_state[chat_id]["selected_free_angle"] = text
         user_state[chat_id]["selected_pro_angle"] = text
@@ -4613,7 +4610,7 @@ def handle_message(msg):
     if stage == "awaiting_custom_social_angle":
         user_state[chat_id]["social_angle"] = text
         user_state[chat_id]["stage"] = "pick_social_formats"
-        # If format already selected, go straight to hooks — don't reset and re-ask
+        # If format already selected, go straight to hooks - don't reset and re-ask
         if user_state[chat_id].get("selected_social_formats"):
             gen_social_hooks(chat_id)
         else:
@@ -4681,7 +4678,7 @@ def handle_message(msg):
         return
 
     if stage == "ds_vwo_awaiting_manual_data":
-        # Parse pasted VWO data — extract campaign, variants, metrics
+        # Parse pasted VWO data - extract campaign, variants, metrics
         import re as _re
         raw = text.strip()
 
@@ -4693,7 +4690,7 @@ def handle_message(msg):
         date_match = _re.search(r'Date range:\s*(.+)', raw, _re.IGNORECASE)
         date_label = date_match.group(1).strip() if date_match else ""
 
-        # Extract variants — each block starts with a variant name line
+        # Extract variants - each block starts with a variant name line
         variant_pattern = _re.split(r'\n(?=Control|Variant|Original)', raw, flags=_re.IGNORECASE)
         variants = []
         for block in variant_pattern:
@@ -4723,7 +4720,7 @@ def handle_message(msg):
             return
 
         # Build report
-        lines = [f"*VWO SPLIT TEST — {campaign_label}*"]
+        lines = [f"*VWO SPLIT TEST - {campaign_label}*"]
         if date_label:
             lines.append(f"_{date_label}_")
         lines.append("")
@@ -4740,7 +4737,7 @@ def handle_message(msg):
         lines.append("")
         lines.append("*PRIMARY: Subscription*")
         sub_rates = [
-            f"{v['subscriptions']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "—"
+            f"{v['subscriptions']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "-"
             for v in variants
         ]
         lines.append(fmt_row("Conversions", [f"{v['subscriptions']:,}" for v in variants]))
@@ -4754,7 +4751,7 @@ def handle_message(msg):
             lines.append("")
             lines.append("*SECONDARY: Initiate Checkout*")
             chk_rates = [
-                f"{v['checkouts']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "—"
+                f"{v['checkouts']/v['visitors']*100:.2f}%" if v['visitors'] > 0 else "-"
                 for v in variants
             ]
             lines.append(fmt_row("Conversions", [f"{v['checkouts']:,}" for v in variants]))
@@ -4774,7 +4771,7 @@ def handle_message(msg):
 
     if stage == "ds_vwo_awaiting_num":
         raw = text.strip()
-        # Parse input — could be "001" or "001_Homepage"
+        # Parse input - could be "001" or "001_Homepage"
         if "_" in raw:
             parts = raw.split("_", 1)
             campaign_num = parts[0].zfill(3)
@@ -4783,7 +4780,7 @@ def handle_message(msg):
             campaign_num = raw.zfill(3)
             page_filter = None
 
-        # Custom date range — ask for it
+        # Custom date range - ask for it
         state["ds_vwo_campaign_num"] = campaign_num
         state["ds_vwo_page_filter"] = page_filter
         state["stage"] = "ds_vwo_awaiting_dates"
@@ -4853,14 +4850,14 @@ def handle_message(msg):
         user_state[chat_id]["stage"] = "ds_awaiting_email_split_data"
         user_state[chat_id]["ds_images"] = []
         keyboard = [
-            [{"text": "Done — analyse now", "callback_data": "ds_analyse_emails_split"}],
+            [{"text": "Done - analyse now", "callback_data": "ds_analyse_emails_split"}],
             [{"text": "Type numbers manually", "callback_data": "ds_email_type_numbers"}]
         ]
         send(chat_id, "Got it. Upload screenshots/CSV or type raw numbers directly (e.g. \'Variant A: 5000 sent, 1200 opens, 25 clicks\').", keyboard)
         return
 
     if stage == "ds_awaiting_email_split_numbers":
-        # User typed raw numbers — use as CSV text
+        # User typed raw numbers - use as CSV text
         user_state[chat_id]["ds_csv_text"] = text
         analyse_emails(chat_id, split_var=user_state[chat_id].get("ds_split_var"))
         return
@@ -4869,7 +4866,7 @@ def handle_message(msg):
         user_state[chat_id]["ds_split_var"] = text
         user_state[chat_id]["stage"] = "ds_awaiting_landing_split_data"
         user_state[chat_id]["ds_images"] = []
-        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_landing_split"}]]
+        keyboard = [[{"text": "Done - analyse now", "callback_data": "ds_analyse_landing_split"}]]
         send(chat_id, "Got it. Now upload your landing page screenshots or CSV.", keyboard)
         return
 
@@ -4886,7 +4883,7 @@ def handle_message(msg):
                 avg_ctr = round(sum(ctrs) / len(ctrs), 2) if ctrs else totals.get("avg_ctr", 0)
                 max_ctr = round(max(ctrs), 2) if ctrs else 0
                 totals_prefix = (
-                    "VERIFIED DATA — always use these exact numbers, do not re-calculate:\n"
+                    "VERIFIED DATA - always use these exact numbers, do not re-calculate:\n"
                     f"Total ads: {totals.get('total_ads', '?')}\n"
                     f"Total spend: £{totals.get('total_spend', 0):,.2f}\n"
                     f"Total checkouts initiated: {totals.get('total_checkouts', '?')}\n"
@@ -4902,7 +4899,7 @@ def handle_message(msg):
                 totals_prefix +
                 "Previous analysis:\n" + last_analysis[:2000] +
                 "\n\nFollow-up question: " + text +
-                "\n\nAnswer specifically and directly from the verified data above. Never say you cannot calculate something — the numbers are all there.",
+                "\n\nAnswer specifically and directly from the verified data above. Never say you cannot calculate something - the numbers are all there.",
                 max_tokens=1500,
                 system=DATA_STUDIO_SYSTEM
             )
@@ -4996,7 +4993,7 @@ def handle_message(msg):
         return
 
     if stage == "voice_awaiting_edit":
-        # User is adding detail to their voice brief — re-interpret with the extra context
+        # User is adding detail to their voice brief - re-interpret with the extra context
         original = user_state[chat_id].get("voice_transcript", "")
         combined = original + ". Additional detail: " + text
         user_state[chat_id]["voice_transcript"] = combined
@@ -5102,7 +5099,7 @@ def handle_message(msg):
         return
 
     if stage == "ec_awaiting_instruction":
-        # First paste — this is the copy they want to edit
+        # First paste - this is the copy they want to edit
         original = text.strip()
         if len(original) < 20:
             send(chat_id, "That looks too short. Paste the full copy you want to edit.")
@@ -5121,7 +5118,7 @@ def handle_message(msg):
         return
 
     if stage == "ec_awaiting_specific":
-        # Second input — specific instruction
+        # Second input - specific instruction
         instruction = text.strip()
         st = user_state[chat_id]
         original = st.get("ec_original", "")
@@ -5137,9 +5134,9 @@ def handle_message(msg):
         intent_instructions = {
             "voice":   f"Rewrite this Cryptonary {label} in Adam's voice. Rules: British-casual, direct, short punchy sentences, no em dashes, no corporate speak, first person. Instruction: {instruction}",
             "punch":   f"Punch up this Cryptonary {label}. Keep the structure. Make every sentence earn its place. Sharper hooks, stronger verbs, tighter sentences. Instruction: {instruction}",
-            "cred":    f"Rewrite this Cryptonary {label} weaving in Cryptonary's credibility and track record naturally. Don't make it a list — integrate the proof points into the copy flow. Instruction: {instruction}",
+            "cred":    f"Rewrite this Cryptonary {label} weaving in Cryptonary's credibility and track record naturally. Don't make it a list - integrate the proof points into the copy flow. Instruction: {instruction}",
             "convert": f"Convert this copy into the requested format for Cryptonary. Maintain the core message and Adam's voice throughout. Instruction: {instruction}",
-            "fix":     f"Fix the specific issue in this Cryptonary {label}. Only change what needs fixing — leave the rest intact. Issue to fix: {instruction}",
+            "fix":     f"Fix the specific issue in this Cryptonary {label}. Only change what needs fixing - leave the rest intact. Issue to fix: {instruction}",
         }
         base_instruction = intent_instructions.get(intent, f"Improve this {label} in Adam's voice. Instruction: {instruction}")
 
@@ -5148,7 +5145,7 @@ def handle_message(msg):
             (voice_ex + "\n\n" if voice_ex else "") +
             base_instruction +
             "\n\nORIGINAL:\n" + original[:4000] +
-            "\n\nRules: No em dashes. Adam's voice. Return ONLY the rewritten copy as plain text — no preamble, no explanation, no 'Here's the rewritten version:'."
+            "\n\nRules: No em dashes. Adam's voice. Return ONLY the rewritten copy as plain text - no preamble, no explanation, no 'Here's the rewritten version:'."
         )
 
         send(chat_id, "Rewriting...")
@@ -5345,7 +5342,7 @@ def handle_message(msg):
     if stage == "yt_awaiting_content":
         state["yt_content"] = text
         state["yt_mode"] = state.get("yt_mode", "fresh")
-        # Generate immediately — no extra questions
+        # Generate immediately - no extra questions
         gen_yt_desc(chat_id)
         return
 
@@ -5358,18 +5355,19 @@ def handle_message(msg):
     if len(text) > 100:
         current_stage = user_state.get(chat_id, {}).get("stage", "idle")
 
-        # Already buffering — append and extend the window, never trigger twice
+        # Already buffering - append and extend the window, never trigger twice
         if current_stage == "buffering_report":
             user_state[chat_id]["report_buffer"] += "\n" + text
             user_state[chat_id]["buffer_timer"] = time.time()
             return
 
         # Suppress stale chunks arriving after buffer already resolved
-        if current_stage in ["awaiting_context_choice", "context_preview", "pick_angle", "pick_free_hook",
+        if current_stage in ["awaiting_context_choice", "context_preview",
+                              "pick_angle", "pick_free_hook",
                               "pick_pro_hook", "social_ready", "emails_ready"]:
             return
 
-        # EMAIL REPORT — buffer and wait for all chunks
+        # EMAIL REPORT - buffer and wait for all chunks
         if current_stage == "awaiting_email_report":
             user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text,
                                     "buffer_timer": time.time(), "mode": "email"}
@@ -5380,15 +5378,31 @@ def handle_message(msg):
                 ask_context(chat_id)
             return
 
-        # SOCIAL REPORT — buffer and wait
+        # SOCIAL REPORT - buffer and wait
         if current_stage == "awaiting_social_report":
             user_state[chat_id]["report"] = (user_state[chat_id].get("report", "") + "\n" + text).strip()
-            # Don't trigger again — awaiting_social_report already handled above
+            # Don't trigger again - awaiting_social_report already handled above
             return
 
-        # DEFAULT fallback — treat as email report
+        # DEFAULT fallback - treat as email report ONLY if not in a known input stage
         if current_stage in ["idle", "buffering_report"]:
             return
+        # If in a legitimate text-input stage, let handle_message's stage routing handle it
+        _legitimate_input_stages = {
+            "awaiting_context_text", "awaiting_quick_edit", "social_quick_edit",
+            "awaiting_custom_angle", "awaiting_custom_pro_angle",
+            "awaiting_custom_free_hook", "awaiting_custom_pro_hook",
+            "awaiting_seg_edit", "awaiting_additional_context",
+            "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing",
+            "awaiting_format_instruction", "awaiting_manual_edit",
+            "awaiting_revised_email", "awaiting_revised_free_email",
+            "awaiting_revised_pro_email", "awaiting_revised_ad", "awaiting_revised_social",
+            "awaiting_revised_yt", "yt_awaiting_quick_edit", "yt_awaiting_content",
+            "yt_awaiting_existing", "lp_awaiting_paste_back", "lp_awaiting_length_instruction",
+            "awaiting_storyboard_brief", "awaiting_storyboard_report",
+        }
+        if current_stage in _legitimate_input_stages:
+            return  # Let handle_message's stage routing handle it below
         user_state[chat_id] = {"stage": "buffering_report", "report_buffer": text,
                                 "buffer_timer": time.time(), "mode": "email"}
         time.sleep(2)
@@ -5400,7 +5414,7 @@ def handle_message(msg):
         stage = user_state.get(chat_id, {}).get("stage", "idle")
         if stage == "idle":
             show_main_menu(chat_id)
-        # Silently ignore short text in active flows — don't reset or confuse the user
+        # Silently ignore short text in active flows - don't reset or confuse the user
 
 def handle_callback(cb):
     chat_id = cb["message"]["chat"]["id"]
@@ -5414,7 +5428,7 @@ def handle_callback(cb):
     cb_key = str(chat_id) + ":" + data
     now = time.time()
     last = _last_callback_time.get(cb_key, 0)
-    # Never cooldown these — they need to fire immediately every time
+    # Never cooldown these - they need to fire immediately every time
     no_cooldown = {
         "mark_complete", "start_over", "vb_auto", "img_from_brief",
         "img_regen", "img_direction", "img_restyle",
@@ -5599,7 +5613,7 @@ def handle_callback(cb):
     elif data == "mode_reel_analysis":
         user_state.setdefault(chat_id, {})
         user_state[chat_id]["stage"] = "awaiting_reel_upload"
-        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll score it on:\n• Hook (1-10) — does it stop the scroll in 3 seconds?\n• Pacing (1-10) — information density, hold rate\n• On-screen text (1-10) — clarity, timing, load\n• Shareability (1-10) — would someone send this?\n• Overall score (1-10)\n\nPlus: what's working, what to change, and a Cryptonary version of the concept.\n\n_Works for your own reels or competitor content. Max 20MB._")
+        send(chat_id, "*Reel Analysis*\n\nUpload a video (reel, ad, or any short-form content).\n\nI'll score it on:\n• Hook (1-10) - does it stop the scroll in 3 seconds?\n• Pacing (1-10) - information density, hold rate\n• On-screen text (1-10) - clarity, timing, load\n• Shareability (1-10) - would someone send this?\n• Overall score (1-10)\n\nPlus: what's working, what to change, and a Cryptonary version of the concept.\n\n_Works for your own reels or competitor content. Max 20MB._")
 
     elif data == "mode_yt_desc":
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
@@ -5607,7 +5621,7 @@ def handle_callback(cb):
             [{"text": "Edit an existing description instead", "callback_data": "yt_mode_edit"}],
         ]
         send(chat_id,
-             "*YouTube Description*\n\nPaste anything — transcript, script, report, email copy, or a quick brief.\n\nI'll write the full description from it.\n\n_Already have a description and want it tightened? Tap below._",
+             "*YouTube Description*\n\nPaste anything - transcript, script, report, email copy, or a quick brief.\n\nI'll write the full description from it.\n\n_Already have a description and want it tightened? Tap below._",
              keyboard)
 
     elif data == "social_mode_yt":
@@ -5615,7 +5629,7 @@ def handle_callback(cb):
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
         keyboard = [[{"text": "Edit an existing description instead", "callback_data": "yt_mode_edit"}]]
         send(chat_id,
-             "*YouTube Description*\n\nPaste anything — transcript, script, report, email copy, or a quick brief.\n\n_Already have a description? Tap below to tighten it instead._",
+             "*YouTube Description*\n\nPaste anything - transcript, script, report, email copy, or a quick brief.\n\n_Already have a description? Tap below to tighten it instead._",
              keyboard)
 
     elif data == "yt_mode_edit":
@@ -5718,9 +5732,9 @@ def handle_callback(cb):
         else:
             state["selected_stages"] = []
             keyboard = [
-                [{"text": "Awareness — stop the scroll, no selling", "callback_data": "adstage_awareness"}],
-                [{"text": "Consideration — proof and education",     "callback_data": "adstage_consideration"}],
-                [{"text": "Conversion — direct offer and CTA",       "callback_data": "adstage_conversion"}],
+                [{"text": "Awareness - stop the scroll, no selling", "callback_data": "adstage_awareness"}],
+                [{"text": "Consideration - proof and education",     "callback_data": "adstage_consideration"}],
+                [{"text": "Conversion - direct offer and CTA",       "callback_data": "adstage_conversion"}],
             ]
             send(chat_id, "*Which funnel stage?*", keyboard)
 
@@ -5786,8 +5800,8 @@ def handle_callback(cb):
         else:
             state["stage"] = "awaiting_lp_context"
             keyboard = [
-                [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
-                [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
+                [{"text": "Yes - add context", "callback_data": "lp_context_yes"}],
+                [{"text": "No - generate outline now", "callback_data": "lp_context_no"}]
             ]
             send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
@@ -5795,8 +5809,8 @@ def handle_callback(cb):
         state["lp_cta"] = "pro"
         state["stage"] = "awaiting_lp_context"
         keyboard = [
-            [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
-            [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
+            [{"text": "Yes - add context", "callback_data": "lp_context_yes"}],
+            [{"text": "No - generate outline now", "callback_data": "lp_context_no"}]
         ]
         send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
@@ -5804,8 +5818,8 @@ def handle_callback(cb):
         state["lp_cta"] = "inner_circle"
         state["stage"] = "awaiting_lp_context"
         keyboard = [
-            [{"text": "Yes — add context", "callback_data": "lp_context_yes"}],
-            [{"text": "No — generate outline now", "callback_data": "lp_context_no"}]
+            [{"text": "Yes - add context", "callback_data": "lp_context_yes"}],
+            [{"text": "No - generate outline now", "callback_data": "lp_context_no"}]
         ]
         send(chat_id, "*Any extra context?*\n\nCurrent offer, promo, urgency mechanic, specific hook, seasonal angle...", keyboard)
 
@@ -5834,7 +5848,7 @@ def handle_callback(cb):
             state["current_lp"] = pre_edit
             send(chat_id, "Reverted to previous version.")
             keyboard = [
-                [{"text": "Approve — Generate Design Brief", "callback_data": "lp_approve_copy"}],
+                [{"text": "Approve - Generate Design Brief", "callback_data": "lp_approve_copy"}],
                 [{"text": "Quick Edit", "callback_data": "lp_quick_edit"}]
             ]
             send(chat_id, "Previous version restored.", keyboard)
@@ -5945,7 +5959,7 @@ def handle_callback(cb):
         prev = state.get("pro_angles", [])
         avoid = ""
         if prev:
-            avoid = "\n\nPREVIOUSLY SHOWN — use completely different angles:\n" + "\n".join(f"{i+1}. {a}" for i, a in enumerate(prev))
+            avoid = "\n\nPREVIOUSLY SHOWN - use completely different angles:\n" + "\n".join(f"{i+1}. {a}" for i, a in enumerate(prev))
         send(chat_id, "Finding new angles...")
         try:
             raw = openai_gpt(
@@ -5977,7 +5991,7 @@ def handle_callback(cb):
             state["selected_free_hook"] = hooks[idx]
             state["selected_pro_hook"] = hooks[idx]
             state["selected_hook"] = hooks[idx]
-        # Skip Pro hook picker — go straight to CTA
+        # Skip Pro hook picker - go straight to CTA
         ask_free_cta(chat_id)
 
     elif data.startswith("pro_hook_") and data != "pro_hook_same":
@@ -6030,15 +6044,25 @@ def handle_callback(cb):
 
     elif data.startswith("cta_free_"):
         key = data.replace("cta_free_", "")
-        user_state[chat_id]["free_cta"] = key
-        send(chat_id, "Free CTA: _" + CTA_OPTIONS["free"][key] + "_")
-        ask_pro_cta(chat_id)
+        if key == "custom":
+            user_state[chat_id]["stage"] = "awaiting_custom_free_cta"
+            send(chat_id, "*Write your Free email CTA instruction:*\n\n"
+                         "_Describe what you want the CTA to do — e.g. 'Drive to the IC application page with urgency' / 'Soft invite to book a call'_")
+        else:
+            user_state[chat_id]["free_cta"] = key
+            send(chat_id, "Free CTA: _" + CTA_OPTIONS["free"].get(key, key) + "_")
+            ask_pro_cta(chat_id)
 
     elif data.startswith("cta_pro_"):
         key = data.replace("cta_pro_", "")
-        user_state[chat_id]["pro_cta"] = key
-        send(chat_id, "Pro CTA: _" + CTA_OPTIONS["pro"][key] + "_")
-        gen_emails(chat_id)
+        if key == "custom":
+            user_state[chat_id]["stage"] = "awaiting_custom_pro_cta"
+            send(chat_id, "*Write your Pro email CTA instruction:*\n\n"
+                         "_Describe what you want the CTA to do — e.g. 'Link to the full report dashboard' / 'Drive to the IC page'_")
+        else:
+            user_state[chat_id]["pro_cta"] = key
+            send(chat_id, "Pro CTA: _" + CTA_OPTIONS["pro"].get(key, key) + "_")
+            gen_emails(chat_id)
 
     elif data == "regen_emails":
         # Regenerate emails with same report/angle
@@ -6156,7 +6180,7 @@ def handle_callback(cb):
 
     elif data == "add_context_email":
         state["stage"] = "awaiting_additional_context"
-        send(chat_id, "Add any extra context to factor in — promo, event, angle tweak, anything:\n\n_The emails will be regenerated with this added._")
+        send(chat_id, "Add any extra context to factor in - promo, event, angle tweak, anything:\n\n_The emails will be regenerated with this added._")
 
     elif data == "revert_email_edit":
         pre_edit = state.get("pre_edit_emails", {})
@@ -6205,7 +6229,7 @@ def handle_callback(cb):
             ]
             send(chat_id, "Which email(s) do you want to approve?", keyboard)
             return
-        # Only one exists — fall through to approve both
+        # Only one exists - fall through to approve both
         state["_approve_which"] = "both"
 
     elif data in ("approve_emails_both", "approve_emails_free", "approve_emails_pro"):
@@ -6254,7 +6278,7 @@ def handle_callback(cb):
         creative = state.get("last_ad_creative_desc", "")
         if creative:
             state["ad_creative_angle_instruction"] = "Try a completely different emotional angle from the previous version."
-            gen_ad_copy_for_creative(chat_id, creative + "\n\nTry a completely different emotional angle — if previous was fear-based, use aspiration or social proof instead.")
+            gen_ad_copy_for_creative(chat_id, creative + "\n\nTry a completely different emotional angle - if previous was fear-based, use aspiration or social proof instead.")
         else:
             send(chat_id, "Upload the creative again.")
             state["stage"] = "awaiting_ad_creative_upload"
@@ -6266,9 +6290,9 @@ def handle_callback(cb):
     elif data == "ad_diff_stage":
         state["selected_stages"] = []
         keyboard = [
-            [{"text": "Awareness — stop the scroll, no selling", "callback_data": "adstage_awareness"}],
-            [{"text": "Consideration — proof and education",     "callback_data": "adstage_consideration"}],
-            [{"text": "Conversion — direct offer and CTA",       "callback_data": "adstage_conversion"}],
+            [{"text": "Awareness - stop the scroll, no selling", "callback_data": "adstage_awareness"}],
+            [{"text": "Consideration - proof and education",     "callback_data": "adstage_consideration"}],
+            [{"text": "Conversion - direct offer and CTA",       "callback_data": "adstage_conversion"}],
         ]
         send(chat_id, "*Which funnel stage?*", keyboard)
 
@@ -6289,7 +6313,7 @@ def handle_callback(cb):
         has_free = bool(emails.get("free", ""))
         has_pro = bool(emails.get("pro", ""))
         if has_free and has_pro:
-            # Ask which to submit first — or both
+            # Ask which to submit first - or both
             keyboard = [
                 [{"text": "Submit Free email",       "callback_data": "submit_revised_free"}],
                 [{"text": "Submit Pro email",         "callback_data": "submit_revised_pro"}],
@@ -6330,7 +6354,7 @@ def handle_callback(cb):
 
     elif data == "social_yes":
         state["selected_social_formats"] = []
-        # Coming from approved email — report and angle already in state, skip straight to format picker
+        # Coming from approved email - report and angle already in state, skip straight to format picker
         email_stages = {"emails_approved", "emails_ready", "social_approved"}
         has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
         has_report = bool(state.get("report") or state.get("current_social") or state.get("current_emails"))
@@ -6349,7 +6373,7 @@ def handle_callback(cb):
         angles = state.get("social_angles", [])
         if idx < len(angles):
             state["social_angle"] = angles[idx]
-        # Don't reset formats — go straight to hooks since formats already selected
+        # Don't reset formats - go straight to hooks since formats already selected
         gen_social_hooks(chat_id)
 
     elif data == "social_regen_angles":
@@ -6435,9 +6459,9 @@ def handle_callback(cb):
         show_social_format_menu(chat_id)
 
     elif data.startswith("pick_fmt_"):
-        # Single-tap format selection — pick one format and go straight to angle/hook
+        # Single-tap format selection - pick one format and go straight to angle/hook
         fmt = data.replace("pick_fmt_", "")
-        # Preserve existing angle/report — only reset format-specific state
+        # Preserve existing angle/report - only reset format-specific state
         state["selected_social_formats"] = [fmt]
         state["social_hooks"] = {}
         state["selected_social_hooks"] = {}
@@ -6530,20 +6554,21 @@ def handle_callback(cb):
         send(chat_id, "Segments approved.", keyboard)
 
     elif data == "view_current":
-        # Show current version of whatever is in state
-        shown = False
         emails = state.get("current_emails", {})
-        if emails.get("free"):
-            send_plain(chat_id, "FREE EMAIL (current)\n\n" + clean_copy(extract_text(emails["free"])))
-            shown = True
-        if emails.get("pro"):
-            send_plain(chat_id, "PRO EMAIL (current)\n\n" + clean_copy(extract_text(emails["pro"])))
-            shown = True
-        if state.get("current_social") and not emails:
+        if emails.get("free") or emails.get("pro"):
+            if emails.get("free"):
+                send_plain(chat_id, "FREE EMAIL (current)\n\n" + clean_copy(extract_text(emails["free"])))
+            if emails.get("pro"):
+                send_plain(chat_id, "PRO EMAIL (current)\n\n" + clean_copy(extract_text(emails["pro"])))
+            send(chat_id, "Current version shown above.", email_action_keyboard())
+        elif state.get("current_social"):
             social_type = state.get("current_social_type", "Social content")
             send_plain(chat_id, social_type.upper() + " (current)\n\n" + state["current_social"])
-            shown = True
-        if not shown:
+            send(chat_id, "Current version shown above.", social_action_keyboard())
+        elif state.get("current_ad_output"):
+            send_plain(chat_id, "AD COPY (current)\n\n" + state["current_ad_output"][:3000])
+            send(chat_id, "Current version shown above.", ad_action_keyboard())
+        else:
             send(chat_id, "Nothing to show yet.")
 
     elif data == "back_to_emails":
@@ -6662,26 +6687,26 @@ def handle_callback(cb):
         start_ds_adverts(chat_id)
 
     elif data == "ds_landing_upload":
-        # Alias — route to landing page data studio
+        # Alias - route to landing page data studio
         state["ds_images"] = []
         start_ds_landing(chat_id)
 
     elif data == "ds_social_upload":
-        # Alias — route to social data studio upload flow
+        # Alias - route to social data studio upload flow
         state["ds_images"] = []
         state["ds_social_filter"] = "all"
         state["stage"] = "ds_awaiting_social_data"
         send(chat_id, "Upload your Instagram screenshots or CSV:")
 
     elif data == "ds_social_manual":
-        # Alias — route to social manual entry
+        # Alias - route to social manual entry
         state["ds_images"] = []
         state["ds_social_filter"] = "all"
         state["stage"] = "ds_awaiting_social_data"
         send(chat_id, "Paste your Instagram performance numbers:")
 
     elif data == "ds_adverts_upload":
-        # After choosing upload — ask which ad type filter then accept files
+        # After choosing upload - ask which ad type filter then accept files
         keyboard = [
             [{"text": "All ads", "callback_data": "ad_filter_all"}],
             [{"text": "Video ads only", "callback_data": "ad_filter_video"}],
@@ -6692,8 +6717,8 @@ def handle_callback(cb):
     elif data == "ds_adverts_manual":
         state["ds_ad_filter"] = "all"
         state["stage"] = "ds_awaiting_ad_data"
-        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
-        send(chat_id, "*Ad Data*\n\nPaste your numbers directly — any format works.\n\n_e.g. Ad name | Spend | Clicks | CTR | Checkouts_", keyboard)
+        keyboard = [[{"text": "Done - analyse now", "callback_data": "ds_analyse_ads"}]]
+        send(chat_id, "*Ad Data*\n\nPaste your numbers directly - any format works.\n\n_e.g. Ad name | Spend | Clicks | CTR | Checkouts_", keyboard)
 
     elif data.startswith("ad_filter_"):
         ad_filter = data.replace("ad_filter_", "")
@@ -6701,7 +6726,7 @@ def handle_callback(cb):
         state["stage"] = "ds_awaiting_ad_data"
         state["ds_images"] = []
         filter_label = {"all": "All ads", "video": "Video ads only", "static": "Static ads only"}.get(ad_filter, "All ads")
-        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_ads"}]]
+        keyboard = [[{"text": "Done - analyse now", "callback_data": "ds_analyse_ads"}]]
         send(chat_id, "*" + filter_label + "*\n\nUpload your Meta Ads Manager screenshots or CSV. Send all files then tap Done.", keyboard)
 
     elif data == "ds_social":
@@ -6715,7 +6740,7 @@ def handle_callback(cb):
         state["stage"] = "ds_awaiting_social_data"
         state["ds_images"] = []
         filter_label = {"all": "All formats", "reels": "Reels only", "statics": "Statics only", "carousels": "Carousels only"}.get(social_filter, "All formats")
-        keyboard = [[{"text": "Done — analyse now", "callback_data": "ds_analyse_social"}]]
+        keyboard = [[{"text": "Done - analyse now", "callback_data": "ds_analyse_social"}]]
         send(chat_id, "*" + filter_label + "*\n\nUpload your Minter screenshots or CSV. Send all then tap Done.", keyboard)
 
     elif data == "ds_emails":
@@ -6724,7 +6749,7 @@ def handle_callback(cb):
         start_ds_emails(chat_id)
 
     elif data == "ds_meta_setup":
-        send(chat_id, "*Connect Meta Ads*\n\nAdd these to your Render environment variables:\n\n`META_TOKEN` — your Meta Business API token\n`META_AD_ACCOUNT` — your ad account ID (e.g. act_123456789)\n\nGet your token at: business.facebook.com → Settings → API → Generate token")
+        send(chat_id, "*Connect Meta Ads*\n\nAdd these to your Render environment variables:\n\n`META_TOKEN` - your Meta Business API token\n`META_AD_ACCOUNT` - your ad account ID (e.g. act_123456789)\n\nGet your token at: business.facebook.com → Settings → API → Generate token")
 
     elif data == "ds_meta_pull":
         send(chat_id, "Pulling Meta ad data (last 30 days)...")
@@ -6736,7 +6761,7 @@ def handle_callback(cb):
                           fallback_action="Check your ad account ID and token permissions in Render environment variables.")
         else:
             # Format as text for analysis
-            lines = ["META ADS — Last 30 Days\n"]
+            lines = ["META ADS - Last 30 Days\n"]
             for ad in ads[:50]:
                 spend = ad.get("spend", "0")
                 clicks = ad.get("clicks", "0")
@@ -6766,16 +6791,16 @@ def handle_callback(cb):
 
     elif data == "ds_email_manual":
         state["stage"] = "ds_awaiting_email_splitvar"
-        send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers — any format.")
+        send(chat_id, "*Email Split Test Analysis*\n\nWhat variable are you testing?\n\n_e.g. Image vs No Image, Name in subject vs No name, Short subject vs Long subject_\n\nAfter entering the variable, you can upload screenshots, CSVs, paste raw numbers - any format.")
 
     elif data == "ds_brevo_setup":
-        send(chat_id, "*Connect Brevo*\n\nAdd this to your Render environment variables:\n\n`BREVO_API_KEY` — your Brevo API key\n\nGet it at: app.brevo.com → Settings → API Keys")
+        send(chat_id, "*Connect Brevo*\n\nAdd this to your Render environment variables:\n\n`BREVO_API_KEY` - your Brevo API key\n\nGet it at: app.brevo.com → Settings → API Keys")
 
     elif data == "ds_brevo_list_sizes":
         if not BREVO_API_KEY:
             notify_failure(chat_id, "brevo_lists", error="No API key configured")
             return
-        send(chat_id, "Pulling segment sizes from Brevo — this takes about 30 seconds...")
+        send(chat_id, "Pulling segment sizes from Brevo - this takes about 30 seconds...")
         try:
             report = build_brevo_list_health()
             current = fetch_all_segment_sizes()
@@ -6806,11 +6831,11 @@ def handle_callback(cb):
         if err:
             notify_failure(chat_id, "brevo_campaigns", error=err)
         elif not campaigns:
-            send(chat_id, "No sent campaigns found in Brevo. Campaigns must have status 'sent' to appear here — drafts and scheduled campaigns won't show.", [
+            send(chat_id, "No sent campaigns found in Brevo. Campaigns must have status 'sent' to appear here - drafts and scheduled campaigns won't show.", [
                 [{"text": "Back to Email Analysis", "callback_data": "ds_emails"}],
             ])
         else:
-            lines = ["BREVO EMAIL CAMPAIGNS — Last 30 sent\n"]
+            lines = ["BREVO EMAIL CAMPAIGNS - Last 30 sent\n"]
             lines.append("Name | Subject | Sent | Open Rate | CTR | Unsub Rate")
             lines.append("-" * 80)
             for c in campaigns:
@@ -6898,7 +6923,7 @@ def handle_callback(cb):
             "3. You need: Unique Visitors per variant, and Unique Conversions for each goal\n"
             "4. Goals to look for: your Subscription goal (primary) and Checkout/Initiate Checkout goal (secondary)\n\n"
             "_If you have more than 2 variants, add them in the same format (Variant C, Variant D etc.)_\n\n"
-            "_If you only have one conversion metric, just omit the other — the bot will handle it._"
+            "_If you only have one conversion metric, just omit the other - the bot will handle it._"
         ))
         user_state[chat_id]["stage"] = "ds_vwo_awaiting_manual_data"
 
@@ -7015,13 +7040,13 @@ def handle_callback(cb):
     elif data == "ad_product_pro":
         state["ad_product"] = "pro"
         state["ad_product_label"] = "Cryptonary Pro ($1,197/year)"
-        state["ad_product_context"] = "Cryptonary Pro — research platform, 300K+ subscribers, weekly analysis, airdrops, community. Price: $1,197/year."
+        state["ad_product_context"] = "Cryptonary Pro - research platform, 300K+ subscribers, weekly analysis, airdrops, community. Price: $1,197/year."
         show_ad_input_menu(chat_id)
 
     elif data == "ad_product_ic":
         state["ad_product"] = "ic"
         state["ad_product_label"] = "Inner Circle ($15K–$22K)"
-        state["ad_product_context"] = "Cryptonary Inner Circle — dedicated team of 8, personalised portfolio framework, monthly audit reports, 20+ hours call time. Application only. $15,000–$22,000/year. Minimum $200K portfolio."
+        state["ad_product_context"] = "Cryptonary Inner Circle - dedicated team of 8, personalised portfolio framework, monthly audit reports, 20+ hours call time. Application only. $15,000–$22,000/year. Minimum $200K portfolio."
         show_ad_input_menu(chat_id)
 
     elif data == "ad_input_new":
@@ -7033,7 +7058,7 @@ def handle_callback(cb):
     elif data == "ad_input_existing":
         state["ad_existing"] = True
         state["stage"] = "awaiting_ad_existing_upload"
-        send(chat_id, "Upload your existing ad — image, screenshot, or paste the copy below.")
+        send(chat_id, "Upload your existing ad - image, screenshot, or paste the copy below.")
 
     elif data.startswith("existing_ad_") and data != "existing_ad_back":
         action = data.replace("existing_ad_", "")
@@ -7140,7 +7165,7 @@ def handle_callback(cb):
         # Wait for user to drop text, URL, brief, or image
         state["stage"] = "ie_awaiting_inspiration"
         state["ie_idea_type"] = "instagram"
-        send(chat_id, "*Generate from Inspiration*\n\nDrop anything:\n\n• A link\n• A screenshot or image\n• Paste text (article, caption, post)\n• Or just type a brief — e.g. \"market manipulation ideas\"")
+        send(chat_id, "*Generate from Inspiration*\n\nDrop anything:\n\n• A link\n• A screenshot or image\n• Paste text (article, caption, post)\n• Or just type a brief - e.g. \"market manipulation ideas\"")
 
     elif data == "ie_generate_all":
         # Regenerate concepts using current source content
@@ -7158,7 +7183,7 @@ def handle_callback(cb):
             [{"text": "Video script", "callback_data": "ie_ad_fmt_video"}],
             [{"text": "Static ad", "callback_data": "ie_ad_fmt_static"}]
         ]
-        send(chat_id, "*Ad idea — what format?*", keyboard)
+        send(chat_id, "*Ad idea - what format?*", keyboard)
 
     elif data == "ie_ad_fmt_video":
         state["ie_format"] = "video"
@@ -7176,7 +7201,7 @@ def handle_callback(cb):
             [{"text": "Static post", "callback_data": "ie_ig_fmt_static"},
              {"text": "Story", "callback_data": "ie_ig_fmt_story"}]
         ]
-        send(chat_id, "*Instagram idea — what format?*", keyboard)
+        send(chat_id, "*Instagram idea - what format?*", keyboard)
 
     elif data.startswith("ie_ig_fmt_"):
         fmt = data.replace("ie_ig_fmt_", "")
@@ -7227,7 +7252,7 @@ def handle_callback(cb):
             concept_text = blocks[num][:300]
         else:
             concept_text = concepts_raw[:300]
-        # Skip angle picker — concept already contains the angle. Go straight to content flow.
+        # Skip angle picker - concept already contains the angle. Go straight to content flow.
         state["report"] = "INSTAGRAM CONCEPT TO DEVELOP:\n" + concept_text
         state["social_angle"] = concept_text[:120]
         state["social_origin"] = "idea_engine"
@@ -7246,7 +7271,7 @@ def handle_callback(cb):
         if concepts_raw:
             send_plain(chat_id, "*IDEAS*\n\n" + concepts_raw)
             keyboard = [
-                [{"text": str(i+1) + " — Expand this", "callback_data": "ie_develop_concept_" + str(i+1)}]
+                [{"text": str(i+1) + " - Expand this", "callback_data": "ie_develop_concept_" + str(i+1)}]
                 for i in range(4)
             ] + [[{"text": "Regenerate", "callback_data": "ie_regen_concepts"}]]
             send(chat_id, "Tap a number to expand into full content:", keyboard)
@@ -7336,7 +7361,7 @@ def handle_callback(cb):
             user_state[chat_id]["stage"] = "pick_ad_avatars"
             show_avatar_menu(chat_id)
         else:
-            # Route to social format picker — stays inside creative flow
+            # Route to social format picker - stays inside creative flow
             show_standalone_social_menu(chat_id)
 
     elif data == "ie_manage_sources":
@@ -7352,11 +7377,11 @@ def handle_callback(cb):
 
     elif data == "ie_screenshot_ideas":
         state["stage"] = "ie_awaiting_screenshot_ideas"
-        send(chat_id, "*Ideas from a Screenshot*\n\nSend an image — Instagram post, ad, competitor content, anything. I\'ll analyse it and generate ideas based on what\'s working in it.")
+        send(chat_id, "*Ideas from a Screenshot*\n\nSend an image - Instagram post, ad, competitor content, anything. I\'ll analyse it and generate ideas based on what\'s working in it.")
 
     elif data == "ie_screenshot_critique":
         state["stage"] = "ie_awaiting_screenshot_critique"
-        send(chat_id, "*Critique a Screenshot*\n\nSend an image of any content — your own post, a competitor ad, a carousel. I\'ll critique it against our full knowledge base with specific, numbered fixes.")
+        send(chat_id, "*Critique a Screenshot*\n\nSend an image of any content - your own post, a competitor ad, a carousel. I\'ll critique it against our full knowledge base with specific, numbered fixes.")
 
     elif data == "ie_imageprompt_again":
         brief = state.get("last_image_brief", "")
@@ -7387,7 +7412,7 @@ def handle_callback(cb):
         if verified:
             with_co = [a for a in verified if a["checkouts"] > 0]
             ranked = sorted(with_co, key=lambda x: x["cost_per_checkout"])[:5]
-            table = "VERIFIED TOP 5 BY COST PER CHECKOUT (Python-computed — use these exact names and numbers):\n"
+            table = "VERIFIED TOP 5 BY COST PER CHECKOUT (Python-computed - use these exact names and numbers):\n"
             for i, a in enumerate(ranked, 1):
                 table += f"{i}. {a['name']} | Spend: £{a['spend']:.2f} | Checkouts: {int(a['checkouts'])} | CPCo: £{a['cost_per_checkout']:.2f} | CTR: {a['ctr']:.2f}%\n"
             prompt = (table + "\nFor each of these 5 ads: confirm the exact ad name as listed above, state the key metric, "
@@ -7417,7 +7442,7 @@ def handle_callback(cb):
             worst_cpco = sorted(with_co, key=lambda x: -x["cost_per_checkout"])[:3]
             zero_co = sorted([a for a in verified if a["checkouts"] == 0 and a["spend"] >= 10],
                              key=lambda x: -x["spend"])[:2]
-            table = "VERIFIED WORST PERFORMERS (Python-computed — use these exact names and numbers):\n\nHIGHEST COST PER CHECKOUT:\n"
+            table = "VERIFIED WORST PERFORMERS (Python-computed - use these exact names and numbers):\n\nHIGHEST COST PER CHECKOUT:\n"
             for i, a in enumerate(worst_cpco, 1):
                 table += f"{i}. {a['name']} | Spend: £{a['spend']:.2f} | Checkouts: {int(a['checkouts'])} | CPCo: £{a['cost_per_checkout']:.2f}\n"
             table += "\nHIGHEST SPEND WITH ZERO CHECKOUTS:\n"
@@ -7472,8 +7497,8 @@ def handle_callback(cb):
 
         prompt = (avatar_table + "\n\n" if avatar_table else "") + (
             "From this ad analysis, identify 5 clear patterns. Rules:\n"
-            "- ONLY cite ad names that appear verbatim in the data — never invent or paraphrase names\n"
-            "- Use the exact CPCo ratios from the verified data — do not compress ranges (e.g. if range is 2x-16x, say 2x-16x)\n"
+            "- ONLY cite ad names that appear verbatim in the data - never invent or paraphrase names\n"
+            "- Use the exact CPCo ratios from the verified data - do not compress ranges (e.g. if range is 2x-16x, say 2x-16x)\n"
             "- Avatar conclusions must use the aggregate CPCo table above, not individual ad cherry-picks\n"
             "- For each pattern: what it is, which specific real ads evidence it (exact names), what to do\n\n"
             + analysis[:3000]
@@ -7491,7 +7516,7 @@ def handle_callback(cb):
         if not analysis:
             send(chat_id, "No analysis found. Run an analysis first.")
             return
-        result = claude("From this ad analysis, rank ALL ads from best to worst. Format as a numbered list: [Rank]. [Ad name/type] — [primary metric] — [SCALE/KEEP/TEST/KILL]\n\n" + analysis[:3000], max_tokens=1000)
+        result = claude("From this ad analysis, rank ALL ads from best to worst. Format as a numbered list: [Rank]. [Ad name/type] - [primary metric] - [SCALE/KEEP/TEST/KILL]\n\n" + analysis[:3000], max_tokens=1000)
         send_plain(chat_id, "*ALL ADS RANKED*\n\n" + result)
 
     elif data == "ds_ads_ideas":
@@ -7507,7 +7532,7 @@ def handle_callback(cb):
         )
         state["ds_ad_ideas"] = result
         send_plain(chat_id, "*IDEAS FROM DATA*\n\n" + result)
-        # Show concept selection — not avatar picker (avatars are already in the ideas)
+        # Show concept selection - not avatar picker (avatars are already in the ideas)
         keyboard = [
             [{"text": "Build Concept 1", "callback_data": "ds_build_concept_1"}],
             [{"text": "Build Concept 2", "callback_data": "ds_build_concept_2"}],
@@ -7539,7 +7564,7 @@ def handle_callback(cb):
         state["stage"] = "pick_ad_avatars"
         state["selected_avatars"] = []
         state["selected_stages"] = []
-        send(chat_id, "Got it — building from your data insights.\n\nPick your target avatars:")
+        send(chat_id, "Got it - building from your data insights.\n\nPick your target avatars:")
         show_avatar_menu(chat_id)
 
     elif data == "ds_followup":
@@ -7661,7 +7686,7 @@ def handle_callback(cb):
         if BREVO_API_KEY and state.get("stage") == "emails_approved" and state.get("current_emails") and not state.get("brevo_draft_pushed"):
             keyboard = [
                 [{"text": "📧 Push to Brevo", "callback_data": "brevo_push_start"}],
-                [{"text": "Skip — session complete", "callback_data": "brevo_skip_push"}],
+                [{"text": "Skip - session complete", "callback_data": "brevo_skip_push"}],
             ]
             send(chat_id, "Emails approved. Push a draft to Brevo?", keyboard)
         else:
@@ -7722,7 +7747,7 @@ def handle_callback(cb):
         send(chat_id, "Session complete. What would you like to do next?", mark_complete_keyboard())
 
     elif data == "brevo_push_start":
-        # Step 1: Which email(s) to push — Free goes to multiple lists, Pro to Pro list only
+        # Step 1: Which email(s) to push - Free goes to multiple lists, Pro to Pro list only
         emails = state.get("current_emails", {})
         has_free = bool(emails.get("free", ""))
         has_pro = bool(emails.get("pro", ""))
@@ -7742,12 +7767,12 @@ def handle_callback(cb):
         state["brevo_selected_segs"] = []
 
         if which == "pro":
-            # Pro always goes to Pro list only — skip segment picker
+            # Pro always goes to Pro list only - skip segment picker
             state["brevo_free_segs"] = []
             state["brevo_pro_segs"] = [BREVO_SEGMENTS["pro_users"]["id"]]
             _execute_brevo_push(chat_id)
         else:
-            # Free email — pick which lists (multi-select)
+            # Free email - pick which lists (multi-select)
             keyboard = []
             free_seg_options = [
                 ("opened_30",       "Opened last 30 days"),
@@ -7784,7 +7809,7 @@ def handle_callback(cb):
             sid = BREVO_SEGMENTS.get(k, {}).get("id")
             tick = "[x]" if sid in selected else "[ ]"
             keyboard.append([{"text": tick + " " + label, "callback_data": "brevo_freesel_" + k}])
-        keyboard.append([{"text": "Done — " + str(len(selected)) + " list(s) selected", "callback_data": "brevo_freesel_done"}])
+        keyboard.append([{"text": "Done - " + str(len(selected)) + " list(s) selected", "callback_data": "brevo_freesel_done"}])
         tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id,
                                        "reply_markup": {"inline_keyboard": keyboard}})
 
@@ -7802,7 +7827,7 @@ def handle_callback(cb):
         _execute_brevo_push(chat_id)
 
     elif data in ("brevo_push_free", "brevo_push_pro", "brevo_push_both"):
-        # Legacy handlers — redirect to new flow
+        # Legacy handlers - redirect to new flow
         state["brevo_push_which"] = data.replace("brevo_push_", "")
         state["brevo_selected_segs"] = []
         keyboard = [
@@ -7823,7 +7848,7 @@ def handle_callback(cb):
         state["pending_img_concept"] = brief[:600]
         state["last_visual_brief"] = brief
         _global_brief_store[chat_id] = brief
-        # Style is already determined by the brief — skip style menu, go straight to engine picker
+        # Style is already determined by the brief - skip style menu, go straight to engine picker
         # Map vb_type to img_style
         style_map = {
             "static": "static", "carousel": "carousel", "story": "story",
@@ -7856,7 +7881,7 @@ def handle_callback(cb):
         handle_image_callbacks(chat_id, data, state)
 
     elif data == "vb_auto":
-        # Auto-detect type from current content — skip picker
+        # Auto-detect type from current content - skip picker
         social_type = state.get("current_social_type", "")
         last_vb_type = state.get("last_visual_type", "")
         # Determine content type from whatever is available
@@ -7878,7 +7903,7 @@ def handle_callback(cb):
             # Reuse last known type
             generate_visual_brief(chat_id, last_vb_type)
         else:
-            # Fallback — ask which type
+            # Fallback - ask which type
             keyboard = [
                 [{"text": "Static post",      "callback_data": "vb_type_static"}],
                 [{"text": "Carousel",         "callback_data": "vb_type_carousel"}],
@@ -7889,7 +7914,7 @@ def handle_callback(cb):
             send(chat_id, "*Which type of visual?*", keyboard)
 
     elif data.startswith("vb_gen_opt_"):
-        # User chose a specific thumbnail option — extract that option from brief and generate
+        # User chose a specific thumbnail option - extract that option from brief and generate
         opt_num = data.replace("vb_gen_opt_", "")
         brief = state.get("last_visual_brief", "") or _global_brief_store.get(chat_id, "")
         if not brief:
@@ -7913,7 +7938,7 @@ def handle_callback(cb):
                 [{"text": "🎨 Different engine", "callback_data": "img_restyle"}],
                 [{"text": "✅ Done", "callback_data": "mark_complete"}],
             ]
-            send(chat_id, "Thumbnail ready." if success else "Generation failed — try again.", img_kb)
+            send(chat_id, "Thumbnail ready." if success else "Generation failed - try again.", img_kb)
 
     elif data.startswith("vb_type_"):
         vb_type = data.replace("vb_type_", "")
@@ -7980,7 +8005,7 @@ def _handle_shutdown(signum, frame):
     continuing to fight with the new instance over the Telegram connection."""
     global _bot_running
     _bot_running = False
-    print("Shutdown signal received — stopping poll loop.", flush=True)
+    print("Shutdown signal received - stopping poll loop.", flush=True)
 
 _signal.signal(_signal.SIGTERM, _handle_shutdown)
 _signal.signal(_signal.SIGINT, _handle_shutdown)
@@ -8029,7 +8054,7 @@ def poll():
             if not data.get("ok"):
                 err_code = data.get("error_code", 0)
                 if err_code == 409:
-                    print("409 Conflict — another instance running. Waiting 15s...", flush=True)
+                    print("409 Conflict - another instance running. Waiting 15s...", flush=True)
                     if not _bot_running:
                         break
                     time.sleep(5)
@@ -8058,7 +8083,7 @@ def poll():
                         chat_id = msg["chat"]["id"]
                         # Handle photo uploads
                         if "voice" in msg or "audio" in msg:
-                            # Voice note — transcribe via Whisper
+                            # Voice note - transcribe via Whisper
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             voice_obj = msg.get("voice") or msg.get("audio")
                             handle_voice_message(chat_id, voice_obj)
@@ -8069,7 +8094,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction", "awaiting_custom_free_cta", "awaiting_custom_pro_cta"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -8089,7 +8114,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction", "awaiting_custom_free_cta", "awaiting_custom_pro_cta"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -8119,7 +8144,7 @@ def poll():
                                 handle_ie_file(chat_id, doc, ftype)
                             else:
                                 fname = doc.get("file_name", "").lower()
-                                # .numbers files can't be read — ask for CSV export
+                                # .numbers files can't be read - ask for CSV export
                                 if fname.endswith(".numbers") or fname.endswith(".xlsx") or fname.endswith(".xls"):
                                     send(chat_id, "📊 *" + doc.get("file_name", "File") + "* can\'t be read directly.\n\nPlease export as CSV first:\n• Numbers: File → Export To → CSV\n• Excel: File → Save As → CSV\n\nThen upload the CSV.")
                                 else:
@@ -8156,13 +8181,13 @@ def poll():
             err = str(e)
             print("Poll error:", err, flush=True)
             if "409" in err:
-                print("409 Conflict — another instance running. Waiting 15s...", flush=True)
+                print("409 Conflict - another instance running. Waiting 15s...", flush=True)
                 time.sleep(15)
             elif "400" in err:
                 time.sleep(3)
             else:
                 time.sleep(5)
-        # Schedulers — run after every poll cycle (every ~8-15s)
+        # Schedulers - run after every poll cycle (every ~8-15s)
         try:
             check_and_send_briefing()
         except Exception as e:
@@ -8241,7 +8266,7 @@ def show_avatar_menu(chat_id, page=0):
         nav.append({"text": "Next page", "callback_data": "avatarpage_next"})
     if nav:
         keyboard.append(nav)
-    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
+    keyboard.append([{"text": "Done - " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
     page_label = "(" + str(page+1) + "/2)" if len(all_avatars) > page_size else ""
     send(chat_id, "*Pick avatars:* " + page_label + "\n_(tap to select multiple)_", keyboard)
 
@@ -8309,8 +8334,8 @@ def generate_existing_ad_action(chat_id, action):
 def show_ad_product_menu(chat_id):
     """Step 1: Which product is this ad for?"""
     keyboard = [
-        [{"text": "Cryptonary Pro — $1,197/year", "callback_data": "ad_product_pro"}],
-        [{"text": "Inner Circle — $15K–$22K", "callback_data": "ad_product_ic"}]
+        [{"text": "Cryptonary Pro - $1,197/year", "callback_data": "ad_product_pro"}],
+        [{"text": "Inner Circle - $15K–$22K", "callback_data": "ad_product_ic"}]
     ]
     send(chat_id, "*Ad Copy Generator*\n\nStep 1: Which product is this ad for?", keyboard)
 
@@ -8325,8 +8350,8 @@ def show_ad_input_menu(chat_id):
 
 def show_adtype_menu(chat_id):
     keyboard = [
-        [{"text": "Static — 3 copy variants", "callback_data": "adtype_static"}],
-        [{"text": "Video — AIDA script + 3 hook variants", "callback_data": "adtype_video"}]
+        [{"text": "Static - 3 copy variants", "callback_data": "adtype_static"}],
+        [{"text": "Video - AIDA script + 3 hook variants", "callback_data": "adtype_video"}]
     ]
     send(chat_id, "*Static or Video?*", keyboard)
 
@@ -8353,7 +8378,7 @@ def toggle_avatar(chat_id, avatar_key, message_id):
         nav.append({"text": "Next page", "callback_data": "avatarpage_next"})
     if nav:
         keyboard.append(nav)
-    keyboard.append([{"text": "Done — " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
+    keyboard.append([{"text": "Done - " + str(len(selected)) + " selected", "callback_data": "adavatars_done"}])
     tg("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": keyboard}})
 
 def toggle_stage(chat_id, stage_key, message_id):
@@ -8381,13 +8406,13 @@ def generate_storyboard(chat_id, brief):
             "Create a production-ready storyboard for a 30-60 second Instagram Reel or short-form video ad.\n\n"
             "SOURCE BRIEF:\n" + brief[:2000] + "\n\n"
             "Generate a complete storyboard with 6-10 frames. For each frame output EXACTLY:\n\n"
-            "FRAME [N] — [0:00-0:00]\n"
+            "FRAME [N] - [0:00-0:00]\n"
             "ON SCREEN: [bold text overlay, max 6 words]\n"
             "VOICEOVER: [exact spoken words for this frame]\n"
-            "VISUAL: [specific scene direction — what camera sees, movement, style]\n"
+            "VISUAL: [specific scene direction - what camera sees, movement, style]\n"
             "DURATION: [seconds]\n\n"
             "Rules:\n"
-            "- Frame 1 must be a pattern interrupt hook — stops scroll in first 2 seconds\n"
+            "- Frame 1 must be a pattern interrupt hook - stops scroll in first 2 seconds\n"
             "- No em dashes. Short punchy sentences.\n"
             "- Cryptonary brand: dark, data-driven, authoritative\n"
             "- Final frame: clear CTA (follow @Cryptonary / link in bio)\n"
@@ -8545,7 +8570,7 @@ def build_storyboard_html(brief, script):
   <div class="header">
     <div class="logo">Cryptonary</div>
     <h1>Video Storyboard</h1>
-    <div class="meta">Generated {date_str} — Total: {total_dur}</div>
+    <div class="meta">Generated {date_str} - Total: {total_dur}</div>
     <div class="brief-box">
       <div class="brief-label">Brief</div>
       <div class="brief-text">{brief[:200]}{"..." if len(brief) > 200 else ""}</div>
@@ -8571,9 +8596,9 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
     file_id = video_obj.get("file_id", "")
     file_size = video_obj.get("file_size", 0)
 
-    # Check size — Telegram bot limit is 20MB
+    # Check size - Telegram bot limit is 20MB
     if file_size and file_size > 20 * 1024 * 1024:
-        send(chat_id, "Video is over 20MB — Telegram's limit for bots. Compress it first or screenshot a few key frames and upload as images instead.")
+        send(chat_id, "Video is over 20MB - Telegram's limit for bots. Compress it first or screenshot a few key frames and upload as images instead.")
         return
 
     send(chat_id, "Video received. Extracting content for analysis...")
@@ -8615,7 +8640,7 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
         video_meta = f"Duration: {duration}s | Format: {'Portrait (9:16)' if is_portrait else 'Landscape (16:9)'} | {width}x{height}"
 
         if mode == "ad_copy":
-            # Ad copy mode — generate primary text + headlines
+            # Ad copy mode - generate primary text + headlines
             analysis_prompt = (
                 "You are analysing a video ad creative for Cryptonary.\n\n"
                 f"VIDEO: {video_meta}\n\n"
@@ -8632,10 +8657,10 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
                 f"VIDEO DETAILS: {video_meta}\n\n"
                 "Score and analyse this reel/video. Structure your response EXACTLY as:\n\n"
                 "SCORES\n"
-                "Hook (1-10): [score] — [one sentence why]\n"
-                "Pacing (1-10): [score] — [one sentence why]\n"
-                "On-screen text (1-10): [score] — [one sentence why]\n"
-                "Shareability (1-10): [score] — [one sentence why]\n"
+                "Hook (1-10): [score] - [one sentence why]\n"
+                "Pacing (1-10): [score] - [one sentence why]\n"
+                "On-screen text (1-10): [score] - [one sentence why]\n"
+                "Shareability (1-10): [score] - [one sentence why]\n"
                 "OVERALL: [X/10]\n\n"
                 "SCORING RUBRIC (apply this objectively):\n"
                 "Hook: 9-10=stops scroll instantly, curiosity or tension in <2s. 7-8=good but slightly slow. 5-6=needs work. <5=loses viewer.\n"
@@ -8645,9 +8670,9 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
                 "WHAT'S WORKING\n"
                 "[2-3 specific strengths with reasons]\n\n"
                 "WHAT TO CHANGE\n"
-                "[2-3 specific improvements — be direct and actionable]\n\n"
+                "[2-3 specific improvements - be direct and actionable]\n\n"
                 "CRYPTONARY VERSION\n"
-                "[A specific concept adapting the best element of this video for Cryptonary's brand — include the exact hook line you'd use]\n\n"
+                "[A specific concept adapting the best element of this video for Cryptonary's brand - include the exact hook line you'd use]\n\n"
                 "Be direct. No fluff. Reference specific seconds where relevant."
             )
 
@@ -8679,7 +8704,7 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
                 result_data = json.loads(r.read())
             analysis = result_data.get("content", [{}])[0].get("text", "")
         else:
-            # No thumbnail — text-only analysis from metadata
+            # No thumbnail - text-only analysis from metadata
             analysis = claude(
                 f"A {duration}-second {'portrait' if is_portrait else 'landscape'} video was uploaded for analysis. "
                 f"No thumbnail was available. Based on typical {duration}s short-form video structure:\n\n" +
@@ -8780,16 +8805,16 @@ def _execute_brevo_push(chat_id):
 
 def gen_ad_copy_for_creative(chat_id, creative_description):
     """Generate primary text + headlines from a creative description or image extract.
-    Path A of the ad flow — quick tool for the team."""
+    Path A of the ad flow - quick tool for the team."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     send(chat_id, "Writing copy for your creative...")
     try:
         prompt = (
-            "You are writing Meta ad copy for Cryptonary — a crypto research platform.\n\n"
+            "You are writing Meta ad copy for Cryptonary - a crypto research platform.\n\n"
             "CREATIVE DESCRIPTION:\n" + creative_description[:1500] + "\n\n"
             "Write copy that matches this creative. Apply all direct response principles.\n\n"
-            "OUTPUT FORMAT — return exactly this structure:\n\n"
+            "OUTPUT FORMAT - return exactly this structure:\n\n"
             "PRIMARY TEXT OPTIONS (125 characters optimal for Meta):\n"
             "1. [option 1] ([X] chars)\n"
             "2. [option 2] ([X] chars)\n"
@@ -8854,7 +8879,7 @@ def generate_all_ads(chat_id):
                     if voice_ex: prompt = voice_ex + "\n\n" + prompt
                     raw = claude(prompt, max_tokens=1800)
                     raw = clean_copy(raw)
-                    header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | STATIC*\n\n"
+                    header = "*AD SET - " + avatar_name.upper() + " | " + stage_key.upper() + " | STATIC*\n\n"
                     send_plain(chat_id, header + raw)
                     state["current_ad_output"] = state.get("current_ad_output", "") + "\n\n" + header + raw[:600]
                 else:
@@ -8863,10 +8888,10 @@ def generate_all_ads(chat_id):
                     if theme: prompt += "\n\nCAMPAIGN THEME/CONTEXT:\n" + theme
                     prompt += "\n\nFUNNEL STAGE: " + stage_instruction
                     prompt += "\n\n" + AD_LOGIC_PROMPT
-                    prompt += "\n\nSTRUCTURE:\n\nATTENTION (0-3 seconds): Pattern interrupt hook. Must stop the scroll.\n\nINTEREST (3-12 seconds): Agitate the problem or amplify the desire. Make them feel it.\n\nDESIRE (12-28 seconds): The solution. Specific proof points. Transformation.\n\nACTION (28-35 seconds): Clear CTA. What to do next.\n\nFormat each section as:\n[SECTION NAME]\nSPOKEN: [voiceover text]\nON SCREEN: [text overlays]\nVISUAL: [scene direction]\n\nThen write 3 ALTERNATIVE HOOKS (just the Attention section, different each time — pattern interrupt, question, bold claim):\n\nHOOK VARIANT 1:\nSPOKEN: ...\nON SCREEN: ...\nVISUAL: ...\n\nHOOK VARIANT 2: ...\nHOOK VARIANT 3: ...\n\nThen:\nLOGIC:\nHook mechanism: [what stops the scroll]\nLF8 desire: [which life force desire and why]\nCialdini principle: [which one and why]\nFunnel logic: [why this stage approach]\nAIDA breakdown: [one sentence per section on what it does psychologically]\n\nReturn as plain text."
+                    prompt += "\n\nSTRUCTURE:\n\nATTENTION (0-3 seconds): Pattern interrupt hook. Must stop the scroll.\n\nINTEREST (3-12 seconds): Agitate the problem or amplify the desire. Make them feel it.\n\nDESIRE (12-28 seconds): The solution. Specific proof points. Transformation.\n\nACTION (28-35 seconds): Clear CTA. What to do next.\n\nFormat each section as:\n[SECTION NAME]\nSPOKEN: [voiceover text]\nON SCREEN: [text overlays]\nVISUAL: [scene direction]\n\nThen write 3 ALTERNATIVE HOOKS (just the Attention section, different each time - pattern interrupt, question, bold claim):\n\nHOOK VARIANT 1:\nSPOKEN: ...\nON SCREEN: ...\nVISUAL: ...\n\nHOOK VARIANT 2: ...\nHOOK VARIANT 3: ...\n\nThen:\nLOGIC:\nHook mechanism: [what stops the scroll]\nLF8 desire: [which life force desire and why]\nCialdini principle: [which one and why]\nFunnel logic: [why this stage approach]\nAIDA breakdown: [one sentence per section on what it does psychologically]\n\nReturn as plain text."
                     raw = claude(prompt, max_tokens=2000)
                     raw = clean_copy(raw)
-                    header = "*AD SET — " + avatar_name.upper() + " | " + stage_key.upper() + " | VIDEO*\n\n"
+                    header = "*AD SET - " + avatar_name.upper() + " | " + stage_key.upper() + " | VIDEO*\n\n"
                     send_plain(chat_id, header + raw)
                     state["current_ad_output"] = state.get("current_ad_output", "") + "\n\n" + header + raw[:600]
             except Exception as e:
@@ -8889,12 +8914,12 @@ def generate_all_ads(chat_id):
 
 # ── YOUTUBE DESCRIPTION FLOW ──────────────────────────────────────
 
-YT_DESC_PROMPT = """You are writing a YouTube video description for Cryptonary — a crypto research and education platform with 7+ years, 3 full market cycles, and a documented track record (BTC under $1K, ETH under $70, SOL at $10, WIF at $0.004, POPCAT at $0.05, HYPE before launch).
+YT_DESC_PROMPT = """You are writing a YouTube video description for Cryptonary - a crypto research and education platform with 7+ years, 3 full market cycles, and a documented track record (BTC under $1K, ETH under $70, SOL at $10, WIF at $0.004, POPCAT at $0.05, HYPE before launch).
 
 VOICE RULES:
 - British-casual. Direct. No corporate speak.
 - Short punchy sentences. No em dashes.
-- First person ("I" / "we" — Adam is the presenter, Cryptonary is the team).
+- First person ("I" / "we" - Adam is the presenter, Cryptonary is the team).
 - No "In this video..." or "Today we're going to...". Start with the hook line.
 - Specificity over vague claims. Use real numbers.
 - Never hype without substance behind it.
@@ -8902,10 +8927,10 @@ VOICE RULES:
 STRUCTURE (always follow this order):
 1. HOOK PARAGRAPH (2-4 sentences): Lead with the insight, the story, the number, or the provocative claim. The thing that makes someone click. No preamble.
 2. CONTEXT PARAGRAPH (1-3 sentences, optional): Why this matters now. What the situation is. Skip if the hook already covers it.
-3. YOU'LL LEARN SECTION: Bulleted list of what viewers will get. Each bullet starts with an action verb or the specific thing they gain. 8-14 bullets. Real specifics — no fluff.
+3. YOU'LL LEARN SECTION: Bulleted list of what viewers will get. Each bullet starts with an action verb or the specific thing they gain. 8-14 bullets. Real specifics - no fluff.
 4. CLOSING LINE (1-2 sentences): Stakes framing. Why watching this matters. Don't use "so make sure to watch to the end."
-5. [TIMESTAMPS PLACEHOLDER — leave this exact line]: Chapters:
-6. CTA BLOCK (always identical — copy exactly):
+5. [TIMESTAMPS PLACEHOLDER - leave this exact line]: Chapters:
+6. CTA BLOCK (always identical - copy exactly):
 Join Cryptonary Pro here: https://cryptonary.com/home11/
 
 For Personalised support, direct access, hands-on work. Email us: support@cryptonary.com
@@ -8933,7 +8958,7 @@ def gen_yt_desc(chat_id):
         prompt = (
             YT_DESC_PROMPT +
             "\n\nMODE: EDIT. The user has provided an existing description. "
-            "Repackage the hook, context, and bullets to be sharper — but keep ALL timestamps/chapters exactly as they appear. "
+            "Repackage the hook, context, and bullets to be sharper - but keep ALL timestamps/chapters exactly as they appear. "
             "Do not change any timestamp content. Do not change the CTA block.\n\n"
             "EXISTING DESCRIPTION:\n" + existing[:3000] +
             ("\n\nEXTRACTED TIMESTAMPS (preserve these verbatim in output):\n" + timestamps_block if timestamps_block else "") +
@@ -9038,14 +9063,14 @@ def handle_video_idea_generation(chat_id, video_obj):
             + (f"LIVE MARKET: {market_line}\n" if market_line else "") +
             "\nAnalyse this video and generate 4 Cryptonary content ideas inspired by it.\n\n"
             "For each idea:\n"
-            "1. What is this video doing well? (one line — hook mechanism, format, angle)\n"
-            "2. The Cryptonary version — a specific adapted concept with:\n"
+            "1. What is this video doing well? (one line - hook mechanism, format, angle)\n"
+            "2. The Cryptonary version - a specific adapted concept with:\n"
             "   CONCEPT: [the big idea in one punchy line]\n"
-            "   HOOK: [first 3 seconds / cover slide text — exact words]\n"
+            "   HOOK: [first 3 seconds / cover slide text - exact words]\n"
             "   ANGLE: [why this hits for Cryptonary's audience]\n"
             "   FORMAT: [Reel / Carousel / Static / Story]\n\n"
             "Rules:\n"
-            "- Ideas must be specific to crypto/markets — not generic finance\n"
+            "- Ideas must be specific to crypto/markets - not generic finance\n"
             "- Use live market data if relevant (exact numbers only, no invented stats)\n"
             "- Each idea must use a different format\n"
             "- Be direct. No filler. Each idea should be actionable immediately.\n\n"
@@ -9070,12 +9095,12 @@ def handle_video_idea_generation(chat_id, video_obj):
                 }]
             }
         else:
-            # No frame — text-only with just metadata
+            # No frame - text-only with just metadata
             payload = {
                 "model": "claude-sonnet-4-5",
                 "max_tokens": 1500,
                 "messages": [{"role": "user", "content":
-                    ideas_prompt + "\n\n(No frame available — base ideas on the video metadata and market context.)"}]
+                    ideas_prompt + "\n\n(No frame available - base ideas on the video metadata and market context.)"}]
             }
 
         body = _json.dumps(payload).encode()
@@ -9132,7 +9157,7 @@ def gen_social_angles(chat_id):
     try:
         avoid_block = ""
         if prev_angles:
-            avoid_block = "\n\nPREVIOUSLY SHOWN — DO NOT REPEAT THESE, use completely different angles:\n"
+            avoid_block = "\n\nPREVIOUSLY SHOWN - DO NOT REPEAT THESE, use completely different angles:\n"
             for i, a in enumerate(prev_angles, 1):
                 avoid_block += f"{i}. {a}\n"
         raw = openai_gpt(
@@ -9140,7 +9165,7 @@ def gen_social_angles(chat_id):
             "\n\nFORMAT(S) SELECTED: " + formats_str +
             avoid_block +
             "\n\nGenerate exactly 4 distinct content angles for this crypto market update.\n"
-            "Each angle must be different — different emotional lens, hook style, or narrative approach.\n"
+            "Each angle must be different - different emotional lens, hook style, or narrative approach.\n"
             "Make them specific to what works for " + formats_str + " format(s) on social media.\n\n"
             "Format:\n1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else.",
             max_tokens=500
@@ -9167,14 +9192,14 @@ def gen_social_hooks(chat_id):
     angle = state.get("social_angle", "")
     formats = state.get("selected_social_formats", [])
 
-    # Guard — if no formats selected, send back to format picker
+    # Guard - if no formats selected, send back to format picker
     if not formats:
         send(chat_id, "Pick a format first:", [
             [{"text": "Reel Script",           "callback_data": "pick_fmt_fmt_reel"}],
             [{"text": "Carousel",              "callback_data": "pick_fmt_fmt_carousel"}],
             [{"text": "Static Post + Caption", "callback_data": "pick_fmt_fmt_static"}],
-            [{"text": "Story — Single slide",  "callback_data": "pick_fmt_fmt_story_single"}],
-            [{"text": "Story — Multi slide",   "callback_data": "pick_fmt_fmt_story_multi"}],
+            [{"text": "Story - Single slide",  "callback_data": "pick_fmt_fmt_story_single"}],
+            [{"text": "Story - Multi slide",   "callback_data": "pick_fmt_fmt_story_multi"}],
         ])
         return
 
@@ -9208,7 +9233,7 @@ def gen_social_hooks(chat_id):
         prev_hooks = state.get("social_prev_hooks", {}).get(fmt, [])
         avoid = ""
         if prev_hooks:
-            avoid = "\n\nPREVIOUSLY SHOWN — generate completely different hooks:\n" + \
+            avoid = "\n\nPREVIOUSLY SHOWN - generate completely different hooks:\n" + \
                     "\n".join(f"{i+1}. {h}" for i, h in enumerate(prev_hooks))
         try:
             raw = openai_gpt(
@@ -9298,14 +9323,14 @@ def show_standalone_social_menu_confirm(chat_id):
     send(chat_id, summary, keyboard)
 
 def show_standalone_social_menu(chat_id):
-    """Single-tap format picker — one format per run, no checkboxes."""
+    """Single-tap format picker - one format per run, no checkboxes."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     keyboard = [
         [{"text": "Reel Script (45-60s)",    "callback_data": "pick_fmt_fmt_reel"}],
         [{"text": "Carousel (5-8 slides)",   "callback_data": "pick_fmt_fmt_carousel"}],
         [{"text": "Static Post + Caption",   "callback_data": "pick_fmt_fmt_static"}],
-        [{"text": "Story — Single slide",    "callback_data": "pick_fmt_fmt_story_single"}],
-        [{"text": "Story — Multi slide",     "callback_data": "pick_fmt_fmt_story_multi"}],
+        [{"text": "Story - Single slide",    "callback_data": "pick_fmt_fmt_story_single"}],
+        [{"text": "Story - Multi slide",     "callback_data": "pick_fmt_fmt_story_multi"}],
         [{"text": "🎬 YouTube Description",  "callback_data": "social_mode_yt"}],
     ]
     send(chat_id, "*Pick a format:*", keyboard)
@@ -9357,8 +9382,8 @@ def handle_email_log_step(chat_id, text):
             log["ctr"] = float(text)
             state["log_stage"] = "email_ab"
             keyboard = [
-                [{"text": "Yes — part of a split test", "callback_data": "email_log_ab_yes"}],
-                [{"text": "No — standalone email", "callback_data": "email_log_ab_no"}]
+                [{"text": "Yes - part of a split test", "callback_data": "email_log_ab_yes"}],
+                [{"text": "No - standalone email", "callback_data": "email_log_ab_no"}]
             ]
             send(chat_id, "Was this part of a split test?", keyboard)
         except:
@@ -9400,7 +9425,7 @@ def save_email_log(chat_id, log):
     msg += "Your averages (" + str(len(records)) + " emails):\n"
     msg += "Open: " + str(avg_open) + "% | CTR: " + str(avg_ctr) + "%"
     if log.get("ab_variable"):
-        msg += "\n\nTagged as split test: _" + log["ab_variable"] + "_ — variant: _" + log.get("ab_label","") + "_"
+        msg += "\n\nTagged as split test: _" + log["ab_variable"] + "_ - variant: _" + log.get("ab_label","") + "_"
     keyboard = [[{"text": "Back to menu", "callback_data": "start_over"}]]
     send(chat_id, msg, keyboard)
 
@@ -9435,7 +9460,7 @@ def handle_ad_log_step(chat_id, text):
         ad_type = log.get("ad_type", "static")
         if ad_type == "video":
             state["log_stage"] = "adlog_v_attention"
-            send(chat_id, "3-second view rate? (Attention — 3s views / impressions as %, e.g. 12.5)")
+            send(chat_id, "3-second view rate? (Attention - 3s views / impressions as %, e.g. 12.5)")
         else:
             state["log_stage"] = "adlog_s_cpc"
             send(chat_id, "Cost per click? (CPC in GBP/USD, e.g. 0.85)")
@@ -9452,7 +9477,7 @@ def handle_ad_log_step(chat_id, text):
         try:
             log["interest"] = float(text)
             state["log_stage"] = "adlog_v_desire"
-            send(chat_id, "Outbound CTR? (Desire — %, e.g. 2.4)")
+            send(chat_id, "Outbound CTR? (Desire - %, e.g. 2.4)")
         except: send(chat_id, "Enter a number, e.g. 18")
 
     elif step == "adlog_v_desire":
@@ -9537,7 +9562,7 @@ def run_email_analysis(chat_id):
         summary += str(i+1) + ". Subject: " + r.get("subject","") + "\n"
         summary += "   Date: " + r.get("date","?") + " | Open: " + str(r.get("open_rate","?")) + "% | CTR: " + str(r.get("ctr","?")) + "%\n"
         if r.get("ab_variable"):
-            summary += "   Split test: " + r["ab_variable"] + " — variant: " + r.get("ab_label","") + " | Recipients: " + str(r.get("recipients","?")) + "\n"
+            summary += "   Split test: " + r["ab_variable"] + " - variant: " + r.get("ab_label","") + " | Recipients: " + str(r.get("recipients","?")) + "\n"
         summary += "\n"
 
     # Split test aggregation
@@ -9563,7 +9588,7 @@ def run_email_analysis(chat_id):
                 agg_ctr = round(data["clicks"] / data["recipients"] * 100, 1) if data["recipients"] else 0
                 summary += "  " + label + ": " + str(agg_open) + "% open / " + str(agg_ctr) + "% CTR (" + str(data["count"]) + " emails, " + str(data["recipients"]) + " total recipients)\n"
 
-    prompt = "Analyse this Cryptonary email performance data and provide:\n\n1. TOP PERFORMERS — top 3 emails and exactly what made them work (subject style, angle type, CTA)\n2. WORST PERFORMERS — bottom 3 and what likely caused underperformance\n3. PATTERN RECOGNITION — what patterns emerge across the data (which subject styles, angles, CTAs consistently outperform)\n4. SPLIT TEST RESULTS — if split test data exists, declare the winner with the aggregated numbers and statistical context\n5. ITERATION IDEAS — for the top performers, give 3 specific variations to test next\n6. IMPROVEMENT SUGGESTIONS — for underperformers, give specific fixes based on the copywriting principles you know\n\n" + summary + "\n\nBe specific and actionable. Reference actual subject lines and numbers."
+    prompt = "Analyse this Cryptonary email performance data and provide:\n\n1. TOP PERFORMERS - top 3 emails and exactly what made them work (subject style, angle type, CTA)\n2. WORST PERFORMERS - bottom 3 and what likely caused underperformance\n3. PATTERN RECOGNITION - what patterns emerge across the data (which subject styles, angles, CTAs consistently outperform)\n4. SPLIT TEST RESULTS - if split test data exists, declare the winner with the aggregated numbers and statistical context\n5. ITERATION IDEAS - for the top performers, give 3 specific variations to test next\n6. IMPROVEMENT SUGGESTIONS - for underperformers, give specific fixes based on the copywriting principles you know\n\n" + summary + "\n\nBe specific and actionable. Reference actual subject lines and numbers."
     try:
         analysis = claude(prompt, max_tokens=2000)
         send_plain(chat_id, "EMAIL PERFORMANCE ANALYSIS\n\n" + analysis)
@@ -9600,7 +9625,7 @@ def run_ad_analysis(chat_id):
             summary += "   CPC: " + str(r.get("cpc","?")) + " | Outbound CTR: " + str(r.get("outbound_ctr","?")) + "%\n"
             summary += "   ACTION: " + str(r.get("purchases","?")) + " purchases @ " + str(r.get("cost_per_purchase","?")) + " CPP\n\n"
 
-    prompt = "Analyse this Cryptonary Meta ad performance data and provide:\n\n1. TOP PERFORMERS — best 3 ads with exactly what made them work (avatar, stage, hook type, which metrics stood out)\n2. WORST PERFORMERS — bottom 3 and diagnose where they failed (for video: which AIDA stage had the biggest drop-off? for static: which metric was weakest?)\n3. PATTERN RECOGNITION — what patterns emerge? (which avatars convert best, which stages perform, which ad types win)\n4. VIDEO AIDA DIAGNOSIS — for video ads, map the drop-off: high attention but low interest = hook works but body fails. High desire but low action = landing page issue. Give specific diagnosis per video.\n5. ITERATION IDEAS FOR WINNERS — for top performers, give 3 specific variants to test next\n6. IMPROVEMENT SUGGESTIONS FOR LOSERS — specific creative fixes based on the AIDA failure point or static metric weakness\n\n" + summary + "\n\nBe specific. Reference actual headlines and numbers."
+    prompt = "Analyse this Cryptonary Meta ad performance data and provide:\n\n1. TOP PERFORMERS - best 3 ads with exactly what made them work (avatar, stage, hook type, which metrics stood out)\n2. WORST PERFORMERS - bottom 3 and diagnose where they failed (for video: which AIDA stage had the biggest drop-off? for static: which metric was weakest?)\n3. PATTERN RECOGNITION - what patterns emerge? (which avatars convert best, which stages perform, which ad types win)\n4. VIDEO AIDA DIAGNOSIS - for video ads, map the drop-off: high attention but low interest = hook works but body fails. High desire but low action = landing page issue. Give specific diagnosis per video.\n5. ITERATION IDEAS FOR WINNERS - for top performers, give 3 specific variants to test next\n6. IMPROVEMENT SUGGESTIONS FOR LOSERS - specific creative fixes based on the AIDA failure point or static metric weakness\n\n" + summary + "\n\nBe specific. Reference actual headlines and numbers."
     try:
         analysis = claude(prompt, max_tokens=2000)
         send_plain(chat_id, "AD PERFORMANCE ANALYSIS\n\n" + analysis)
@@ -9671,14 +9696,14 @@ LP_CTA_DEFS = {
         "cta_text": "Get Pro Access Now",
         "alt_cta": "Start Making Better Trades",
         "audience": "crypto investors and traders wanting research-backed guidance",
-        "positioning": "The research platform that puts you ahead of the market. Not a signal service — a complete intelligence layer.",
+        "positioning": "The research platform that puts you ahead of the market. Not a signal service - a complete intelligence layer.",
         "urgency": "Markets don't wait. Every day without this costs you positioning."
     },
     "inner_circle": {
         "label": "Apply for Inner Circle",
         "price": "$15,000-$22,000",
         "cta_text": "Apply for Inner Circle",
-        "alt_cta": "Apply Now — Limited Spots",
+        "alt_cta": "Apply Now - Limited Spots",
         "audience": "high-net-worth crypto investors with $200K+ portfolios",
         "positioning": "Private advisory for serious capital. Personal access to Co-Founder Asad for portfolio-level guidance.",
         "urgency": "Inner Circle is application-only. Spots are strictly limited to maintain quality of service."
@@ -9687,37 +9712,37 @@ LP_CTA_DEFS = {
 
 # Inner Circle avatars for landing pages
 IC_AVATARS = {
-    "ic_universal": ("Universal IC", "High-net-worth investor ($200K+ portfolio) seeking institutional-grade research framework and dedicated team support across crypto cycles. The Cryptonary Framework — from exhausted to structured in 14 days."),
-    "ic_exhausted": ("Exhausted Believer", "Survived 3+ cycles, made and lost significant money. Doesn't need conviction — needs a system. Tired of 3am chart-watching. Sitting in stables paralysed or still fully exposed waiting for something to change."),
-    "ic_timepoor": ("Time-Poor Professional", "Seven-figure portfolio managed between meetings. Delegates accountant, lawyer, financial advisor — but still managing crypto alone. Information without execution. Reactive not systematic."),
+    "ic_universal": ("Universal IC", "High-net-worth investor ($200K+ portfolio) seeking institutional-grade research framework and dedicated team support across crypto cycles. The Cryptonary Framework - from exhausted to structured in 14 days."),
+    "ic_exhausted": ("Exhausted Believer", "Survived 3+ cycles, made and lost significant money. Doesn't need conviction - needs a system. Tired of 3am chart-watching. Sitting in stables paralysed or still fully exposed waiting for something to change."),
+    "ic_timepoor": ("Time-Poor Professional", "Seven-figure portfolio managed between meetings. Delegates accountant, lawyer, financial advisor - but still managing crypto alone. Information without execution. Reactive not systematic."),
     "ic_liquidity": ("Liquidity Event Winner", "New serious capital from business exit, inheritance, stock options, or ballooned early gains. Doesn't know what they don't know. This money is too important to learn on. Traditional advisors can't help."),
     "ic_family": ("Family Wealth", "Managing family trust or generational capital. Every dip is a boardroom question. Every loss is a personal failure. Needs institutional-grade reporting and a framework they can present at family meetings."),
-    "ic_uhnw": ("Crypto-Curious UHNW", "Built serious wealth in traditional markets — equities, real estate, private markets. Understands due diligence and risk. The crypto industry doesn't speak their language. Wealth manager can't help. Opportunity cost compounding."),
+    "ic_uhnw": ("Crypto-Curious UHNW", "Built serious wealth in traditional markets - equities, real estate, private markets. Understands due diligence and risk. The crypto industry doesn't speak their language. Wealth manager can't help. Opportunity cost compounding."),
 }
 
 # Pro avatars for LP flow
 PRO_AVATARS_LP = {
-    "universal": "Universal — broad crypto investor wanting research and guidance",
-    "trader": "Trader — active, wants daily structure, setups, and confirmation",
-    "investor": "Investor — long-term, wants conviction and clean long-term thesis",
-    "passive": "Passive Income Seeker — wants yield without complexity",
-    "portfolio": "Portfolio Builder — overwhelmed by tokens, wants sector picks",
-    "chaser": "100X Chaser — degen energy, FOMO-driven, loves early narratives",
-    "skeptic": "Skeptic — needs proof, track record, receipts before buying",
-    "burned": "The Burned — lost money, wants redemption and trusted guide",
-    "student": "College Student — smart, ambitious, price-sensitive",
-    "worker": "Burned-Out 9-5 Worker — wants side income and eventual exit path",
-    "boomer": "Boomer Near Retirement — safety and yield, risk-averse",
-    "sidehustle": "Side-Hustle Seeker — wants clear steps and fast action",
-    "beginner": "Complete Beginner — overwhelmed, needs step-by-step structure",
+    "universal": "Universal - broad crypto investor wanting research and guidance",
+    "trader": "Trader - active, wants daily structure, setups, and confirmation",
+    "investor": "Investor - long-term, wants conviction and clean long-term thesis",
+    "passive": "Passive Income Seeker - wants yield without complexity",
+    "portfolio": "Portfolio Builder - overwhelmed by tokens, wants sector picks",
+    "chaser": "100X Chaser - degen energy, FOMO-driven, loves early narratives",
+    "skeptic": "Skeptic - needs proof, track record, receipts before buying",
+    "burned": "The Burned - lost money, wants redemption and trusted guide",
+    "student": "College Student - smart, ambitious, price-sensitive",
+    "worker": "Burned-Out 9-5 Worker - wants side income and eventual exit path",
+    "boomer": "Boomer Near Retirement - safety and yield, risk-averse",
+    "sidehustle": "Side-Hustle Seeker - wants clear steps and fast action",
+    "beginner": "Complete Beginner - overwhelmed, needs step-by-step structure",
 }
 
 # ══════════════════════════════════════════════════════════════════
-# LANDING PAGE FLOW — 8-STEP REBUILD
+# LANDING PAGE FLOW - 8-STEP REBUILD
 # ══════════════════════════════════════════════════════════════════
 
 def start_landing_page_flow(chat_id):
-    """Step 1: Goal selection — CPRO or Inner Circle."""
+    """Step 1: Goal selection - CPRO or Inner Circle."""
     user_state[chat_id]["stage"] = "lp_idle"
     user_state[chat_id]["selected_avatars"] = []
     user_state[chat_id]["lp_outline"] = {}
@@ -9729,7 +9754,7 @@ def start_landing_page_flow(chat_id):
     send(chat_id, "*Landing Page Builder*\n\nStep 1: What is the goal of this page?", keyboard)
 
 def show_lp_avatar_menu(chat_id, page=0):
-    """Step 2: Avatar selection — different options for CPRO vs IC."""
+    """Step 2: Avatar selection - different options for CPRO vs IC."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     goal = state.get("lp_goal", "pro")
@@ -9805,14 +9830,14 @@ def generate_lp_outline(chat_id):
         for key in avatar_keys:
             val = IC_AVATARS.get(key, ("Universal IC", ""))
             avatar_descs.append(val[0] + ": " + val[1])
-        cta_info = "Apply for Inner Circle — $15,000-$22,000/year — application only, limited spots"
+        cta_info = "Apply for Inner Circle - $15,000-$22,000/year - application only, limited spots"
         page_type = "Inner Circle Sales Page"
     else:
         avatar_descs = []
         for key in avatar_keys:
             val = PRO_AVATARS_LP.get(key, "General crypto investor")
             avatar_descs.append(val)
-        cta_info = "Join Cryptonary Pro — $1,197/year"
+        cta_info = "Join Cryptonary Pro - $1,197/year"
         page_type = "CPRO Sales Page"
 
     avatar_detail = "\n".join(avatar_descs) if avatar_descs else "General investor"
@@ -9825,16 +9850,16 @@ def generate_lp_outline(chat_id):
 CTA: """ + cta_info + """
 
 Write 1-2 sentences for EACH of these 7 sections. This is an outline, not the final copy.
-Be specific to the avatar — not generic.
+Be specific to the avatar - not generic.
 
 Format EXACTLY as:
-1. HERO: [1-2 sentences — what the reader wants and what this page promises]
-2. VILLAIN: [1-2 sentences — the specific problem/enemy this avatar faces]
-3. GUIDE EMPATHY: [1-2 sentences — how Cryptonary understands their struggle]
-4. GUIDE AUTHORITY: [1-2 sentences — specific proof points that earn trust]
-5. THE PLAN: [1-2 sentences — how simple the path to the solution is]
-6. TRANSFORMATION: [1-2 sentences — who they become / what changes after joining]
-7. CTA BLOCK: [1-2 sentences — the ask and why now]
+1. HERO: [1-2 sentences - what the reader wants and what this page promises]
+2. VILLAIN: [1-2 sentences - the specific problem/enemy this avatar faces]
+3. GUIDE EMPATHY: [1-2 sentences - how Cryptonary understands their struggle]
+4. GUIDE AUTHORITY: [1-2 sentences - specific proof points that earn trust]
+5. THE PLAN: [1-2 sentences - how simple the path to the solution is]
+6. TRANSFORMATION: [1-2 sentences - who they become / what changes after joining]
+7. CTA BLOCK: [1-2 sentences - the ask and why now]
 
 Nothing else. Just the 7 sections."""
 
@@ -9845,7 +9870,7 @@ Nothing else. Just the 7 sections."""
         send_plain(chat_id, "*BRANDSCRIPT OUTLINE*\n\nReview each section. Send feedback on any numbered section (e.g. \'2: Make the villain more specific to managing family capital\') or approve to continue.\n\n" + raw)
 
         keyboard = [
-            [{"text": "Looks good — continue", "callback_data": "lp_outline_approve"}],
+            [{"text": "Looks good - continue", "callback_data": "lp_outline_approve"}],
             [{"text": "Regenerate outline", "callback_data": "lp_regen_outline"}]
         ]
         send(chat_id, "Review the outline. Approve or send feedback by section number.", keyboard)
@@ -9869,7 +9894,7 @@ def apply_lp_outline_feedback(chat_id, feedback_text):
         state["lp_outline_raw"] = result
         send_plain(chat_id, "*REVISED OUTLINE*\n\n" + result)
         keyboard = [
-            [{"text": "Approve outline — generate full copy", "callback_data": "lp_outline_approve"}],
+            [{"text": "Approve outline - generate full copy", "callback_data": "lp_outline_approve"}],
             [{"text": "More feedback", "callback_data": "lp_more_outline_feedback"}]
         ]
         send(chat_id, "How does the revised outline look?", keyboard)
@@ -9900,9 +9925,9 @@ def generate_lp_full_copy(chat_id):
     if goal == "ic":
         ic_copy_brief = """
 INNER CIRCLE SPECIFIC CONTEXT:
-- Product: The Cryptonary Framework — dedicated team of 8, personalised portfolio research
+- Product: The Cryptonary Framework - dedicated team of 8, personalised portfolio research
 - 8 critical regime calls since 2019 | 129 documented posture shifts | 7,300+ published articles
-- Jan 2025: RISK-OFF called at $104,855 — 43% drawdown avoided
+- Jan 2025: RISK-OFF called at $104,855 - 43% drawdown avoided
 - Monthly portfolio audit reports | 20+ hours call time/year | 24hr direct access
 - Private dashboard | Security assessment | Airdrop guidance | Yield analysis
 - Annual in-person meeting | Starting $15,000/year | $200K+ minimum portfolio
@@ -9912,9 +9937,9 @@ INNER CIRCLE SPECIFIC CONTEXT:
 
     sections = [
         ("HERO", "Write the complete Hero section based on the outline. Include H1 (max 10 words), H2 (max 20 words), hero body (2-3 sentences), primary CTA button, secondary soft CTA, and trust bar stats."),
-        ("VILLAIN", "Write the complete Villain/Problem section. Three levels: external problem, internal fear/frustration, philosophical injustice. Make the reader feel deeply understood. This is the longest section — earn the scroll."),
-        ("GUIDE — EMPATHY", "Write the Guide Empathy section. Show Cryptonary has been where the reader is. Specific, vulnerable, credible. Not corporate."),
-        ("GUIDE — AUTHORITY", "Write the Guide Authority section. Specific proof points only — track record, regime calls, published research, years in market. The guide demonstrates, never brags."),
+        ("VILLAIN", "Write the complete Villain/Problem section. Three levels: external problem, internal fear/frustration, philosophical injustice. Make the reader feel deeply understood. This is the longest section - earn the scroll."),
+        ("GUIDE - EMPATHY", "Write the Guide Empathy section. Show Cryptonary has been where the reader is. Specific, vulnerable, credible. Not corporate."),
+        ("GUIDE - AUTHORITY", "Write the Guide Authority section. Specific proof points only - track record, regime calls, published research, years in market. The guide demonstrates, never brags."),
         ("THE PLAN", "Write the Plan section. 3-4 simple numbered steps. Remove every obstacle. Dead simple."),
         ("TRANSFORMATION", "Write the Transformation section. Before/after table. Who they become. What their life looks like after joining. Paint it vividly."),
         ("VALUE STACK & PRICING", "Write the Value Stack section and pricing reveal. List every deliverable with its standalone value. Make the price look like the obvious decision."),
@@ -9953,7 +9978,7 @@ INNER CIRCLE SPECIFIC CONTEXT:
          {"text": "Suggest Enhancements", "callback_data": "lp_enhance"}],
         [{"text": "Adjust Length", "callback_data": "lp_length"},
          {"text": "Paste-Back Edit", "callback_data": "lp_paste_back"}],
-        [{"text": "Approve — Generate Design Brief", "callback_data": "lp_approve_copy"}],
+        [{"text": "Approve - Generate Design Brief", "callback_data": "lp_approve_copy"}],
         [{"text": "Critique", "callback_data": "critique_lp"},
          {"text": "Regenerate a section", "callback_data": "lp_regen"}]
     ]
@@ -9973,16 +9998,16 @@ def generate_lp_design_brief(chat_id):
             "LANDING PAGE COPY:\n" + lp_content[:4000] +
             "\n\nCREATE A DESIGN BRIEF that covers:\n\n" +
             "1. PAGE OVERVIEW: Layout type, scroll depth, overall visual direction\n" +
-            "2. SECTION-BY-SECTION DESIGN SPECS: For each section — graphic type (photo/illustration/chart/video), exact content to show, placement, size recommendation, and why it works psychologically\n" +
+            "2. SECTION-BY-SECTION DESIGN SPECS: For each section - graphic type (photo/illustration/chart/video), exact content to show, placement, size recommendation, and why it works psychologically\n" +
             "3. TYPOGRAPHY HIERARCHY: Which headlines need special treatment\n" +
-            "4. COLOR & MOOD: Per section — dark/light, accent usage, emotional tone\n" +
+            "4. COLOR & MOOD: Per section - dark/light, accent usage, emotional tone\n" +
             "5. MOBILE CONSIDERATIONS: Any sections that need different mobile treatment\n" +
             "6. AI IMAGE PROMPTS: One ready-to-use Midjourney prompt per major section (photorealistic, professional, dark Cryptonary aesthetic)\n" +
             "7. ASSETS NEEDED: Complete list of what the design team needs to source or create\n\n" +
             "Format clearly. This document should be passable directly to a UI designer.",
             max_tokens=2500, system=BRANDSCRIPT_PROMPT
         )
-        send_plain(chat_id, "*DESIGN BRIEF — PASS DIRECTLY TO UI TEAM*\n\n" + result)
+        send_plain(chat_id, "*DESIGN BRIEF - PASS DIRECTLY TO UI TEAM*\n\n" + result)
         keyboard = [
             [{"text": "Mark Complete", "callback_data": "mark_complete"}],
             [{"text": "Build another page", "callback_data": "lp_again"}]
@@ -9993,7 +10018,7 @@ def generate_lp_design_brief(chat_id):
         send(chat_id, "Error generating design brief: " + str(e))
 
 def show_lp_cta_menu(chat_id):
-    """Legacy — now handled by goal selection. Kept for backward compat."""
+    """Legacy - now handled by goal selection. Kept for backward compat."""
     keyboard = [
         [{"text": "Join Cryptonary Pro ($1,197/year)", "callback_data": "lpcta_pro"}],
         [{"text": "Apply for Inner Circle ($15K-$22K)", "callback_data": "lpcta_inner_circle"}]
@@ -10001,7 +10026,7 @@ def show_lp_cta_menu(chat_id):
     send(chat_id, "*What is the CTA for this landing page?*", keyboard)
 
 def generate_landing_page(chat_id):
-    """Legacy function — now routes to generate_lp_full_copy."""
+    """Legacy function - now routes to generate_lp_full_copy."""
     generate_lp_full_copy(chat_id)
 
 
@@ -10015,18 +10040,18 @@ Your job is to analyse marketing performance data extracted from screenshots or 
 
 ANALYSIS PHILOSOPHY:
 - Never just report numbers. Explain WHY something performed well or poorly.
-- Look for patterns across the data — topic, format, hook style, avatar, funnel stage.
+- Look for patterns across the data - topic, format, hook style, avatar, funnel stage.
 - Generate specific, actionable ideas based on what the patterns suggest.
 - Use the A/B/C/D grading system (A=top 25%, B=above average, C=below average, D=bottom 25%).
 - For metrics where lower is better (CPC, CPP), invert the grading.
-- Always pool raw numbers for split tests — never average percentages.
+- Always pool raw numbers for split tests - never average percentages.
 - Compare like-for-like: ads vs ads of same avatar/stage, posts vs posts of same format.
 
 GRADING SYSTEM:
-A = Top 25% of cohort — Scale / Keep running
-B = 26-50% — Above average, monitor
-C = 51-75% — Below average, test changes
-D = Bottom 25% — Kill or overhaul
+A = Top 25% of cohort - Scale / Keep running
+B = 26-50% - Above average, monitor
+C = 51-75% - Below average, test changes
+D = Bottom 25% - Kill or overhaul
 
 OVERALL AD RATINGS:
 Mostly A/B = SCALE
@@ -10053,7 +10078,7 @@ VIDEO AIDA DIAGNOSIS:
 GRADING RULE: Grade each ad against its own cohort ONLY.
 - Videos graded against other videos
 - Statics graded against other statics
-- NEVER compare video metrics against static metrics — they are fundamentally different
+- NEVER compare video metrics against static metrics - they are fundamentally different
 
 META AD NAMING CONVENTION:
 Format: IMG (static) or VID (video)
@@ -10150,7 +10175,7 @@ def parse_ads_csv(csv_text):
             checkouts = float(r.get("Checkouts initiated", 0) or 0)
             cpc = float(r.get("CPC (cost per link click) (GBP)", r.get("CPC (GBP)", 0)) or 0)
             ctr_raw = float(r.get("Outbound CTR (click-through rate)", r.get("Outbound CTR", 0)) or 0)
-            # Meta exports CTR as decimal (0.0207 = 2.07%) — convert to percentage
+            # Meta exports CTR as decimal (0.0207 = 2.07%) - convert to percentage
             ctr = round(ctr_raw * 100, 2) if ctr_raw < 1.0 else round(ctr_raw, 2)
             purchases = float(r.get("Purchases", 0) or 0)
             cost_per_checkout = float(r.get("Cost per checkout initiated (GBP)", 0) or 0)
@@ -10173,7 +10198,7 @@ def parse_ads_csv(csv_text):
         max_ctr = round(max(ctrs), 2) if ctrs else 0
 
         lines = [
-            "VERIFIED AD DATA — computed by Python (do not re-calculate, use these numbers exactly)",
+            "VERIFIED AD DATA - computed by Python (do not re-calculate, use these numbers exactly)",
             f"Total ads: {total_ads}",
             f"Total spend: £{total_spend:,.2f}",
             f"Total checkouts initiated: {total_checkouts}",
@@ -10187,8 +10212,8 @@ def parse_ads_csv(csv_text):
             "Ad Name | Spend | Checkouts | Cost/Checkout | CTR | CPC",
         ]
         for a in sorted(ads, key=lambda x: (-x["checkouts"], -x["spend"])):
-            cpc_str = f"£{a['cpc']:.2f}" if a["cpc"] > 0 else "—"
-            ctr_str = f"{a['ctr']:.2f}%" if a["ctr"] > 0 else "—"
+            cpc_str = f"£{a['cpc']:.2f}" if a["cpc"] > 0 else "-"
+            ctr_str = f"{a['ctr']:.2f}%" if a["ctr"] > 0 else "-"
             cpco_str = f"£{a['cost_per_checkout']:.2f}" if a["cost_per_checkout"] > 0 else "£0"
             ch_str = str(int(a["checkouts"])) if a["checkouts"] > 0 else "0"
             lines.append(f"{a['name']} | £{a['spend']:.2f} | {ch_str} | {cpco_str} | {ctr_str} | {cpc_str}")
@@ -10218,12 +10243,12 @@ def analyse_ads(chat_id):
         ads_prompt = ("Extract and analyse all ad performance data from these screenshots.\n\n"
             "META AD NAMING: IMG=static, VID=video | AWA/CDR/CNV=funnel stage | Avatar in name | Msg_=angle\n\n"
             "FILTER: Only analyse " + {"all": "all ad types", "video": "VIDEO (VID) ads only", "static": "STATIC (IMG) ads only"}.get(state.get("ds_ad_filter","all"), "all ad types") + "\n\n"
-            "STEP 1 — DATA EXTRACTION: List every qualifying ad with all metrics.\n"
-            "STEP 2 — GRADING (A/B/C/D quartiles): Rate each ad SCALE/KEEP/TEST/KILL\n"
-            "STEP 3 — COHORT ANALYSIS: Grade against cohort (same avatar + stage)\n"
-            "STEP 4 — VIDEO AIDA DIAGNOSIS (video only)\n"
-            "STEP 5 — PATTERN RECOGNITION: patterns across avatar, stage, angle, type\n"
-            "STEP 6 — IDEAS: 5 specific new ad ideas from the data\n\n"
+            "STEP 1 - DATA EXTRACTION: List every qualifying ad with all metrics.\n"
+            "STEP 2 - GRADING (A/B/C/D quartiles): Rate each ad SCALE/KEEP/TEST/KILL\n"
+            "STEP 3 - COHORT ANALYSIS: Grade against cohort (same avatar + stage)\n"
+            "STEP 4 - VIDEO AIDA DIAGNOSIS (video only)\n"
+            "STEP 5 - PATTERN RECOGNITION: patterns across avatar, stage, angle, type\n"
+            "STEP 6 - IDEAS: 5 specific new ad ideas from the data\n\n"
             "Format clearly with headers.\n" + ctx)
         extraction_prompt = "Extract all ad data from these screenshots. For each ad: name, type (IMG/VID), stage, metrics. Return as a data table only."
         if images:
@@ -10251,7 +10276,7 @@ def analyse_ads(chat_id):
         state["stage"] = "ds_analysis_done"
         state["ds_full_ads_analysis"] = result
         extract_and_save_insights(chat_id, result, "ads")
-        # Show summary first — use verified Python totals if available
+        # Show summary first - use verified Python totals if available
         try:
             totals = state.get("ds_verified_totals", {})
             totals_line = ""
@@ -10317,12 +10342,12 @@ def analyse_social(chat_id):
     try:
         analysis_prompt = """You are analysing Instagram performance data for Cryptonary.
 
-FORMAT FILTER: Only analyse """ + {"all": "all formats (Reels, Statics, and Carousels)", "reels": "REELS only — ignore Statics and Carousels", "statics": "STATICS only — ignore Reels and Carousels", "carousels": "CAROUSELS only — ignore Reels and Statics"}.get(state.get("ds_social_filter","all"), "all formats") + """
+FORMAT FILTER: Only analyse """ + {"all": "all formats (Reels, Statics, and Carousels)", "reels": "REELS only - ignore Statics and Carousels", "statics": "STATICS only - ignore Reels and Carousels", "carousels": "CAROUSELS only - ignore Reels and Statics"}.get(state.get("ds_social_filter","all"), "all formats") + """
 
-FORMAT DETECTION — look for these visual cues in the screenshots:
-- REELS: show a Views metric (in addition to likes/saves etc) — video posts
-- STATICS: single image posts — thumbnail has NO overlay indicator
-- CAROUSELS: multi-image posts — thumbnail has a small white square tile indicator in the corner
+FORMAT DETECTION - look for these visual cues in the screenshots:
+- REELS: show a Views metric (in addition to likes/saves etc) - video posts
+- STATICS: single image posts - thumbnail has NO overlay indicator
+- CAROUSELS: multi-image posts - thumbnail has a small white square tile indicator in the corner
 
 If Minter shows a post type column, use that. Otherwise use the visual cues above.
 
@@ -10330,18 +10355,18 @@ PRIMARY SUCCESS METRIC: Engagement Rate = (Likes + Comments + Saves + Shares) / 
 Metric priority: Engagement Rate > Saves > Reach > Follows gained > Comments > Likes > Shares
 Views are Reels-only and graded separately.
 
-STEP 1 — DATA EXTRACTION:
+STEP 1 - DATA EXTRACTION:
 State total posts found across ALL images combined.
 For each post extract: caption snippet, format (Reel/Static/Carousel), date if shown, Reach, Likes, Comments, Saves, Shares, Views (Reels only), Follows gained if shown.
 Calculate Engagement Rate for each post.
 
-STEP 2 — PERFORMANCE RANKING (no A/B/C/D grading needed):
+STEP 2 - PERFORMANCE RANKING (no A/B/C/D grading needed):
 Rank posts by Likes (primary metric).
 For Reels, also note Views separately.
-Identify: top performers, solid performers, underperformers — with brief reasoning for each.
+Identify: top performers, solid performers, underperformers - with brief reasoning for each.
 No grading system required.
 
-STEP 3 — FORMAT BREAKDOWN:
+STEP 3 - FORMAT BREAKDOWN:
 For each format present:
 - Count of posts
 - Average engagement rate
@@ -10351,11 +10376,11 @@ For each format present:
 - Worst performer with ER%
 - What this format is best used for based on this data
 
-STEP 4 — CROSS-FORMAT COMPARISON:
+STEP 4 - CROSS-FORMAT COMPARISON:
 Which format wins on: Engagement Rate / Reach / Saves / Follows gained?
 Overall format verdict: which delivers most value right now and for what goal?
 
-STEP 5 — CONTENT PATTERN ANALYSIS:
+STEP 5 - CONTENT PATTERN ANALYSIS:
 From captions and topics, identify:
 - Which topics drive most saves?
 - Which drive most comments?
@@ -10363,24 +10388,24 @@ From captions and topics, identify:
 - Any pricing/data posts vs opinion posts difference?
 - Any BTC vs altcoin vs airdrop vs general crypto difference?
 
-STEP 6 — PATTERN RECOGNITION:
+STEP 6 - PATTERN RECOGNITION:
 3 strongest patterns with specific post evidence.
 
-STEP 7 — IDEAS:
+STEP 7 - IDEAS:
 5 specific content ideas. For each: format, topic, hook, why the data supports it.
 
-STEP 8 — TOTALS SUMMARY:
+STEP 8 - TOTALS SUMMARY:
 - Total posts analysed: N
 - Overall average engagement rate: X%
 - Best format by ER: [format] at [avg ER%]
 - Best format by reach: [format]
-- Best single post: [caption] — [ER%]
-- Worst single post: [caption] — [ER%]
+- Best single post: [caption] - [ER%]
+- Worst single post: [caption] - [ER%]
 
 Format clearly with headers."""
 
         if images:
-            # Cap at 5 images per API call — more than that exceeds context window
+            # Cap at 5 images per API call - more than that exceeds context window
             MAX_IMGS = 5
             if len(images) > MAX_IMGS:
                 send(chat_id, "Processing " + str(len(images)) + " images in batches...")
@@ -10393,7 +10418,7 @@ Format clearly with headers."""
                     content_blocks = []
                     for img_data in batch:
                         content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
-                    batch_prompt = analysis_prompt if batch_num == 1 else "Extract all post data from these screenshots. For each post: caption snippet, format, reach, likes, comments, saves, shares, views if reel. Calculate engagement rate. Return as a data table only — no analysis yet."
+                    batch_prompt = analysis_prompt if batch_num == 1 else "Extract all post data from these screenshots. For each post: caption snippet, format, reach, likes, comments, saves, shares, views if reel. Calculate engagement rate. Return as a data table only - no analysis yet."
                     content_blocks.append({"type": "text", "text": batch_prompt})
                     batch_payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 2000,
                         "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content": content_blocks}]}).encode()
@@ -10496,30 +10521,30 @@ def analyse_emails(chat_id, split_var=None):
 VARIABLE TESTED: """ + split_var + """
 
 CRITICAL RULES ON OPEN RATES:
-- ALWAYS use the platform's own reported open rate % directly from the screenshot — do NOT recalculate
-- "Total Opens" and "Total delivered" are DIFFERENT columns — never divide opens by opens
+- ALWAYS use the platform's own reported open rate % directly from the screenshot - do NOT recalculate
+- "Total Opens" and "Total delivered" are DIFFERENT columns - never divide opens by opens
 - If delivered count is not visible, use the platform's reported rate and flag that delivered was not available
-- For Brevo screenshots: the open rate % shown on the Opens tab IS the correct figure — use it directly
+- For Brevo screenshots: the open rate % shown on the Opens tab IS the correct figure - use it directly
 
-STEP 1 — FROM EACH CAMPAIGN, EXTRACT:
+STEP 1 - FROM EACH CAMPAIGN, EXTRACT:
 - Campaign name and audience segment  
 - Brevo's reported open rate for Version A (%) and Version B (%)
 - Raw openers for Version A and Version B (the actual open counts, not delivered)
 - Winner: whichever version has the higher open rate %
 - Format: | Campaign | Segment | Version A rate | Version A opens | Version B rate | Version B opens | Winner |
 
-STEP 2 — HEAD-TO-HEAD COMPARISON:
+STEP 2 - HEAD-TO-HEAD COMPARISON:
 For each campaign independently: A rate vs B rate, margin in percentage points, which won
-Do NOT weight by recipient volume or count "winner campaigns" — compare rates directly
+Do NOT weight by recipient volume or count "winner campaigns" - compare rates directly
 
-STEP 3 — OVERALL VERDICT:
+STEP 3 - OVERALL VERDICT:
 - How many campaigns did A win vs B win?
 - What was the average margin across all campaigns?
 - Did the pattern hold consistently or only in certain segments?
 - Flag any campaign where sample was too small to be meaningful (under 200 recipients per variant)
 
-STEP 4 — VERDICT (5 lines):
-WINNER: [A or B] — won [X of Y] campaigns on open rate
+STEP 4 - VERDICT (5 lines):
+WINNER: [A or B] - won [X of Y] campaigns on open rate
 CONSISTENCY: [did it hold across all segments or just some?]
 AVERAGE MARGIN: [mean percentage point difference across campaigns]
 CONFIDENCE: [INCONCLUSIVE <5,000 / DIRECTIONAL 5,000-20,000 / SIGNIFICANT 20,000+ total delivered]
@@ -10535,31 +10560,31 @@ NOTHING ELSE. No performance grades. No insights. No suggestions beyond the reco
             analysis_prompt = """Extract and analyse all email performance data.
 
 CRITICAL RULES ON OPEN RATES:
-- Use the platform's own reported open rate % DIRECTLY — do NOT recalculate from raw numbers
-- "Total Opens" is NOT the same as "Total Delivered/Recipients" — never divide opens by opens
-- If you see a reported open rate % on screen, that IS the correct figure — use it as-is
+- Use the platform's own reported open rate % DIRECTLY - do NOT recalculate from raw numbers
+- "Total Opens" is NOT the same as "Total Delivered/Recipients" - never divide opens by opens
+- If you see a reported open rate % on screen, that IS the correct figure - use it as-is
 - Only calculate a pooled rate if you have BOTH delivered count AND opens for every campaign
 
 METRICS TO EXTRACT per email:
 - Subject line
 - Send date  
-- Reported open rate % (from platform — use directly)
-- Reported CTR % (from platform — use directly)
+- Reported open rate % (from platform - use directly)
+- Reported CTR % (from platform - use directly)
 - Recipients/delivered count (only if explicitly shown as a delivered/sent figure)
 - Email type if identifiable (Free/Pro/Segment name)
 
-STEP 1 — DATA EXTRACTION:
+STEP 1 - DATA EXTRACTION:
 List every email with the platform-reported rates. Flag any where you cannot confirm the denominator.
 
-STEP 2 — GRADING (A/B/C/D quartiles):
+STEP 2 - GRADING (A/B/C/D quartiles):
 Grade each email on open rate and CTR within the same list/segment type.
 A = top 25%, B = 26-50%, C = 51-75%, D = bottom 25%.
 
-STEP 3 — TOP AND BOTTOM PERFORMERS:
-Top 3 emails by open rate — what made them work? (subject style, topic, hook type)
-Bottom 3 — what likely caused underperformance?
+STEP 3 - TOP AND BOTTOM PERFORMERS:
+Top 3 emails by open rate - what made them work? (subject style, topic, hook type)
+Bottom 3 - what likely caused underperformance?
 
-STEP 4 — PATTERN RECOGNITION:
+STEP 4 - PATTERN RECOGNITION:
 Which subject line patterns correlate with higher open rates?
 - Curiosity gap vs data-led vs fear-based vs contrarian
 - With name vs without name
@@ -10567,7 +10592,7 @@ Which subject line patterns correlate with higher open rates?
 - Question vs statement
 - Specific numbers vs general claims
 
-STEP 5 — IDEAS:
+STEP 5 - IDEAS:
 5 specific subject line and angle ideas based on what patterns the data shows.
 """ + split_instruction
 
@@ -10666,11 +10691,11 @@ METRICS TO EXTRACT (priority order):
 
 SUCCESS PRIORITY: Purchases first, then Checkout Initiation rate. Ignore bounce rate.
 
-STEP 1 — DATA EXTRACTION: Extract all metrics per variant.
-STEP 2 — PERFORMANCE TABLE: Each variant with all metrics. Calculate CVR if not shown.
-STEP 3 — POOLED TOTALS: Sum raw numbers across cohorts. Never average percentages.
-STEP 4 — WINNER: Highest purchase CVR wins. Note if checkout rate tells a different story.
-STEP 5 — VERDICT: Winner, confidence, one recommendation. Keep it simple.
+STEP 1 - DATA EXTRACTION: Extract all metrics per variant.
+STEP 2 - PERFORMANCE TABLE: Each variant with all metrics. Calculate CVR if not shown.
+STEP 3 - POOLED TOTALS: Sum raw numbers across cohorts. Never average percentages.
+STEP 4 - WINNER: Highest purchase CVR wins. Note if checkout rate tells a different story.
+STEP 5 - VERDICT: Winner, confidence, one recommendation. Keep it simple.
 """ + ctx
 
         if images:
@@ -10777,7 +10802,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                 msg += "\n\n" + str(count) + " images queued."
             send(chat_id, msg, keyboard)
         else:
-            # CSV or document — decode as text
+            # CSV or document - decode as text
             # Reject binary formats that can't be decoded
             if file_path.endswith(".numbers") or file_path.endswith(".xlsx") or file_path.endswith(".xls"):
                 send(chat_id, "📊 This file format can\'t be read directly.\n\nExport as CSV first:\n• Numbers: File → Export To → CSV\n• Excel: File → Save As → CSV")
@@ -10786,7 +10811,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                 text = file_bytes.decode("utf-8")
             except:
                 text = file_bytes.decode("latin-1")
-            # Sanity check — if mostly binary garbage, reject
+            # Sanity check - if mostly binary garbage, reject
             if sum(1 for c in text[:200] if ord(c) < 32 and c not in "\n\t\r") > 20:
                 send(chat_id, "📊 This file appears to be in a binary format.\n\nPlease export as CSV and upload that instead.")
                 return False
@@ -10800,7 +10825,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                 "ds_awaiting_landing_split_data": "ds_analyse_landing_split"
             }
             analyse_cb = ds_stage_map.get(stage, "ds_analyse_ads")
-            keyboard = [[{"text": "Done — analyse now", "callback_data": analyse_cb}]]
+            keyboard = [[{"text": "Done - analyse now", "callback_data": analyse_cb}]]
             send(chat_id, "File received (" + str(len(text)) + " characters). Tap to analyse.", keyboard)
         return True
     except Exception as e:
@@ -10917,7 +10942,7 @@ def get_voice_corpus_context(chat_id):
     if not examples:
         return ""
     recent = examples[-5:]
-    ctx = "\n\n=== APPROVED WRITING EXAMPLES (Adam's actual voice — match this style) ===\n"
+    ctx = "\n\n=== APPROVED WRITING EXAMPLES (Adam's actual voice - match this style) ===\n"
     for ex in recent:
         ctx += "\n[" + ex.get("source","") + " - " + ex.get("date","") + "]\n"
         ctx += ex.get("text","") + "\n"
@@ -11007,7 +11032,7 @@ def get_preanalysis_checklist(data_type, item_count):
     }
     t = thresholds.get(data_type, {"min": 3, "warn": 5})
     if item_count < t["min"]:
-        return ("TOO_SMALL", "Only " + str(item_count) + " items found. Minimum " + str(t["min"]) + " needed for meaningful analysis. Results may be misleading — consider gathering more data first.")
+        return ("TOO_SMALL", "Only " + str(item_count) + " items found. Minimum " + str(t["min"]) + " needed for meaningful analysis. Results may be misleading - consider gathering more data first.")
     elif item_count < t["warn"]:
         return ("SMALL", "Small sample (" + str(item_count) + " items). Analysis will run but treat conclusions as directional, not definitive.")
     return ("OK", "")
@@ -11036,7 +11061,7 @@ def save_briefing_subscribers(ids):
         print("Briefing subscriber save error:", e, flush=True)
 
 # ══════════════════════════════════════════════════════════════════
-# WHISPER — VOICE TO TEXT
+# WHISPER - VOICE TO TEXT
 # ══════════════════════════════════════════════════════════════════
 
 def transcribe_voice(file_id):
@@ -11057,7 +11082,7 @@ def transcribe_voice(file_id):
         with urllib.request.urlopen(req, timeout=30) as r:
             audio_data = r.read()
 
-        # Step 3: Send to Whisper API — retry once on 429
+        # Step 3: Send to Whisper API - retry once on 429
         boundary = "----WhisperBoundary7MA4YWx"
         body = (
             ("--" + boundary + "\r\n").encode() +
@@ -11097,7 +11122,7 @@ def transcribe_voice(file_id):
 
 
 def handle_voice_message(chat_id, voice):
-    """Handle a voice note — transcribe and route contextually based on current stage."""
+    """Handle a voice note - transcribe and route contextually based on current stage."""
     if not OPENAI_KEY:
         send(chat_id, "⚠️ Voice input needs an OpenAI key. Add OPENAI_KEY to Render.")
         return
@@ -11112,12 +11137,13 @@ def handle_voice_message(chat_id, voice):
 
     current_stage = user_state.get(chat_id, {}).get("stage", "idle")
 
-    # INPUT STAGES — bot is waiting for text, voice is transparent replacement
+    # INPUT STAGES - bot is waiting for text, voice is transparent replacement
     # Just transcribe and route exactly as if the user typed it
     input_stages = {
         # Email flow
         "awaiting_email_report", "awaiting_report", "buffering_report",
         "awaiting_context_choice", "awaiting_context_text", "context_preview",
+        "awaiting_custom_free_cta", "awaiting_custom_pro_cta",
         # Social flow
         "awaiting_social_report",
         # ALL quick edit stages
@@ -11148,7 +11174,7 @@ def handle_voice_message(chat_id, voice):
         "awaiting_custom_pro_hook",
         # DS followup
         "ds_followup",
-        # Active content stages — voice = quick edit instruction
+        # Active content stages - voice = quick edit instruction
         "social_ready", "social_approved",
         "emails_ready", "emails_approved",
         # YouTube description flow
@@ -11175,7 +11201,7 @@ def handle_voice_message(chat_id, voice):
         handle_message(fake_msg)
         return
 
-    # IDLE — bot is not waiting for anything specific
+    # IDLE - bot is not waiting for anything specific
     # Use interpretation flow so we know what to do with the voice brief
     send(chat_id, "Heard: _\"" + transcript[:300] + "\"_\n\nInterpreting...")
     try:
@@ -11215,11 +11241,11 @@ def handle_voice_message(chat_id, voice):
             [{"text": "❌ Start over",        "callback_data": "voice_discard"}],
         ]
         if not ready:
-            summary += "\n_Brief is a bit vague — generate anyway or add detail?_"
+            summary += "\n_Brief is a bit vague - generate anyway or add detail?_"
         send(chat_id, summary, keyboard)
 
     except Exception as e:
-        # Interpretation failed — just route as text
+        # Interpretation failed - just route as text
         send(chat_id, "🎙️ _\"" + transcript[:200] + "\"_")
         fake_msg = {"chat": {"id": chat_id}, "text": transcript, "from": {"id": chat_id}}
         handle_message(fake_msg)
@@ -11260,7 +11286,7 @@ def route_voice_to_flow(chat_id):
         generate_ie_concept(chat_id)
 
     else:
-        # General — show them what we got and let them pick
+        # General - show them what we got and let them pick
         keyboard = [
             [{"text": "📧 Make it an email",     "callback_data": "voice_as_email"}],
             [{"text": "📱 Make it social content","callback_data": "voice_as_social"}],
@@ -11271,10 +11297,10 @@ def route_voice_to_flow(chat_id):
 
 
 # ══════════════════════════════════════════════════════════════════
-# X (TWITTER) API — LIVE TWEET FETCHING
+# X (TWITTER) API - LIVE TWEET FETCHING
 # ══════════════════════════════════════════════════════════════════
 
-# Accounts to pull from — these are the high-signal crypto accounts
+# Accounts to pull from - these are the high-signal crypto accounts
 X_ACCOUNTS = [
     "WatcherGuru",
     "lookonchain",
@@ -11367,11 +11393,11 @@ def format_x_context(tweets):
 
 
 # ══════════════════════════════════════════════════════════════════
-# IMAGE GENERATION — DALL-E 3 via OpenAI API
+# IMAGE GENERATION - DALL-E 3 via OpenAI API
 # ══════════════════════════════════════════════════════════════════
 
 # Post type → style instruction mapping
-# Cryptonary Brand Guidelines — derived from actual Instagram post analysis
+# Cryptonary Brand Guidelines - derived from actual Instagram post analysis
 # LOGO PLACEMENT (INSTAGRAM): bracket-C logomark = bottom-RIGHT. @Cryptonary text handle = bottom-LEFT. Both on every post.
 # LOGO PLACEMENT (YOUTUBE): bracket-C logomark = bottom-LEFT only. No @Cryptonary text handle.
 # LOGO PLACEMENT (EMAIL/REPORT): No logo at all.
@@ -11393,10 +11419,10 @@ CRYPTONARY_BRAND = {
         "youtube_cover":     {"w": 1920, "h": 1080},
     },
     "templates": {
-        "data_table":    "Pure black bg. Massive Tungsten headline top (white + ONE accent colour word). Dark grey rounded cards for data rows. Coin logo + ticker + price + % change columns. Zero decoration — data IS the design.",
+        "data_table":    "Pure black bg. Massive Tungsten headline top (white + ONE accent colour word). Dark grey rounded cards for data rows. Coin logo + ticker + price + % change columns. Zero decoration - data IS the design.",
         "news":          "Visual/chart fills top 55-60%. Pure black bottom 40%. Red rounded pill badge ('NEWS'/'BREAKING') above headline. White Tungsten headline 3-4 words per line, left-aligned, very large. Hashtag grey top-left.",
         "quote_photo":   "Subject photo full bleed or B&W with colour accents. Large white Inter quote left side. Key phrase in orange. Attribution in spaced small caps below. Coin logo accent top-right if relevant.",
-        "comparison":    "Two panels in one rounded card on black. Each panel has photo/visual. Bold white label on each. The juxtaposition does all the work — minimal extra text.",
+        "comparison":    "Two panels in one rounded card on black. Each panel has photo/visual. Bold white label on each. The juxtaposition does all the work - minimal extra text.",
         "cultural_meme": "Full illustration, warm or dramatic palette. Message in the scene itself. Minimal text overlay. High quality art style, not clipart.",
         "data_card":     "Dark gradient bg with dramatic 3D coin visual centred. Stats in clean rows below. 'Cryptonary\'s Take' box at bottom. Slide number top-left corner. Premium app-like feel.",
     }
@@ -11404,7 +11430,7 @@ CRYPTONARY_BRAND = {
 
 IMAGE_STYLE_MAP = {
     "breaking_news":  "NEWS template. Visual/chart top 55%. Pure black bottom. Red rounded 'NEWS' pill badge. White Tungsten headline 3-4 words/line left-aligned. Hashtag grey top-left. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
-    "price_data":     "DATA TABLE template. Pure black bg. Massive Tungsten headline top — white with green or red accent word. Dark grey rounded cards (#1A1A1A) for each asset row: coin logo | ticker | price | % change (green=up, red=down). Zero decoration. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
+    "price_data":     "DATA TABLE template. Pure black bg. Massive Tungsten headline top - white with green or red accent word. Dark grey rounded cards (#1A1A1A) for each asset row: coin logo | ticker | price | % change (green=up, red=down). Zero decoration. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
     "engagement":     "TYPOGRAPHY template. Pure black bg. Ultra-bold Tungsten statement, 2-4 words per line, full width. One key word or phrase in accent colour. Nothing else. Maximum negative space. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
     "educational":    "DATA CARD template. Dark gradient bg. Dramatic centred coin/topic visual. Clean stat rows below. 'Cryptonary\'s Take' summary box. Inter body font. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
     "meme_cultural":  "CULTURAL template. Full warm-palette illustration. Message embedded in scene. Minimal text overlay. High craft. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
@@ -11414,18 +11440,18 @@ IMAGE_STYLE_MAP = {
     "background":     "Cinematic dark background for compositing. No text. No logos. Dark mood relevant to crypto/finance.",
     "email_banner":   "600x200px. Dark bg. Short bold Inter headline centre-left. Clean, professional. No logo.",
     "report_thumb":   "1920x1080px. Pure black. Bold Tungsten title. Data element. No logo. Editorial.",
-    "youtube_cover":  "YouTube thumbnail 1920x1080px landscape, full bleed. Three templates — SPLIT/POINTING: solid textured colour bg (blue/red/green/yellow), key visual element left, bold yellow or red pill badge top-left (black Tungsten text, rounded corners); CHART_OVERLAY: real chart fills full bg, Adam cut-out over it, minimal text, red circle annotation on key data; DRAMATIC: dark moody full-bleed bg (red/dark tones, coin logos), massive white Tungsten headline full-width at top, serious. All: bracket-C logomark bottom-LEFT white only. NO @Cryptonary text handle on YouTube.",
+    "youtube_cover":  "YouTube thumbnail 1920x1080px landscape, full bleed. Three templates - SPLIT/POINTING: solid textured colour bg (blue/red/green/yellow), key visual element left, bold yellow or red pill badge top-left (black Tungsten text, rounded corners); CHART_OVERLAY: real chart fills full bg, Adam cut-out over it, minimal text, red circle annotation on key data; DRAMATIC: dark moody full-bleed bg (red/dark tones, coin logos), massive white Tungsten headline full-width at top, serious. All: bracket-C logomark bottom-LEFT white only. NO @Cryptonary text handle on YouTube.",
     "static":         "INSTAGRAM STATIC. 1080x1350px. Choose appropriate template from: data_table / news / quote / comparison / cultural / data_card based on brief content. @Cryptonary bottom-left. Bracket-C logo bottom-right.",
     "carousel":       "CAROUSEL. 1080x1350px. TWO main carousel types:\n"
-"TYPE 1 — DATA REPORT: Cover=cinematic image lower 60% + black top + massive Tungsten headline centre + red pill badge + no slide number. Data slides=dramatic 3D neon coin visual upper 55% in coin brand colours, coin ticker TL + price TR Inter, Statistics label + 5 rows, Cryptonary's Take box. CTA=blurred bg + subscribe message + blue pill button.\n"
-"TYPE 2 — EDITORIAL/NARRATIVE: Cover=dark photo bg + slide number 01 TL + massive left-aligned Tungsten headline (ultra-compressed tight leading) + Inter subtitle + red pill SWIPE CTA left-aligned. Content slides=cinematic photo full bg with dark overlay + left-aligned text: bold Tungsten/Inter headline + thin RED UNDERLINE RULE under key phrase + Inter body with inline bold. Accent colour sets per topic (red=sell/risk, blue=stake/commitment). Data slides=textured bg (charcoal or dark blue newspaper) + accent-coloured rounded cards matching bg. CTA=engagement question + bold options list + full-width blue LINK IN BIO button (no blur).\n"
+"TYPE 1 - DATA REPORT: Cover=cinematic image lower 60% + black top + massive Tungsten headline centre + red pill badge + no slide number. Data slides=dramatic 3D neon coin visual upper 55% in coin brand colours, coin ticker TL + price TR Inter, Statistics label + 5 rows, Cryptonary's Take box. CTA=blurred bg + subscribe message + blue pill button.\n"
+"TYPE 2 - EDITORIAL/NARRATIVE: Cover=dark photo bg + slide number 01 TL + massive left-aligned Tungsten headline (ultra-compressed tight leading) + Inter subtitle + red pill SWIPE CTA left-aligned. Content slides=cinematic photo full bg with dark overlay + left-aligned text: bold Tungsten/Inter headline + thin RED UNDERLINE RULE under key phrase + Inter body with inline bold. Accent colour sets per topic (red=sell/risk, blue=stake/commitment). Data slides=textured bg (charcoal or dark blue newspaper) + accent-coloured rounded cards matching bg. CTA=engagement question + bold options list + full-width blue LINK IN BIO button (no blur).\n"
 "BOTH types: @Cryptonary bottom-left, bracket-C bottom-right every slide. Slide numbers top-left grey on all non-cover slides.",
-    "ad_static":      "AD STATIC CREATIVE. 1080x1350px. THREE funnel-stage templates — pick by stage in brief:\n"
-"AWARENESS (TOF): Editorial news-article aesthetic — looks like content, not an ad. Dark photo or chart fills top 55-60%, pure black lower 40%. Small red rounded pill badge top-left: 'BREAKING' / 'JUST DROPPED' / bold category label. White Tungsten headline 3-4 words/line, tight leading, left-aligned — reads like a news headline not an ad. Small track-record proof line in grey Inter below headline (e.g. 'SOL at $23. ETH at $1,200.'). Bracket-C logomark bottom-right. NO taglines, NO CTAs, NO prices on image — this is awareness not conversion.\n"
-"CONSIDERATION (MOF): Social proof template — dark bg (#0A0A0A). Upper 40%: bold white Tungsten headline (the key insight or promise, max 6 words). Middle: dark grey rounded card (#1A1A1A) with 3 specific proof bullets (Inter 15px, bullet •, white body, green accent on numbers). Lower: avatar identifier line in grey Inter 13px (e.g. 'For investors managing $50K+') + thin blue divider rule. Bracket-C bottom-right + @Cryptonary bottom-left. Feels premium, data-driven, editorial.\n"
-"CONVERSION (BOF): Direct response offer template — pure black bg. Top: red rounded 'LIMITED' / 'TODAY ONLY' pill badge (if applicable). Massive Tungsten headline centre-top (the offer, max 5 words, white + ONE red or blue accent word). Sub-headline Inter 16px grey (the qualifier/'For investors who...'). Visual middle: dark gradient card with key offer details in clean rows (what they get, Inter 14px). Bottom: full-width blue rounded CTA pill button with white Tungsten text ('JOIN PRO NOW' / 'APPLY NOW'). @Cryptonary bottom-left. Bracket-C bottom-right.\n"
+    "ad_static":      "AD STATIC CREATIVE. 1080x1350px. THREE funnel-stage templates - pick by stage in brief:\n"
+"AWARENESS (TOF): Editorial news-article aesthetic - looks like content, not an ad. Dark photo or chart fills top 55-60%, pure black lower 40%. Small red rounded pill badge top-left: 'BREAKING' / 'JUST DROPPED' / bold category label. White Tungsten headline 3-4 words/line, tight leading, left-aligned - reads like a news headline not an ad. Small track-record proof line in grey Inter below headline (e.g. 'SOL at $23. ETH at $1,200.'). Bracket-C logomark bottom-right. NO taglines, NO CTAs, NO prices on image - this is awareness not conversion.\n"
+"CONSIDERATION (MOF): Social proof template - dark bg (#0A0A0A). Upper 40%: bold white Tungsten headline (the key insight or promise, max 6 words). Middle: dark grey rounded card (#1A1A1A) with 3 specific proof bullets (Inter 15px, bullet •, white body, green accent on numbers). Lower: avatar identifier line in grey Inter 13px (e.g. 'For investors managing $50K+') + thin blue divider rule. Bracket-C bottom-right + @Cryptonary bottom-left. Feels premium, data-driven, editorial.\n"
+"CONVERSION (BOF): Direct response offer template - pure black bg. Top: red rounded 'LIMITED' / 'TODAY ONLY' pill badge (if applicable). Massive Tungsten headline centre-top (the offer, max 5 words, white + ONE red or blue accent word). Sub-headline Inter 16px grey (the qualifier/'For investors who...'). Visual middle: dark gradient card with key offer details in clean rows (what they get, Inter 14px). Bottom: full-width blue rounded CTA pill button with white Tungsten text ('JOIN PRO NOW' / 'APPLY NOW'). @Cryptonary bottom-left. Bracket-C bottom-right.\n"
 "ALL: No 'AD' label. Editorial over advertising. Specific numbers outperform vague claims. Loss-framed headlines preferred over gain-framed.",
-    "ad_video":       "AD VIDEO STORYBOARD. Three-act structure for 15-30s Meta/YouTube video ads. HOOK [0-3s]: Full-bleed dark dramatic frame — coin visual or chart animation or bold text wipe. Single white Tungsten headline slams in (3-5 words max). No logo in hook. BODY [3-15s]: Two or three scene cuts. Each scene: dark bg, single claim or proof point (specific number/date), Inter text overlay left-aligned. Accent colour matches claim sentiment (green=bullish call, red=risk/missed, blue=platform/edge). Track record frames preferred (SOL $23 / ETH $1,200 / HYPE pre-launch). CLOSE/CTA [final 5s]: Pure black bg. Offer statement Tungsten centre. Full-width blue rounded pill button. Bracket-C logomark appears bottom-right on close only. Music: building tension in body, resolves on CTA. Caption burn-in throughout — all speech must be readable without audio.",
+    "ad_video":       "AD VIDEO STORYBOARD. Three-act structure for 15-30s Meta/YouTube video ads. HOOK [0-3s]: Full-bleed dark dramatic frame - coin visual or chart animation or bold text wipe. Single white Tungsten headline slams in (3-5 words max). No logo in hook. BODY [3-15s]: Two or three scene cuts. Each scene: dark bg, single claim or proof point (specific number/date), Inter text overlay left-aligned. Accent colour matches claim sentiment (green=bullish call, red=risk/missed, blue=platform/edge). Track record frames preferred (SOL $23 / ETH $1,200 / HYPE pre-launch). CLOSE/CTA [final 5s]: Pure black bg. Offer statement Tungsten centre. Full-width blue rounded pill button. Bracket-C logomark appears bottom-right on close only. Music: building tension in body, resolves on CTA. Caption burn-in throughout - all speech must be readable without audio.",
 }
 
 def build_image_prompt(concept, angle, post_type="breaking_news", extra_direction=""):
@@ -11546,7 +11572,7 @@ def send_image_bytes(chat_id, image_bytes, mime_type="image/png", caption=""):
 
 
 # ══════════════════════════════════════════════════════════════════
-# CLAUDE VISUAL GENERATION — SVG + HTML
+# CLAUDE VISUAL GENERATION - SVG + HTML
 # Claude generates brand-accurate visuals as SVG (sent as image)
 # and HTML (sent as downloadable file for editing)
 # ══════════════════════════════════════════════════════════════════
@@ -11555,12 +11581,12 @@ def generate_claude_svg(brief, post_type, angle=""):
     """Ask Claude to generate an SVG graphic from a visual brief."""
     type_instructions = {
         "storyboard": "Create a STORYBOARD SVG showing scene frames in a grid layout. Each frame is a labelled rectangle with scene description inside. Clean, minimal, black background, white text, blue accent borders.",
-        "static":     "Create a STATIC POST SVG (1080x1350px portrait — MUST be portrait, not square). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
+        "static":     "Create a STATIC POST SVG (1080x1350px portrait - MUST be portrait, not square). Bold headline text, dark background, brand colours. Minimal text on the graphic itself. Make it look like a real Instagram post.",
         "carousel":   "Create a CAROUSEL COVER SLIDE SVG (1080x1350px portrait). Full-bleed dramatic cinematic image lower 60%, pure black top. Massive white Tungsten headline centre. Red rounded pill badge with white text. @Cryptonary white bottom-left, bracket-C logomark bottom-right.",
         "story":      "Create a STORY FRAME SVG (1080x1920). Full screen vertical. Bold text, dark bg, designed for mobile.",
         "thumbnail":  "Create an EMAIL THUMBNAIL SVG (1200x628). Bold headline, relevant visual element, dark background. Optimised for email preview.",
         "data":       "Create a DATA VISUALISATION SVG. Charts, numbers, clean layout. Dark background, green/red for up/down, white text.",
-        "ad_static":  "Create an AD STATIC CREATIVE SVG (1080x1350px portrait). Editorial news-article aesthetic — must NOT look like an ad. Determine funnel stage from brief: AWARENESS=dark photo/chart upper 55%+pure black lower 40%+small red rounded pill badge top-left+white bold headline 3-4 words/line left-aligned+grey proof line below headline; CONSIDERATION=dark #0A0A0A bg+bold white headline top+dark #1A1A1A rounded card centre with 3 proof bullets (green accent on numbers)+avatar identifier grey line+blue divider rule; CONVERSION=pure black bg+massive centred Tungsten headline (white+ONE red/blue accent word)+grey sub-headline+offer detail rows+full-width blue rounded CTA pill bottom. All: bracket-C logomark bottom-right, @Cryptonary bottom-left. No AD label. Specific numbers over vague claims.",
+        "ad_static":  "Create an AD STATIC CREATIVE SVG (1080x1350px portrait). Editorial news-article aesthetic - must NOT look like an ad. Determine funnel stage from brief: AWARENESS=dark photo/chart upper 55%+pure black lower 40%+small red rounded pill badge top-left+white bold headline 3-4 words/line left-aligned+grey proof line below headline; CONSIDERATION=dark #0A0A0A bg+bold white headline top+dark #1A1A1A rounded card centre with 3 proof bullets (green accent on numbers)+avatar identifier grey line+blue divider rule; CONVERSION=pure black bg+massive centred Tungsten headline (white+ONE red/blue accent word)+grey sub-headline+offer detail rows+full-width blue rounded CTA pill bottom. All: bracket-C logomark bottom-right, @Cryptonary bottom-left. No AD label. Specific numbers over vague claims.",
         "ad_video":   "Create a VIDEO AD STORYBOARD SVG. CSS grid of labelled frames showing each act: HOOK frame (0-3s) | BODY frames (3-15s, 2-3 scenes) | CTA frame (final 5s). Each frame: dark bg rectangle with scene label top, text overlay description inside, colour bar at bottom showing dominant accent (blue/green/red). Clean minimal layout, black background, white text, blue accent borders on frame containers.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
@@ -11586,9 +11612,9 @@ RULES:
 - Return ONLY the complete SVG code, nothing else
 - No markdown, no explanation, just the raw SVG starting with <svg
 - Must be valid, renderable SVG
-- Keep text concise — max 8 words per headline
+- Keep text concise - max 8 words per headline
 - Use viewBox for proper scaling
-- CRITICAL — NO PROMPT BLEED: Only render actual content from the brief as visible text. Never render layout instructions, font names, dimension specs, or any directive text as visible content on the graphic. Apply all instructions silently.
+- CRITICAL - NO PROMPT BLEED: Only render actual content from the brief as visible text. Never render layout instructions, font names, dimension specs, or any directive text as visible content on the graphic. Apply all instructions silently.
 - Make it look professional and on-brand""")
 
     try:
@@ -11610,7 +11636,7 @@ RULES:
                 end = result.lower().rfind('</svg>') + 6
                 if end > start:
                     return result[start:end], None
-            return None, "Claude did not return valid SVG — try again"
+            return None, "Claude did not return valid SVG - try again"
     except Exception as e:
         return None, str(e)
 
@@ -11620,7 +11646,7 @@ def generate_claude_html(brief, post_type, angle=""):
     type_instructions = {
         "storyboard": "Storyboard layout. CSS grid of numbered scene frames. Dark #000. Tungsten titles, Inter body.",
         "static":     "Instagram static 1080x1350px. Pick template by content: DATA TABLE=pure black bg, huge Tungsten headline (white+green/red accent word), #1A1A1A rounded cards for data rows; NEWS=visual top 55%, black bottom, red NEWS pill, Tungsten headline 3-4 words/line; QUOTE=subject photo full-bleed, large Inter quote, orange key words; COMPARISON=two rounded panels on black each with photo+label. Always: @Cryptonary white Inter 13px bottom-left + bracket-C SVG bottom-right.",
-        "carousel":   "Full carousel HTML. ALL slides 1080x1350px portrait scrollable. Two carousel types — choose based on brief:\n"
+        "carousel":   "Full carousel HTML. ALL slides 1080x1350px portrait scrollable. Two carousel types - choose based on brief:\n"
 "DATA REPORT TYPE: Cover=cinematic image lower 60%+black top+Tungsten headline centre+red pill badge+no slide number. Data slides=3D neon coin visual upper 55% in coin colours+Statistics rows+Cryptonary's Take box. CTA=blurred bg+blue pill subscribe button.\n"
 "EDITORIAL TYPE: Cover=dark photo bg+slide number 01+massive LEFT-ALIGNED Tungsten headline (tight leading)+red SWIPE pill. Content slides=full-bleed dark photo+left-aligned text+THIN RED UNDERLINE under key phrase+Inter body bold inline. Textured bg slides use accent-coloured cards matching bg tone. CTA=engagement question+bold option list+full-width blue LINK IN BIO button.\n"
 "All slides: @Cryptonary white Inter 13px bottom-left + bracket-C SVG bottom-right. USE EXACT TEXT from brief.",
@@ -11630,11 +11656,11 @@ def generate_claude_html(brief, post_type, angle=""):
         "youtube":    "YouTube thumbnail 1920x1080px landscape full bleed. SPLIT/POINTING: solid/textured colour bg, bold yellow or red pill badge top-left (black Tungsten rounded corners), key visual left side; CHART_OVERLAY: chart fills bg, minimal text, red annotation circle; DRAMATIC: dark moody bg, massive Tungsten headline full-width top. All: bracket-C logomark bottom-LEFT white only. NO @Cryptonary text on YouTube.",
         "data":       "Data card. Dark gradient bg. Dramatic centred 3D/neon coin visual. Clean Inter stat rows (label left, value right). Rounded Cryptonary's Take box at bottom. @Cryptonary white 13px bottom-left + bracket-C SVG bottom-right.",
         "ad_static":  "AD STATIC CREATIVE. 1080x1350px. Determine funnel stage from brief then apply:\n"
-"AWARENESS (TOF): editorial news look — dark photo or gradient top 55%, pure black lower 45%. Small red rounded pill badge top-left (8px radius, 11px Tungsten white text: 'BREAKING' or category). White Tungsten headline left-aligned, 3-4 words per line, font-size 72-80px, font-weight 900, letter-spacing -0.02em, line-height 1.0. Grey (#666) Inter 14px proof line below headline (track record stat). NO price/offer/CTA visible on image. @Cryptonary white Inter 13px bottom-left. Bracket-C SVG bottom-right.\n"
+"AWARENESS (TOF): editorial news look - dark photo or gradient top 55%, pure black lower 45%. Small red rounded pill badge top-left (8px radius, 11px Tungsten white text: 'BREAKING' or category). White Tungsten headline left-aligned, 3-4 words per line, font-size 72-80px, font-weight 900, letter-spacing -0.02em, line-height 1.0. Grey (#666) Inter 14px proof line below headline (track record stat). NO price/offer/CTA visible on image. @Cryptonary white Inter 13px bottom-left. Bracket-C SVG bottom-right.\n"
 "CONSIDERATION (MOF): dark #0A0A0A bg full height. Bold white Tungsten headline 68px top-centre (max 6 words). Dark #1A1A1A rounded-16px card centre: 3 bullet rows (• Inter 15px white body + green #0DA500 number/stat). Grey Inter 13px avatar line below card ('For investors managing $50K+'). 2px blue #005EFF horizontal rule dividing card from bottom. @Cryptonary white 13px bottom-left. Bracket-C SVG bottom-right.\n"
 "CONVERSION (BOF): pure black bg. Optional red pill 'LIMITED' badge top-centre. Massive white Tungsten headline 80-90px centre (white + ONE accent word in red or blue). Grey Inter 16px sub-headline below ('For investors who...'). Dark #111 rounded-12px offer card: 3-4 rows of offer details, Inter 14px white. Full-width blue #005EFF rounded-100px CTA pill bottom (white Tungsten 'JOIN PRO NOW' or 'APPLY NOW'). @Cryptonary white 13px bottom-left. Bracket-C SVG bottom-right.\n"
 "ALL: NO 'AD' label. Editorial > advertising. Specific numbers > vague claims. Loss framing > gain framing.",
-        "ad_video":   "VIDEO AD STORYBOARD. Full-page HTML showing 4 storyboard frames in a 2x2 CSS grid. Each frame 540x960px (scaled 50% for display), dark #0A0A0A bg, 2px #333 border, border-radius 8px. Frame 1 — HOOK [0-3s]: label top-left grey Inter 11px. Dramatic near-full-bleed dark gradient. Single Tungsten headline 3-5 words slams centre, font-size 56px white, weight 900. Frame 2 — BODY SCENE 1 [3-10s]: single proof claim, specific stat in green/red accent, dark bg, Inter text overlay left-aligned. Frame 3 — BODY SCENE 2 [10-15s]: second scene — track record visual description or avatar pain-point text. Frame 4 — CTA [15-30s]: pure black bg. Tungsten offer statement centre. Full-width blue rounded CTA pill. Bracket-C logomark bottom-right appears here only. Caption burn-in bar at bottom of each frame (white text on #000000 30% opacity strip). Title row above grid: 'VIDEO AD STORYBOARD — [STAGE]' white Tungsten 24px. Background page colour #000.",
+        "ad_video":   "VIDEO AD STORYBOARD. Full-page HTML showing 4 storyboard frames in a 2x2 CSS grid. Each frame 540x960px (scaled 50% for display), dark #0A0A0A bg, 2px #333 border, border-radius 8px. Frame 1 - HOOK [0-3s]: label top-left grey Inter 11px. Dramatic near-full-bleed dark gradient. Single Tungsten headline 3-5 words slams centre, font-size 56px white, weight 900. Frame 2 - BODY SCENE 1 [3-10s]: single proof claim, specific stat in green/red accent, dark bg, Inter text overlay left-aligned. Frame 3 - BODY SCENE 2 [10-15s]: second scene - track record visual description or avatar pain-point text. Frame 4 - CTA [15-30s]: pure black bg. Tungsten offer statement centre. Full-width blue rounded CTA pill. Bracket-C logomark bottom-right appears here only. Caption burn-in bar at bottom of each frame (white text on #000000 30% opacity strip). Title row above grid: 'VIDEO AD STORYBOARD - [STAGE]' white Tungsten 24px. Background page colour #000.",
     }
     instruction = type_instructions.get(post_type, type_instructions["static"])
 
@@ -11653,7 +11679,7 @@ TYPE: """ + instruction + """
 
 CRYPTONARY BRAND GUIDELINES:
 Colours: #000000 black | #FFFFFF white | #005EFF blue | #FF0000 red | #0DA500 green | #F7931A bitcoin orange
-Title font: Tungsten (font-weight:900, uppercase, letter-spacing:-0.02em) — fallback: Impact, Arial Black
+Title font: Tungsten (font-weight:900, uppercase, letter-spacing:-0.02em) - fallback: Impact, Arial Black
 Body font: Inter, Proxima Nova, Arial, sans-serif
 Canvas sizes: Instagram static/carousel = 1080x1350px PORTRAIT | Email banner = 600x200px | Report/YouTube = 1920x1080px
 CRITICAL CANVAS RULE: Instagram static and carousel MUST be exactly width:1080px height:1350px portrait orientation. Landscape output is wrong. Set this on the root canvas element explicitly.
@@ -11661,15 +11687,15 @@ Logo: """ + logo_instruction + """
 
 RULES:
 - Return ONLY the complete HTML starting with <!DOCTYPE html>
-- Fully self-contained — all CSS inline in <style> tags
+- Fully self-contained - all CSS inline in <style> tags
 - No external resources or CDN links
 - Professional, on-brand, clean design
 - CONTENT RULE: Use ONLY the actual text, headlines, data points, and copy from the BRIEF above. Do not invent placeholder text, generic crypto phrases, or filler copy. Every word on the canvas must come from the brief.
-- BRAND RULE: This is Cryptonary — dark, editorial, data-driven. Not generic crypto. Not colourful. Not friendly. Authoritative, analytical, premium.
-- CRITICAL — NO PROMPT BLEED: Every text element rendered on the canvas must be actual content from the brief. NEVER render layout directives, font instructions, dimension specs, or any text from these instructions as visible content. If an instruction says "3-4 words per line" — apply it silently, never print those words. If an instruction mentions "Tungsten headline" — use that style, never write "Tungsten headline" on the canvas.
+- BRAND RULE: This is Cryptonary - dark, editorial, data-driven. Not generic crypto. Not colourful. Not friendly. Authoritative, analytical, premium.
+- CRITICAL - NO PROMPT BLEED: Every text element rendered on the canvas must be actual content from the brief. NEVER render layout directives, font instructions, dimension specs, or any text from these instructions as visible content. If an instruction says "3-4 words per line" - apply it silently, never print those words. If an instruction mentions "Tungsten headline" - use that style, never write "Tungsten headline" on the canvas.
 - Include a print/screenshot note: <!-- Open in browser and screenshot for best results -->""")
 
-    # Carousels need more tokens — they have many slides
+    # Carousels need more tokens - they have many slides
     max_tok = 5000 if post_type == "carousel" else 3500
 
     try:
@@ -11694,7 +11720,7 @@ RULES:
                     handle_div = '<div style="position:fixed;bottom:18px;left:16px;font-family:Inter,Arial,sans-serif;font-size:13px;color:white;z-index:999;opacity:0.9;">@Cryptonary</div>'
                     html_out = html_out.replace('</body>', logo_div + handle_div + '</body>')
             return html_out, None
-        return None, "Claude did not return valid HTML — try again or use a different engine"
+        return None, "Claude did not return valid HTML - try again or use a different engine"
     except Exception as e:
         return None, str(e)
 
@@ -11712,16 +11738,16 @@ def send_svg_as_image(chat_id, svg_content):
         send_image_bytes(chat_id, png_bytes, "image/png")
         return True
     except ImportError:
-        # cairosvg not on Render — send as SVG file (opens in browser)
+        # cairosvg not on Render - send as SVG file (opens in browser)
         send_file_bytes(chat_id, svg_content.encode(), "cryptonary_visual.svg", "image/svg+xml")
         send(chat_id, "📎 Open the SVG file in your browser to view the full-quality image.")
         return True
     except Exception as e:
         print("SVG conversion error:", e, flush=True)
-        # Last resort — send as file anyway
+        # Last resort - send as file anyway
         try:
             send_file_bytes(chat_id, svg_content.encode(), "cryptonary_visual.svg", "image/svg+xml")
-            send(chat_id, "📎 SVG sent as file — open in browser.")
+            send(chat_id, "📎 SVG sent as file - open in browser.")
             return True
         except:
             return False
@@ -11762,7 +11788,7 @@ def generate_claude_visual(chat_id, brief, post_type, send_html=True):
     user_state[chat_id]["last_claude_brief"] = brief[:600]
     user_state[chat_id]["last_claude_type"] = post_type
 
-    # Claude generates HTML only — clean, full quality, opens in browser
+    # Claude generates HTML only - clean, full quality, opens in browser
     send(chat_id, "🤖 Claude generating " + vtype_label + "...")
     html, html_err = generate_claude_html(brief, post_type)
     if html:
@@ -11848,7 +11874,7 @@ def generate_and_send_image(chat_id, prompt, post_type="static"):
             send(chat_id, "Image generation failed: " + info)
             return False
 
-    # Final fallback — Claude SVG requires no external API
+    # Final fallback - Claude SVG requires no external API
     send(chat_id, "⚠️ No image API keys configured. Using Claude SVG instead...")
     brief = _global_brief_store.get(chat_id, prompt[:300])
     generate_claude_visual(chat_id, brief, post_type, send_html=True)
@@ -11870,21 +11896,21 @@ def show_image_type_menu(chat_id):
     """Ask which AI to use for image generation."""
     print(f"show_image_type_menu called for {chat_id}", flush=True)
     keyboard = [
-        [{"text": "🤖 Claude — Storyboard / Layout / Data", "callback_data": "img_engine_claude"}],
-        [{"text": "🎨 Gemini — Thumbnail / Graphic / Static", "callback_data": "img_engine_gemini"}],
-        [{"text": "🖼️ DALL-E — Cinematic / Photo / Macro",   "callback_data": "img_engine_dalle"}],
+        [{"text": "🤖 Claude - Storyboard / Layout / Data", "callback_data": "img_engine_claude"}],
+        [{"text": "🎨 Gemini - Thumbnail / Graphic / Static", "callback_data": "img_engine_gemini"}],
+        [{"text": "🖼️ DALL-E - Cinematic / Photo / Macro",   "callback_data": "img_engine_dalle"}],
     ]
-    result = send(chat_id, "Which AI for image generation?\n\nClaude — storyboards, layouts, data visuals\nGemini — thumbnails, static posts, graphics\nDALL-E — cinematic backgrounds, editorial photos", keyboard)
+    result = send(chat_id, "Which AI for image generation?\n\nClaude - storyboards, layouts, data visuals\nGemini - thumbnails, static posts, graphics\nDALL-E - cinematic backgrounds, editorial photos", keyboard)
     print(f"Engine picker sent: {result}", flush=True)
 
 
 def show_image_style_menu(chat_id, engine):
-    """After engine selected, route directly to generation using known style — never ask for style."""
+    """After engine selected, route directly to generation using known style - never ask for style."""
     user_state.setdefault(chat_id, {})
     user_state[chat_id]["img_engine"] = engine
     state = user_state[chat_id]
 
-    # Resolve style from context — never prompt the user
+    # Resolve style from context - never prompt the user
     vb_type = state.get("last_visual_type", "")
     social_type = state.get("current_social_type", "")
     pending_style = state.get("pending_img_style", "")
@@ -11996,7 +12022,7 @@ THUMBNAIL OPTION 2: [alternative]""",
 
 For each slide:
 SLIDE [N]: [slide purpose]
-Headline text: [max 8 words — this goes ON the image]
+Headline text: [max 8 words - this goes ON the image]
 Supporting text: [max 15 words] (optional)
 Visual direction: [background image / graphic / data viz]
 Colour: [which brand colour dominates this slide]
@@ -12007,12 +12033,12 @@ Final slide: CTA with link in bio direction.""",
         "static": """Create a STATIC IMAGE BRIEF for this post.
 
 ON-IMAGE TEXT (this is all that appears on the image):
-Headline: [max 6 words — bold, Tungsten-style]
+Headline: [max 6 words - bold, Tungsten-style]
 Subtext: [max 4 words] (optional)
 
 VISUAL DIRECTION:
 Background: [photo type / graphic style / colour]
-Colour palette: [from Cryptonary brand — black/white/red/green/blue/bitcoin orange]
+Colour palette: [from Cryptonary brand - black/white/red/green/blue/bitcoin orange]
 Logo placement: [bottom-right @Cryptonary mark]
 Overall feel: [e.g. breaking news / editorial / data / meme]
 
@@ -12023,7 +12049,7 @@ AI IMAGE PROMPT (for DALL-E/Midjourney):
 
 For each slide:
 SLIDE [N]:
-Screen text: [max 12 words — this appears on screen]
+Screen text: [max 12 words - this appears on screen]
 Background: [image direction or colour]
 Sticker/element: [poll / countdown / emoji / swipe up]
 Animation feel: [fade in / slide / pop]
@@ -12042,7 +12068,7 @@ Colour: [dominant colour from brand palette]
 
 THUMBNAIL OPTION 2: [alternative angle]
 
-THUMBNAIL OPTION 3: [alternative — try a different style]
+THUMBNAIL OPTION 3: [alternative - try a different style]
 
 Note: thumbnails are 1200x628px (standard email header size), text must be readable and high contrast.""",
 
@@ -12054,7 +12080,7 @@ PRIMARY HEADLINE (on image, max 6 words):
 SUPPORTING TEXT (on image, max 10 words):
 [reinforces the hook]
 
-PRIMARY TEXT (ad copy — shown below image):
+PRIMARY TEXT (ad copy - shown below image):
 [already written in the ad copy above]
 
 VISUAL DIRECTION:
@@ -12064,7 +12090,7 @@ CTA button text: [Learn More / Sign Up / Get Started]
 
 CREATIVE VARIANTS:
 Variant A: [version 1 concept]
-Variant B: [version 2 concept — different visual angle]""",
+Variant B: [version 2 concept - different visual angle]""",
 
         "ad_video": """Create a VIDEO AD STORYBOARD BRIEF.
 
@@ -12081,7 +12107,7 @@ Visual: [closing shot]
 Text: [CTA overlay]
 Button: [Sign Up / Learn More]
 
-THUMBNAIL: [best frame to use as cover — describe it]"""
+THUMBNAIL: [best frame to use as cover - describe it]"""
     }
 
     prompt_template = brief_prompts.get(content_type, brief_prompts["static"])
@@ -12108,7 +12134,7 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
         state["last_visual_brief"] = result
         state["last_visual_type"] = content_type
         _global_brief_store[chat_id] = result  # persist across state changes
-        send_plain(chat_id, "*VISUAL BRIEF — " + content_type.upper().replace("_", " ") + "*\n\n" + result)
+        send_plain(chat_id, "*VISUAL BRIEF - " + content_type.upper().replace("_", " ") + "*\n\n" + result)
 
         # For email thumbnails, offer numbered option choice; otherwise standard keyboard
         if content_type == "email":
@@ -12124,7 +12150,8 @@ THUMBNAIL: [best frame to use as cover — describe it]"""
                 [{"text": "✅ Done", "callback_data": "mark_complete"}],
             ]
             send(chat_id, "Which thumbnail option to generate?", keyboard)
-        # Brief ready — generate image directly, no style prompt needed (brief already contains style)
+            return  # Require explicit option selection - no auto generate button
+        # Brief ready - generate image directly, no style prompt needed (brief already contains style)
         img_row = [{"text": "🎨 Generate image", "callback_data": "img_from_brief"}] if (OPENAI_KEY or GEMINI_KEY) else []
         keyboard = [
             [{"text": "✏️ Adjust brief", "callback_data": "vb_edit"}],
@@ -12186,7 +12213,7 @@ def handle_image_callbacks(chat_id, data, state):
         brief = (_global_brief_store.get(chat_id, "") or 
                  state.get("pending_img_concept", "") or
                  state.get("last_visual_brief", "") or
-                 state.get("report", ""))  # no truncation — pass full brief
+                 state.get("report", ""))  # no truncation - pass full brief
         print(f"img_style_ fired. style={style}, engine={engine}, brief_len={len(brief)}", flush=True)
         angle = state.get("pending_img_angle", state.get("social_angle", ""))[:150]
         state["last_img_type"] = style
@@ -12207,7 +12234,7 @@ def handle_image_callbacks(chat_id, data, state):
             prompt = build_image_prompt(brief, angle, post_type)
             state["last_img_prompt"] = prompt
             prefer_gemini = (engine == "gemini")
-            # Override routing — force the chosen engine
+            # Override routing - force the chosen engine
             if engine == "gemini" and GEMINI_KEY:
                 send(chat_id, "🎨 Generating with Gemini...")
                 img_bytes, mime, err = generate_gemini_image(prompt)
@@ -12240,7 +12267,7 @@ def handle_image_callbacks(chat_id, data, state):
                         send_image_url(chat_id, url)
                     send(chat_id, "Image ready.", img_action_kb)
                 else:
-                    # DALL-E failed — try stripped prompt (content policy fix)
+                    # DALL-E failed - try stripped prompt (content policy fix)
                     send(chat_id, "Retrying with simplified prompt...")
                     safe_prompt = build_image_prompt(brief[:150], "", post_type)
                     url2, info2 = generate_dalle_image(safe_prompt)
@@ -12262,7 +12289,7 @@ def handle_image_callbacks(chat_id, data, state):
                         generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
                         send(chat_id, "Claude SVG used as final fallback.", img_action_kb)
             else:
-                # No paid APIs — use Claude SVG
+                # No paid APIs - use Claude SVG
                 send(chat_id, "🤖 Using Claude SVG (no paid image API configured)...")
                 generate_claude_visual(chat_id, brief[:400], post_type, send_html=False)
                 send(chat_id, "Claude SVG generated.", img_action_kb)
@@ -12310,7 +12337,7 @@ def handle_image_callbacks(chat_id, data, state):
             send(chat_id, "Regenerated.", img_kb)
         else:
             success = generate_and_send_image(chat_id, prompt, post_type)
-            send(chat_id, "New version ready." if success else "Generation failed — try again.", img_kb)
+            send(chat_id, "New version ready." if success else "Generation failed - try again.", img_kb)
 
     elif data == "img_direction":
         state["stage"] = "img_awaiting_direction"
@@ -12334,7 +12361,7 @@ def handle_image_callbacks(chat_id, data, state):
         send(chat_id, "Which format?", keyboard)
 
     elif data.startswith("imgfmt_"):
-        # User picked a new format — update style and regenerate with current engine
+        # User picked a new format - update style and regenerate with current engine
         new_style = data.replace("imgfmt_", "")
         state["pending_img_style"] = new_style
         state["last_visual_type"] = new_style
@@ -12420,7 +12447,7 @@ def fetch_meta_ad_insights(days=30):
     except Exception as e:
         return None, "Meta fetch failed: " + str(e)
 
-# ── BREVO CONFIGURATION — HARDCODED IDS ─────────────────────────
+# ── BREVO CONFIGURATION - HARDCODED IDS ─────────────────────────
 # Segment IDs (Brevo "My segments")
 BREVO_SEGMENTS = {
     "pro_users":        {"id": 1,   "name": "Pro Members",                    "type": "pro"},
@@ -12548,7 +12575,7 @@ def fetch_brevo_segment_size(segment_id):
         return None, "No API key"
     headers = {"Accept": "application/json", "api-key": BREVO_API_KEY}
 
-    # Try: contacts search with segmentId — most reliable for dynamic segments
+    # Try: contacts search with segmentId - most reliable for dynamic segments
     try:
         url = f"https://api.brevo.com/v3/contacts?segmentId={segment_id}&limit=1"
         req = urllib.request.Request(url, headers=headers)
@@ -12619,14 +12646,14 @@ def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=
     """Analyse VWO split test by campaign number.
     
     campaign_number: e.g. '001'
-    page_filter: e.g. 'Homepage' — if set, only analyse tests matching 001_Homepage
+    page_filter: e.g. 'Homepage' - if set, only analyse tests matching 001_Homepage
     from_date/to_date: YYYY-MM-DD strings for custom date range
     
     Metrics per variant:
     - Visitors (unique)
-    - Subscriptions (primary conversion) — unique
+    - Subscriptions (primary conversion) - unique
     - Subscription conversion rate (subscriptions / visitors)
-    - Checkout initiations (secondary conversion) — unique
+    - Checkout initiations (secondary conversion) - unique
     - Checkout conversion rate (checkouts / visitors)
     """
     tests, err = fetch_vwo_tests(campaign_number)
@@ -12642,7 +12669,7 @@ def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=
             return None, f"No tests found for '{campaign_number}_{page_filter}'."
 
     lines = [
-        f"*VWO SPLIT TEST — Campaign {campaign_number}*",
+        f"*VWO SPLIT TEST - Campaign {campaign_number}*",
     ]
     if page_filter:
         lines[0] += f" / {page_filter}"
@@ -12650,7 +12677,7 @@ def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=
         lines.append(f"_{from_date} to {to_date}_")
     lines.append("")
 
-    # VWO goal name mapping — update once goal names are confirmed
+    # VWO goal name mapping - update once goal names are confirmed
     # These are the goal IDs/names to look for in VWO stats
     SUBSCRIPTION_GOAL = os.environ.get("VWO_GOAL_SUBSCRIPTION", "Subscription")
     CHECKOUT_GOAL = os.environ.get("VWO_GOAL_CHECKOUT", "Initiate Checkout")
@@ -12695,7 +12722,7 @@ def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=
                     totals[key]["checkouts"] += convs
 
     if not totals:
-        return None, "No variant data found in VWO tests. The API response may use a different structure — check VWO_GOAL_SUBSCRIPTION and VWO_GOAL_CHECKOUT in Render."
+        return None, "No variant data found in VWO tests. The API response may use a different structure - check VWO_GOAL_SUBSCRIPTION and VWO_GOAL_CHECKOUT in Render."
 
     # Format output
     keys = sorted(totals.keys())
@@ -12711,12 +12738,12 @@ def analyse_vwo_test(campaign_number, page_filter=None, from_date=None, to_date=
     chk_row = [totals[k]["checkouts"] for k in keys]
     sub_rate_row = [
         f"{totals[k]['subscriptions']/totals[k]['visitors']*100:.2f}%"
-        if totals[k]["visitors"] > 0 else "—"
+        if totals[k]["visitors"] > 0 else "-"
         for k in keys
     ]
     chk_rate_row = [
         f"{totals[k]['checkouts']/totals[k]['visitors']*100:.2f}%"
-        if totals[k]["visitors"] > 0 else "—"
+        if totals[k]["visitors"] > 0 else "-"
         for k in keys
     ]
 
@@ -12779,7 +12806,7 @@ def fetch_brevo_segment_subscribed(segment_id):
 
 
 def build_brevo_list_health():
-    """Build the full list health report — total, subscribed, unsubscribed per segment.
+    """Build the full list health report - total, subscribed, unsubscribed per segment.
     Blocklisted = sum of unsubscribed across all segments."""
     from datetime import datetime as _dt
     today = _dt.now().strftime("%d %b %Y")
@@ -12794,7 +12821,7 @@ def build_brevo_list_health():
     ]
 
     lines = [
-        f"*CRYPTONARY LIST HEALTH — {today}*",
+        f"*CRYPTONARY LIST HEALTH - {today}*",
         "",
         f"{'SEGMENT':<30} {'TOTAL':>8} {'SENDABLE':>10} {'BLOCKED':>8}",
         "─" * 58,
@@ -12868,7 +12895,7 @@ def get_previous_snapshot():
 def format_list_health_report(current, prev_sizes, prev_date):
     """Format the weekly list health report with trends."""
     today = time.strftime("%d %b %Y")
-    lines = [f"*CRYPTONARY LIST HEALTH — {today}*", ""]
+    lines = [f"*CRYPTONARY LIST HEALTH - {today}*", ""]
 
     # Engaged segments
     lines.append("*ENGAGED (opened recently)*")
@@ -12885,7 +12912,7 @@ def format_list_health_report(current, prev_sizes, prev_date):
             elif delta < 0:
                 trend = f"  {delta:,} ⚠️"
             else:
-                trend = "  —"
+                trend = "  -"
         else:
             trend = ""
         lines.append(f"{name:<20} {size:>8,}{trend}")
@@ -12899,7 +12926,7 @@ def format_list_health_report(current, prev_sizes, prev_date):
         if prev_sizes:
             prev = prev_sizes.get(key, 0)
             delta = size - prev
-            trend = f"  +{delta:,}" if delta > 0 else (f"  {delta:,}" if delta < 0 else "  —")
+            trend = f"  +{delta:,}" if delta > 0 else (f"  {delta:,}" if delta < 0 else "  -")
         else:
             trend = ""
         lines.append(f"{name:<20} {size:>8,}{trend}")
@@ -12918,7 +12945,7 @@ def format_list_health_report(current, prev_sizes, prev_date):
             elif delta < 0:
                 trend = f"  {delta:,} ✅"  # Fewer = good
             else:
-                trend = "  —"
+                trend = "  -"
         else:
             trend = ""
         lines.append(f"{name:<20} {size:>8,}{trend}")
@@ -12933,9 +12960,9 @@ def format_list_health_report(current, prev_sizes, prev_date):
             prev = prev_sizes.get(key, 0)
             delta = size - prev
             if key == "pro_users":
-                trend = (f"  +{delta:,} ✅" if delta > 0 else (f"  {delta:,} ⚠️" if delta < 0 else "  —"))
+                trend = (f"  +{delta:,} ✅" if delta > 0 else (f"  {delta:,} ⚠️" if delta < 0 else "  -"))
             else:
-                trend = (f"  +{delta:,} ⚠️" if delta > 0 else (f"  {delta:,} ✅" if delta < 0 else "  —"))
+                trend = (f"  +{delta:,} ⚠️" if delta > 0 else (f"  {delta:,} ✅" if delta < 0 else "  -"))
         else:
             trend = ""
         lines.append(f"{name:<20} {size:>8,}{trend}")
@@ -12945,14 +12972,14 @@ def format_list_health_report(current, prev_sizes, prev_date):
     if current.get("opened_30", 0) > 0 and prev_sizes and prev_sizes.get("opened_30", 0) > 0:
         drop_pct = (prev_sizes["opened_30"] - current["opened_30"]) / prev_sizes["opened_30"] * 100
         if drop_pct > 5:
-            flags.append(f"⚠️ 0-30d opened dropped {drop_pct:.1f}% — check deliverability and send frequency")
+            flags.append(f"⚠️ 0-30d opened dropped {drop_pct:.1f}% - check deliverability and send frequency")
     if current.get("pro_users", 0) > 0 and prev_sizes and prev_sizes.get("pro_users", 0) > 0:
         if current["pro_users"] < prev_sizes["pro_users"]:
-            flags.append(f"⚠️ Pro members down {prev_sizes['pro_users'] - current['pro_users']} — review churn")
+            flags.append(f"⚠️ Pro members down {prev_sizes['pro_users'] - current['pro_users']} - review churn")
     if current.get("opened_30", 0) > 0 and prev_sizes and prev_sizes.get("opened_30", 0) > 0:
         gain = current["opened_30"] - prev_sizes["opened_30"]
         if gain > 500:
-            flags.append(f"✅ 0-30d opened up {gain:,} — great engagement week")
+            flags.append(f"✅ 0-30d opened up {gain:,} - great engagement week")
 
     if flags:
         lines.append("")
@@ -13078,27 +13105,27 @@ def fetch_mixpanel_metrics(from_date, to_date):
     metrics = {}
     errors = []
 
-    # Unique website visitors — [Auto] Page View, unique users, exclude bots
+    # Unique website visitors - [Auto] Page View, unique users, exclude bots
     v, err = mixpanel_get_uniques("[Auto] Page View", from_date, to_date)
     metrics["visitors"] = v
     if err: errors.append("visitors: " + err)
 
-    # Emails collected — All Emails Collected, unique
+    # Emails collected - All Emails Collected, unique
     v, err = mixpanel_get_uniques("All Emails Collected", from_date, to_date)
     metrics["emails"] = v
     if err: errors.append("emails: " + err)
 
-    # Checkouts — [Auto] Page View filtered by /checkout URL path
+    # Checkouts - [Auto] Page View filtered by /checkout URL path
     v, err = mixpanel_get_uniques("[Auto] Page View", from_date, to_date, url_filter="/checkout")
     metrics["checkouts"] = v
     if err: errors.append("checkouts: " + err)
 
-    # Add payment info — Add Payment Info event
+    # Add payment info - Add Payment Info event
     v, err = mixpanel_get_total("Add Payment Info", from_date, to_date)
     metrics["add_payment"] = v
     if err: errors.append("add_payment: " + err)
 
-    # Purchases — First Pro Invoice (primary conversion event)
+    # Purchases - First Pro Invoice (primary conversion event)
     v, err = mixpanel_get_total("First Pro Invoice", from_date, to_date)
     metrics["purchases"] = v
     if err: errors.append("purchases: " + err)
@@ -13113,11 +13140,11 @@ def format_mixpanel_report(metrics, label, from_date, to_date, prev_metrics=None
         if not prev: return ""
         delta = curr - prev
         pct = round(delta / prev * 100, 1)
-        arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "—")
+        arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "-")
         return f"  {arrow} {abs(pct)}% vs {prev_label}"
 
     lines = [
-        f"*CRYPTONARY WEBSITE — {label}*",
+        f"*CRYPTONARY WEBSITE - {label}*",
         f"_{from_date} to {to_date}_",
         "",
     ]
@@ -13155,7 +13182,7 @@ def format_mixpanel_report(metrics, label, from_date, to_date, prev_metrics=None
     errs = metrics.get("_errors", [])
     if errs:
         lines.append("")
-        lines.append("_Note: some metrics may be incomplete — " + "; ".join(errs[:2]) + "_")
+        lines.append("_Note: some metrics may be incomplete - " + "; ".join(errs[:2]) + "_")
 
     # Claude insight
     try:
@@ -13269,7 +13296,7 @@ def analyse_campaign_performance(campaign_number):
     if total_found == 0:
         return None, f"No campaigns found matching '{campaign_number}_*'. Check the campaign number and naming convention."
 
-    lines = [f"*CAMPAIGN {campaign_number} — PERFORMANCE*", ""]
+    lines = [f"*CAMPAIGN {campaign_number} - PERFORMANCE*", ""]
 
     # PRO section
     if pro_camps:
@@ -13287,10 +13314,10 @@ def analyse_campaign_performance(campaign_number):
             lines.append(f"Clicks:       {clicks:,} ({click_rate}% of opens)")
             lines.append("")
     else:
-        lines.append("*PRO* — no campaigns found")
+        lines.append("*PRO* - no campaigns found")
         lines.append("")
 
-    # FREE section — combine all
+    # FREE section - combine all
     if free_camps:
         total_sent = sum(c.get("_sent", 0) for c in free_camps)
         total_opens = sum(c.get("_opens", 0) for c in free_camps)
@@ -13307,14 +13334,14 @@ def analyse_campaign_performance(campaign_number):
         lines.append(f"Total opens:  {total_opens:,} ({combined_open_rate}%)")
         lines.append(f"Total clicks: {total_clicks:,} ({combined_click_rate}% of opens)")
     else:
-        lines.append("*FREE* — no campaigns found")
+        lines.append("*FREE* - no campaigns found")
 
     return "\n".join(lines), None
 
 
 def analyse_split_test(campaign_number):
     """Analyse A/B split test for a campaign number.
-    Brevo runs A/B within a single campaign — extracts variant stats per campaign,
+    Brevo runs A/B within a single campaign - extracts variant stats per campaign,
     combines free lists, shows pro standalone."""
     pro_camps, free_camps, err = fetch_campaigns_by_number(campaign_number)
     if err:
@@ -13376,7 +13403,7 @@ def analyse_split_test(campaign_number):
         out.append(f"Open winner: {open_winner}  |  Click winner: {click_winner}")
         return "\n".join(out)
 
-    lines = [f"*CAMPAIGN {campaign_number} — SPLIT TEST*", ""]
+    lines = [f"*CAMPAIGN {campaign_number} - SPLIT TEST*", ""]
 
     # Determine what was tested from campaign names/subject lines
     all_subjects = [c.get("subject", "") for c in pro_camps + free_camps]
@@ -13423,7 +13450,7 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None, templ
             payload["htmlContent"] = html_content
         # Note: Brevo campaign recipients.listIds requires CONTACT LIST IDs (static lists),
         # not segment IDs. Our BREVO_SEGMENTS use segment IDs (dynamic segments) which
-        # are different. We create the draft without recipients — set them in Brevo UI.
+        # are different. We create the draft without recipients - set them in Brevo UI.
         # This avoids the "documentnotfound" / invalid list ids error.
         body_bytes = json.dumps(payload).encode()
         req = urllib.request.Request(
@@ -13457,7 +13484,7 @@ def fetch_contact_list_sizes():
 
 def format_contact_list_message(data):
     """Format contact list data as a readable Telegram message."""
-    lines = ["*CONTACT LIST — " + data["date"] + "*", ""]
+    lines = ["*CONTACT LIST - " + data["date"] + "*", ""]
     for display_name, size, _ in data["rows"]:
         size_str = "{:,}".format(size) if isinstance(size, int) else str(size)
         lines.append(f"{display_name:<40} {size_str}")
@@ -13507,7 +13534,7 @@ def openai_gpt(prompt, system="", max_tokens=800):
             return claude(prompt, max_tokens=max_tokens, system=system)
     return claude(prompt, max_tokens=max_tokens, system=system)
 
-# Cache for market data — keyed by timestamp bucket (5 min intervals)
+# Cache for market data - keyed by timestamp bucket (5 min intervals)
 _market_cache = {"data": {}, "fetched_at": 0}
 
 def fetch_market_data():
@@ -13531,7 +13558,7 @@ def fetch_market_data():
             results["btc_24h"] = round(btc.get("usd_24h_change", 0), 1)
             results["btc_7d"] = round(btc.get("usd_7d_change", 0), 1)
     except Exception:
-        # Fallback: Binance public API — no rate limit issues
+        # Fallback: Binance public API - no rate limit issues
         try:
             req2 = urllib.request.Request(
                 "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",
@@ -13614,7 +13641,7 @@ def generate_briefing(chat_id):
     # Build context for Claude
     market_context = ""
     if market.get("price_unavailable"):
-        market_context += "PRICE DATA UNAVAILABLE — both CoinGecko and Binance failed. Do not reference BTC price in this briefing.\n"
+        market_context += "PRICE DATA UNAVAILABLE - both CoinGecko and Binance failed. Do not reference BTC price in this briefing.\n"
     elif market.get("btc_price"):
         price = "${:,.0f}".format(market["btc_price"])
         market_context += "BTC: " + price + " (" + str(market["btc_7d"]) + "% 7d, " + str(market["btc_24h"]) + "% 24h)\n"
@@ -13663,7 +13690,7 @@ TOP STORIES TODAY
 TODAY'S CONTENT OPPORTUNITIES
 [Specific, actionable content ideas based on today's market conditions and news:]
 - Email angle: [specific suggestion if market conditions warrant one]
-- Social post: [1-2 specific post ideas tied to today's news — include a suggested hook]
+- Social post: [1-2 specific post ideas tied to today's news - include a suggested hook]
 - Ad angle: [which avatar/stage to push given current market sentiment]
 
 TONE FOR TODAY
@@ -13711,7 +13738,7 @@ def check_and_send_briefing():
     today = now.strftime("%Y-%m-%d")
 
     # Daily at 9am UK time (BST = UTC+1 in summer, GMT = UTC+0 in winter)
-    # We target UTC 8am in summer / UTC 9am in winter — use 8am UTC as safe default
+    # We target UTC 8am in summer / UTC 9am in winter - use 8am UTC as safe default
     # which lands at 9am BST (Mar-Oct) and 8am GMT (Oct-Mar, close enough)
     if now.hour == 8 and _last_briefing_date != today:
         _last_briefing_date = today
@@ -13831,7 +13858,7 @@ def check_price_alerts():
             f"Each idea should be one of: Static post, Reel hook, or Story slide.\n\n"
             f"For each idea give:\n"
             f"FORMAT: [Static/Reel/Story]\n"
-            f"HOOK: [the opening line or on-screen text — max 8 words, scroll-stopping]\n"
+            f"HOOK: [the opening line or on-screen text - max 8 words, scroll-stopping]\n"
             f"ANGLE: [one sentence on what the post covers]\n\n"
             f"Be specific to this exact move. No generic crypto advice. "
             f"Reference the price, the direction, and what it means for Cryptonary's audience.\n\n"
@@ -13865,30 +13892,30 @@ IDEA_ENGINE_SOURCES_FILE = "idea_sources.json"
 # ── RSS FEED LIBRARY ─────────────────────────────────────────────
 # All feeds verified live. Grouped by priority tier.
 RSS_FEEDS = [
-    # TIER 1 — Mainstream crypto news
+    # TIER 1 - Mainstream crypto news
     {"name": "CoinDesk",        "url": "https://coindesk.com/arc/outboundfeeds/rss/",  "tier": 1},
     {"name": "CoinTelegraph",   "url": "https://cointelegraph.com/rss",                "tier": 1},
     {"name": "Decrypt",         "url": "https://decrypt.co/feed",                      "tier": 1},
     {"name": "Bitcoin Magazine","url": "https://bitcoinmagazine.com/feed",              "tier": 1},
     {"name": "NewsBTC",         "url": "https://newsbtc.com/feed",                     "tier": 1},
-    # TIER 2 — Analysis & data
+    # TIER 2 - Analysis & data
     {"name": "Messari",         "url": "https://messari.io/rss",                       "tier": 2},
     {"name": "Glassnode",       "url": "https://insights.glassnode.com/rss",           "tier": 2},
     {"name": "The Defiant",     "url": "https://thedefiant.io/api/feed",               "tier": 2},
     {"name": "Blockworks",      "url": "https://blockworks.co/feed",                   "tier": 2},
-    # TIER 3 — Market & price focused
+    # TIER 3 - Market & price focused
     {"name": "U.Today",         "url": "https://u.today/rss",                          "tier": 3},
     {"name": "Crypto.news",     "url": "https://crypto.news/feed",                     "tier": 3},
     {"name": "Investing.com",   "url": "https://investing.com/rss/news_301.rss",       "tier": 3},
     {"name": "CoinJournal",     "url": "https://coinjournal.net/feed",                 "tier": 3},
-    # TIER 4 — Broader web3
+    # TIER 4 - Broader web3
     {"name": "Watcher Guru",    "url": "https://watcherguru.com/feed",                 "tier": 4},
     {"name": "Milk Road",       "url": "https://milkroad.substack.com/feed",           "tier": 4},
     {"name": "Glassnode Blog",  "url": "https://glassnode.com/feed",                   "tier": 4},
     {"name": "Santiment",       "url": "https://santiment.net/blog/feed",              "tier": 4},
 ]
 
-# Reddit still works reliably — keep as supplement
+# Reddit still works reliably - keep as supplement
 REDDIT_SOURCES = ["cryptocurrency", "bitcoin", "CryptoMarkets"]
 
 DEFAULT_SOURCES = {
@@ -14021,7 +14048,7 @@ def show_ie_format_menu(chat_id):
         send(chat_id, "*What format?*", keyboard)
 
 def generate_ie_concept(chat_id):
-    """Generate concept ideas — Instagram post focused. Concept + Angle + Source per idea."""
+    """Generate concept ideas - Instagram post focused. Concept + Angle + Source per idea."""
     user_state.setdefault(chat_id, {"stage": "idea_engine_idle"})
     state = user_state[chat_id]
     source_content = state.get("ie_source_content", "")
@@ -14066,7 +14093,7 @@ def generate_ie_concept(chat_id):
 
         # Force live market data to be used accurately
         if market_line:
-            prompt += "LIVE MARKET DATA (use these EXACT numbers — do not invent alternatives):\n"
+            prompt += "LIVE MARKET DATA (use these EXACT numbers - do not invent alternatives):\n"
             prompt += market_line + "\n"
             prompt += "CRITICAL: Only reference Fear & Greed and BTC price using the numbers above. "
             prompt += "Do NOT invent historical comparisons unless you are certain of the fact. "
@@ -14088,13 +14115,13 @@ def generate_ie_concept(chat_id):
 
         prompt += """
 
-Each concept is a distinct Instagram post idea — different angle, emotion, or narrative.
+Each concept is a distinct Instagram post idea - different angle, emotion, or narrative.
 Vary the emotional trigger across all 4: one fear-based, one aspiration, one social proof, one contrarian.
 Keep each entry SHORT. No fluff. No invented statistics.
 
 Format EXACTLY:
-1. CONCEPT: [One punchy line — the big idea]
-   ANGLE: [The emotional approach — why this hits] [Source: name if applicable]
+1. CONCEPT: [One punchy line - the big idea]
+   ANGLE: [The emotional approach - why this hits] [Source: name if applicable]
 
 2. CONCEPT: ...
    ANGLE: ...
@@ -14117,10 +14144,10 @@ Nothing else."""
         send_plain(chat_id, "*IDEAS*\n\n" + raw)
 
         keyboard = [
-            [{"text": "1 — Expand this", "callback_data": "ie_develop_concept_1"}],
-            [{"text": "2 — Expand this", "callback_data": "ie_develop_concept_2"}],
-            [{"text": "3 — Expand this", "callback_data": "ie_develop_concept_3"}],
-            [{"text": "4 — Expand this", "callback_data": "ie_develop_concept_4"}],
+            [{"text": "1 - Expand this", "callback_data": "ie_develop_concept_1"}],
+            [{"text": "2 - Expand this", "callback_data": "ie_develop_concept_2"}],
+            [{"text": "3 - Expand this", "callback_data": "ie_develop_concept_3"}],
+            [{"text": "4 - Expand this", "callback_data": "ie_develop_concept_4"}],
             [{"text": "Regenerate", "callback_data": "ie_regen_concepts"}],
             [{"text": "✏️ Write my own", "callback_data": "ie_custom_concept"}]
         ]
@@ -14142,7 +14169,7 @@ def generate_ie_angle_from_concept(chat_id, concept_text):
         raw = claude(
             "CONCEPT: " + concept_text +
             "\nFORMAT: " + ie_format +
-            "\n\nGenerate 4 distinct ANGLES for this concept. An angle is the specific emotional or argumentative approach — not the hook.\n\n" +
+            "\n\nGenerate 4 distinct ANGLES for this concept. An angle is the specific emotional or argumentative approach - not the hook.\n\n" +
             "1. [angle]\n2. [angle]\n3. [angle]\n4. [angle]\nNothing else.",
             max_tokens=400
         )
@@ -14189,7 +14216,7 @@ def generate_ie_hook_from_angle(chat_id, angle_text):
         )
         hooks = parse_numbered_list(raw, 4)
         state["ie_hooks"] = hooks
-        text = "*HOOKS — " + hook_instruction + "*\n\n"
+        text = "*HOOKS - " + hook_instruction + "*\n\n"
         keyboard = []
         for i, h in enumerate(hooks):
             text += str(i+1) + ". " + h + "\n\n"
@@ -14248,8 +14275,8 @@ def generate_ie_final_content(chat_id, hook_text):
 def show_ie_manage_sources(chat_id):
     sources = load_idea_sources()
     # Show RSS feed count
-    x_status = "✅ Connected (" + str(len(X_ACCOUNTS)) + " accounts)" if X_BEARER_TOKEN else "❌ Not configured — add X_BEARER_TOKEN to Render"
-    whisper_status = "✅ Connected" if OPENAI_KEY else "❌ Not configured — add OPENAI_KEY to Render"
+    x_status = "✅ Connected (" + str(len(X_ACCOUNTS)) + " accounts)" if X_BEARER_TOKEN else "❌ Not configured - add X_BEARER_TOKEN to Render"
+    whisper_status = "✅ Connected" if OPENAI_KEY else "❌ Not configured - add OPENAI_KEY to Render"
     msg = "*News Sources & Integrations*\n\n"
     msg += "🐦 X/Twitter: " + x_status + "\n"
     msg += "🎙️ Voice input: " + whisper_status + "\n\n"
@@ -14272,10 +14299,10 @@ def show_ie_manage_sources(chat_id):
     send(chat_id, msg, keyboard)
 
 def fetch_source_content(sources):
-    """Fetch live content — now powered by RSS feeds + Reddit."""
+    """Fetch live content - now powered by RSS feeds + Reddit."""
     fetched = []
 
-    # RSS feeds — primary source, verified live
+    # RSS feeds - primary source, verified live
     headlines = fetch_rss_headlines(max_per_feed=2, max_total=20)
     for h in headlines:
         fetched.append({
@@ -14285,7 +14312,7 @@ def fetch_source_content(sources):
             "content": h["title"] + (" - " + h["desc"] if h.get("desc") else "")
         })
 
-    # Reddit removed — returns 403 Blocked when fetched from server IPs
+    # Reddit removed - returns 403 Blocked when fetched from server IPs
     # Users can still add Reddit as a source but it won't fetch live
 
     # Telegram public channels
@@ -14358,15 +14385,15 @@ MARKET CONTEXT: """ + market_line + """
 
 Generate exactly 8 specific, actionable content ideas. For each idea:
 
-IDEA [N]: [Format] — [Hook/Concept in one punchy line]
+IDEA [N]: [Format] - [Hook/Concept in one punchy line]
 AVATAR: [Which of these avatars: Trader / Investor / Passive Income / Portfolio Builder / 100X Chaser / Skeptic / Burned / Student / 9-5 Worker / Boomer / Side Hustle / Beginner / Universal]
-OBJECTIVE: [Awareness / Consideration / Conversion] — [what action it drives]
+OBJECTIVE: [Awareness / Consideration / Conversion] - [what action it drives]
 INSPIRED BY: [which source or trend inspired this]
-WHY IT WORKS: [one sentence — specific psychological principle or copywriting mechanic]
+WHY IT WORKS: [one sentence - specific psychological principle or copywriting mechanic]
 ---
 
 Rules:
-- Ideas must be specific to Cryptonary's content — crypto research, market analysis, portfolio strategy, airdrops, passive income
+- Ideas must be specific to Cryptonary's content - crypto research, market analysis, portfolio strategy, airdrops, passive income
 - No generic ideas. Every idea should have a specific angle, hook, or narrative
 - Mix formats: include Reels, Carousels, Static ads, and Video ads
 - Ideas should reflect current market conditions (Fear & Greed: """ + str(market.get("fng_label","unknown")) + """)
@@ -14403,7 +14430,7 @@ def generate_image_prompts(chat_id, brief):
     try:
         prompt = """Generate 3 image prompt variants for this brief: """ + brief + """
 
-You are creating prompts for Cryptonary — a premium crypto research brand. Dark, professional, aspirational aesthetic. The brand uses dark backgrounds, gold/amber accents, clean typography.
+You are creating prompts for Cryptonary - a premium crypto research brand. Dark, professional, aspirational aesthetic. The brand uses dark backgrounds, gold/amber accents, clean typography.
 
 OUTPUT FORMAT:
 
@@ -14419,7 +14446,7 @@ RUNWAY / VIDEO THUMBNAIL:
 DESIGN NOTES:
 [2-3 specific notes for the designer: suggested text overlay placement, color hex codes that fit Cryptonary brand, any stock photo search terms as alternatives]
 
-Keep each prompt specific and visual. Avoid abstract descriptions — describe exactly what should be in the frame."""
+Keep each prompt specific and visual. Avoid abstract descriptions - describe exactly what should be in the frame."""
 
         result = claude(prompt, max_tokens=800)
         send_plain(chat_id, result)
@@ -14449,14 +14476,14 @@ CRITIQUE PHILOSOPHY:
 - If the content is strong, say so clearly. Don't invent problems.
 
 SEVERITY SCALE:
-🔴 RED — Must fix. This is actively hurting the content's performance or breaking a non-negotiable rule.
-🟡 YELLOW — Worth fixing. This is a meaningful improvement that would noticeably lift results.
-🟢 GREEN — Optional polish. Minor refinement that's nice to have but not essential.
+🔴 RED - Must fix. This is actively hurting the content's performance or breaking a non-negotiable rule.
+🟡 YELLOW - Worth fixing. This is a meaningful improvement that would noticeably lift results.
+🟢 GREEN - Optional polish. Minor refinement that's nice to have but not essential.
 
 ADAM'S VOICE NON-NEGOTIABLES (violation = 🔴):
 - Opens with "Gm [Name]," for emails
 - Short punchy sentences. No em dashes. Bullets use •
-- No weasel words: very, quite, rather, really — delete them
+- No weasel words: very, quite, rather, really - delete them
 - Bold key phrases with *asterisks*
 - P.S. is mandatory on emails
 - Sign off: "Talk soon, / Adam"
@@ -14467,22 +14494,22 @@ ADAM'S VOICE NON-NEGOTIABLES (violation = 🔴):
 COPYWRITING STANDARDS:
 - Headline/subject must promise a benefit or provoke curiosity
 - Every line must earn its place
-- Specifics beat generalities — numbers, dates, names, exact levels
+- Specifics beat generalities - numbers, dates, names, exact levels
 - CTA must be clear, single, transformation-led not feature-led
 - Fear, curiosity, or desire must be present in the opening
 - P.S. should contain the sharpest proof point
 
 FORMAT YOUR CRITIQUE AS:
 
-[SEVERITY EMOJI] [Issue title] — [Specific problem]
-WHY IT MATTERS: [Argue the case — what is the cost of this issue on performance?]
+[SEVERITY EMOJI] [Issue title] - [Specific problem]
+WHY IT MATTERS: [Argue the case - what is the cost of this issue on performance?]
 FIX: [Exact replacement copy or specific instruction]
 
 ---
 
 Maximum 6 issues. Order by severity (🔴 first).
 If fewer than 3 genuine issues exist, only list those. Do not pad.
-If the content is strong, open with: "STRONG COPY — [one sentence on what's working]" then list any refinements."""
+If the content is strong, open with: "STRONG COPY - [one sentence on what's working]" then list any refinements."""
 
 def run_critique(chat_id, content_type):
     """Run a critique on the current piece of content."""
@@ -14494,7 +14521,7 @@ def run_critique(chat_id, content_type):
     if content_type == "email":
         free_email = state.get("current_emails", {}).get("free", "")
         pro_email = state.get("current_emails", {}).get("pro", "")
-        # Use full email content — truncation causes false critique flags (missing CTA, P.S. etc)
+        # Use full email content - truncation causes false critique flags (missing CTA, P.S. etc)
         FREE_LIMIT = 4000
         PRO_LIMIT = 4000
         free_truncated = len(free_email) > FREE_LIMIT
@@ -14522,7 +14549,7 @@ def run_critique(chat_id, content_type):
         label = "content"
 
     if not content_to_critique or len(content_to_critique.strip()) < 50:
-        send(chat_id, "Nothing to critique yet — generate content first.")
+        send(chat_id, "Nothing to critique yet - generate content first.")
         return
 
     send(chat_id, "Critiquing your " + label + "...")
@@ -14533,7 +14560,7 @@ def run_critique(chat_id, content_type):
             "CRITICAL RULES BEFORE YOU START:\n"
             "1. Read the COMPLETE content below before writing any critique\n"
             "2. Only flag issues that genuinely exist in what you can read\n"
-            "3. If the content ends mid-sentence with '[...email continues]', ignore anything after that marker — do NOT flag missing CTAs, P.S., or sign-offs that may exist beyond the preview\n"
+            "3. If the content ends mid-sentence with '[...email continues]', ignore anything after that marker - do NOT flag missing CTAs, P.S., or sign-offs that may exist beyond the preview\n"
             "4. Do not invent problems. Only flag what is actually wrong\n\n"
             "CONTENT TO CRITIQUE:\n\n" + content_to_critique,
             max_tokens=1500,
@@ -14547,7 +14574,7 @@ def run_critique(chat_id, content_type):
 
         # Split on emoji severity markers and number each block
         import re as _re
-        # Split on severity emojis — each starts a new numbered block
+        # Split on severity emojis - each starts a new numbered block
         blocks = _re.split(r'(?=(?:🔴|🟡|🟢|STRONG))', result.strip())
         blocks = [b.strip() for b in blocks if b.strip()]
         if not blocks or len(blocks) == 1:
@@ -14641,7 +14668,7 @@ def apply_critique_fixes(chat_id, fix_numbers):
     except Exception as e:
         err = str(e)
         if "429" in err or "rate" in err.lower():
-            send(chat_id, "Rate limit hit — wait 30 seconds and try applying the fix again.",
+            send(chat_id, "Rate limit hit - wait 30 seconds and try applying the fix again.",
                  [[{"text": "Try again", "callback_data": "apply_critique_" + fix_list.replace(", ", "_")}]])
         else:
             send(chat_id, "Error applying fix: " + err[:200])
@@ -14703,7 +14730,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             )
 
         elif file_type == "doc":
-            # Extract docx using stdlib zipfile + XML — no python-docx needed
+            # Extract docx using stdlib zipfile + XML - no python-docx needed
             import io, zipfile, xml.etree.ElementTree as _ET
             extracted = ""
             try:
@@ -14733,11 +14760,11 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             send(chat_id, "Could not extract readable content from this file.\n\nSupported: PDF, image/screenshot, CSV, .docx, plain text.\n\nTry pasting the text directly instead.")
             return
 
-        # Sanity check — reject if extracted text looks like binary garbage
+        # Sanity check - reject if extracted text looks like binary garbage
         sample = extracted[:500]
         non_ascii = sum(1 for c in sample if ord(c) > 127)
         if non_ascii > len(sample) * 0.3:
-            send(chat_id, "The file content didn't extract cleanly — it may be a scanned PDF or protected document.\n\nPlease paste the text directly instead.")
+            send(chat_id, "The file content didn't extract cleanly - it may be a scanned PDF or protected document.\n\nPlease paste the text directly instead.")
             return
 
         # Generate a brief summary so Adam can confirm the right content was extracted
@@ -14752,7 +14779,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
 
         send_plain(chat_id, "*File received. Here\'s what I extracted:*\n\n" + summary)
 
-        # Route based on current stage — same as if text was pasted
+        # Route based on current stage - same as if text was pasted
         if stage in ("awaiting_report", "buffering_report", "awaiting_email_report"):
             # Clear stale angle/hook state from any previous session so prev_angles
             # avoidance doesn't bleed into the new report
@@ -14764,8 +14791,8 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             user_state[chat_id]["report"] = sanitise(extracted)
             user_state[chat_id]["stage"] = "awaiting_context_choice"
             keyboard = [
-                [{"text": "Yes — I have extra context", "callback_data": "context_yes"}],
-                [{"text": "No — just the report", "callback_data": "context_no"}]
+                [{"text": "Yes - I have extra context", "callback_data": "context_yes"}],
+                [{"text": "No - just the report", "callback_data": "context_no"}]
             ]
             send(chat_id, "Any extra context to factor in?\n\n_Promos, discounts, Inner Circle open, upcoming events, factoids, PSAs..._", keyboard)
 
@@ -14793,7 +14820,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             generate_lp_outline(chat_id)
 
         elif stage == "awaiting_ad_creative_upload":
-            # Quick ad copy tool — extract creative then generate copy
+            # Quick ad copy tool - extract creative then generate copy
             user_state[chat_id]["stage"] = "idle"
             user_state[chat_id]["last_ad_creative_desc"] = extracted[:1500]
             send_plain(chat_id, "*Creative read:*\n\n" + summary)
@@ -14805,7 +14832,7 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             if user_state[chat_id].get("yt_existing"):
                 gen_yt_desc(chat_id)
             else:
-                # Generate immediately — no extra question
+                # Generate immediately - no extra question
                 gen_yt_desc(chat_id)
 
         elif stage == "yt_awaiting_existing":
@@ -14821,11 +14848,11 @@ def handle_content_file(chat_id, file_info, file_type="image"):
         send(chat_id, "Error reading file: " + str(e))
 
 # ══════════════════════════════════════════════════════════════════
-# IDEA ENGINE — SCREENSHOT ANALYSIS
+# IDEA ENGINE - SCREENSHOT ANALYSIS
 # ══════════════════════════════════════════════════════════════════
 
 def handle_ie_screenshot(chat_id, file_info, stage):
-    """Handle file uploads for Idea Engine — images, PDFs, CSVs."""
+    """Handle file uploads for Idea Engine - images, PDFs, CSVs."""
     try:
         import base64
         file_id = file_info.get("file_id")
@@ -14854,7 +14881,7 @@ def handle_ie_screenshot(chat_id, file_info, stage):
             text_content = anthropic_vision(
                 [{"role": "user", "content": [
                     {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
-                    {"type": "text", "text": "Extract the key content from this document — headlines, copy, data, analysis. Return as plain text."}
+                    {"type": "text", "text": "Extract the key content from this document - headlines, copy, data, analysis. Return as plain text."}
                 ]}],
                 max_tokens=2000
             )
@@ -14898,15 +14925,15 @@ def handle_ie_screenshot(chat_id, file_info, stage):
         encoded = base64.b64encode(file_bytes).decode()
 
         if stage in ("ie_awaiting_inspiration", "idea_engine_idle"):
-            # Image uploaded in inspiration flow — extract content and generate ideas
+            # Image uploaded in inspiration flow - extract content and generate ideas
             send(chat_id, "Reading image...")
             result = anthropic_vision(
                 [{"role": "user", "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
-                    {"type": "text", "text": "Describe this image in detail. Include: what format it is (meme, post, ad, chart, screenshot), ALL text visible on it word for word, the visual elements, the tone, the apparent message or hook, and what makes it effective or shareable. Be specific and literal — describe exactly what you see."}
+                    {"type": "text", "text": "Describe this image in detail. Include: what format it is (meme, post, ad, chart, screenshot), ALL text visible on it word for word, the visual elements, the tone, the apparent message or hook, and what makes it effective or shareable. Be specific and literal - describe exactly what you see."}
                 ]}],
                 max_tokens=800,
-                system="You are a precise visual analyst. Describe exactly what is in the image — text, visuals, format, tone. Be specific."
+                system="You are a precise visual analyst. Describe exactly what is in the image - text, visuals, format, tone. Be specific."
             )
             user_state[chat_id]["ie_source_content"] = "IMAGE CONTENT:\n" + result
             user_state[chat_id]["ie_source_label"] = "uploaded image: " + result[:80].replace("\n", " ")
@@ -14923,21 +14950,21 @@ def handle_ie_screenshot(chat_id, file_info, stage):
             send(chat_id, "Analysing and generating ideas...")
             prompt_text = """Look at this image carefully. It could be an Instagram post, a Facebook ad, a carousel, a reel thumbnail, or any piece of marketing content.
 
-STEP 1 — READ THE CONTENT:
+STEP 1 - READ THE CONTENT:
 What format is it? What is the hook or opening line? What topic? What's the visual approach? Who is the target audience?
 
-STEP 2 — IDENTIFY WHAT'S WORKING:
+STEP 2 - IDENTIFY WHAT'S WORKING:
 What copywriting or creative principles are at play? Why would this stop a scroll or drive engagement?
 
-STEP 3 — GENERATE 6 CONTENT IDEAS INSPIRED BY THIS:
-Use this as creative inspiration for Cryptonary content. Each idea should be in a different format or take a different angle — don't just replicate it.
+STEP 3 - GENERATE 6 CONTENT IDEAS INSPIRED BY THIS:
+Use this as creative inspiration for Cryptonary content. Each idea should be in a different format or take a different angle - don't just replicate it.
 
 For each idea:
-IDEA [N]: [Format] — [Hook/Concept]
+IDEA [N]: [Format] - [Hook/Concept]
 AVATAR: [which of Cryptonary's 13 avatars: Trader/Investor/Passive Income/Portfolio Builder/100X Chaser/Skeptic/Burned/Student/9-5 Worker/Boomer/Side Hustle/Beginner/Universal]
 OBJECTIVE: [Awareness/Consideration/Conversion]
 INSPIRED BY: [what specifically in the screenshot sparked this]
-WHY IT WORKS: [one sentence — specific principle or mechanic]
+WHY IT WORKS: [one sentence - specific principle or mechanic]
 ---"""
 
             result = anthropic_vision(
@@ -14978,15 +15005,15 @@ WHAT'S WORKING:
 [1-2 things that are genuinely strong]
 
 ISSUES:
-1. [Issue title] — [Specific problem]
+1. [Issue title] - [Specific problem]
    FIX: [Exact suggested improvement]
 
-2. [Issue title] — [Specific problem]
+2. [Issue title] - [Specific problem]
    FIX: [Exact suggested improvement]
 
 (up to 6 issues, ordered by severity)
 
-OVERALL RATING: [A/B/C/D] — [one sentence verdict]"""
+OVERALL RATING: [A/B/C/D] - [one sentence verdict]"""
 
             result = anthropic_vision(
                 [{"role": "user", "content": [
@@ -15062,7 +15089,7 @@ def fetch_url_content(url, url_type):
         title_match = _re.search(r'<title[^>]*>(.*?)</title>', html, _re.IGNORECASE | _re.DOTALL)
         page_title = title_match.group(1).strip() if title_match else ""
 
-        # Try to find main article content — prefer article/main tags over full page
+        # Try to find main article content - prefer article/main tags over full page
         article_match = _re.search(
             r'<(?:article|main)[^>]*>(.*?)</(?:article|main)>',
             html, _re.DOTALL | _re.IGNORECASE
@@ -15092,7 +15119,7 @@ def analyse_url(chat_id, url, mode="ideas"):
     state = user_state.get(chat_id, {})
     url_type = detect_url_type(url)
 
-    # Platform-specific fallbacks — these all block scrapers reliably
+    # Platform-specific fallbacks - these all block scrapers reliably
     PASTE_TEXT_PLATFORMS = {
         "tweet":     ("Twitter/X", "Twitter/X blocks automated access.\n\nPaste the tweet text below and I'll analyse it 👇"),
         "instagram": ("Instagram", "Instagram blocks automated access.\n\nScreenshot the post and upload the image instead, or paste the caption text below 👇"),
@@ -15133,7 +15160,7 @@ def analyse_url(chat_id, url, mode="ideas"):
 
 
 def handle_ie_file(chat_id, file_info, file_type="pdf"):
-    """Handle PDF/doc uploads in Idea Engine from any stage — extract, summarise, generate concepts."""
+    """Handle PDF/doc uploads in Idea Engine from any stage - extract, summarise, generate concepts."""
     import base64, io, zipfile, xml.etree.ElementTree as _ET
     state = user_state.setdefault(chat_id, {"stage": "idea_engine_idle"})
     try:
@@ -15226,7 +15253,7 @@ def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=No
                 "CONTENT FROM " + source_label.upper() + ":\\n" + text_content[:3000] +
                 "\\n\\nGenerate 4 Instagram content concepts for Cryptonary inspired by this material.\\n\\n" +
                 "Format EXACTLY:\\n" +
-                "1. CONCEPT: [One punchy line — the big idea]\\n" +
+                "1. CONCEPT: [One punchy line - the big idea]\\n" +
                 "   ANGLE: [The emotional or argumentative approach]\\n" +
                 "   SOURCE: [What specifically in this material inspired it]\\n\\n" +
                 "2. CONCEPT: ...\\n   ANGLE: ...\\n   SOURCE: ...\\n\\n" +
@@ -15242,10 +15269,10 @@ def _process_ie_text_content(chat_id, stage, text_content, source_label, mode=No
             user_state[chat_id]["stage"] = "ie_concept_review"
             send_plain(chat_id, "*IDEAS FROM " + source_label.upper() + "*\\n\\n" + result)
             keyboard = [
-                [{"text": "1 — Expand this", "callback_data": "ie_develop_concept_1"}],
-                [{"text": "2 — Expand this", "callback_data": "ie_develop_concept_2"}],
-                [{"text": "3 — Expand this", "callback_data": "ie_develop_concept_3"}],
-                [{"text": "4 — Expand this", "callback_data": "ie_develop_concept_4"}],
+                [{"text": "1 - Expand this", "callback_data": "ie_develop_concept_1"}],
+                [{"text": "2 - Expand this", "callback_data": "ie_develop_concept_2"}],
+                [{"text": "3 - Expand this", "callback_data": "ie_develop_concept_3"}],
+                [{"text": "4 - Expand this", "callback_data": "ie_develop_concept_4"}],
                 [{"text": "Regenerate", "callback_data": "ie_regen_concepts"}],
                 [{"text": "Back to Creative Studio", "callback_data": "open_idea_engine"}]
             ]
