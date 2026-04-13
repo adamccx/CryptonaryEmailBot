@@ -2089,7 +2089,38 @@ def send_plain(chat_id, text, keyboard=None):
                 time.sleep(0.3)
 
 
-def notify_failure(chat_id, context, error=None, fallback_action=None, fallback_keyboard=None):
+def send_formatted(chat_id, text, keyboard=None):
+    """Send with Markdown formatting preserved — use for formatted copy output.
+    Unlike send_plain, this preserves *bold*, _italic_, `code` from Claude output."""
+    # Escape characters that break Telegram Markdown but aren't formatting
+    import re as _re
+    # Only escape unmatched brackets/parens that aren't part of links
+    text = text.replace("(", "\\(").replace(")", "\\)")
+    text = text.replace("[", "\\[").replace("]", "\\]")
+    # Undo escaping for valid markdown links [text](url)
+    text = _re.sub(r'\\\[([^\]]+)\\\]\\\(([^)]+)\\\)', r'[\1](\2)', text)
+    max_len = 4000
+    if len(text) <= max_len:
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        if keyboard:
+            data["reply_markup"] = {"inline_keyboard": keyboard}
+        _send_with_fallback(chat_id, data)
+    else:
+        chunks = []
+        while len(text) > max_len:
+            split_at = text.rfind("\n", 0, max_len)
+            if split_at == -1: split_at = max_len
+            chunks.append(text[:split_at])
+            text = text[split_at:].lstrip("\n")
+        chunks.append(text)
+        for i, chunk in enumerate(chunks):
+            is_last = (i == len(chunks) - 1)
+            data = {"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"}
+            if is_last and keyboard:
+                data["reply_markup"] = {"inline_keyboard": keyboard}
+            _send_with_fallback(chat_id, data)
+            if not is_last:
+                time.sleep(0.3)
     """Central failure handler — tells the user clearly what failed and what to do instead.
     
     context: one of 'brevo_lists', 'brevo_campaigns', 'brevo_push', 'mixpanel',
@@ -2206,6 +2237,29 @@ def clean_copy(text):
     text = _re.sub(r'\*\*([^*:]+):\*\*', r'\1:', text)
     # Collapse excess blank lines
     text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+def strip_ui_text(text):
+    """Strip emojis and markdown from angles, hooks, subjects shown in picker UI.
+    Keeps copy clean in buttons and message lists — not applied to email body copy."""
+    import re as _re
+    if not text:
+        return text
+    # Remove emoji ranges
+    text = _re.sub(
+        r'[\U0001F300-\U0001F9FF\U00002700-\U000027BF\U0000FE00-\U0000FE0F'
+        r'\U00002600-\U000026FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF'
+        r'\U00002300-\U000023FF\u200d\ufe0f]',
+        '', text
+    )
+    # Strip markdown bold/italic
+    text = _re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', text)
+    # Strip tags like [TAG] or #tag
+    text = _re.sub(r'\[[\w\s]+\]\s*', '', text)
+    text = _re.sub(r'#\w+\s?', '', text)
+    # Collapse whitespace
+    text = _re.sub(r'  +', ' ', text)
     return text.strip()
 
 
@@ -2465,13 +2519,16 @@ def email_action_keyboard():
         # Global tools
         [{"text": "Enhance",             "callback_data": "enhance"},
          {"text": "🔄 Regenerate",       "callback_data": "regen_emails"},
-         {"text": "Tone",               "callback_data": "tone_menu"}],
+         {"text": "Tone",                "callback_data": "tone_menu"}],
         [{"text": "Subject Lines",       "callback_data": "subject_ab"},
          {"text": "Critique",            "callback_data": "critique_email"},
-         {"text": "Length",             "callback_data": "length_email"}],
-        [{"text": "👁 View current",     "callback_data": "view_current"},
-         {"text": "Add Context",         "callback_data": "add_context_email"}],
-        [{"text": "✏️ Submit revised",   "callback_data": "submit_revised_email"}],
+         {"text": "Segments",            "callback_data": "segments"}],
+        [{"text": "Length",              "callback_data": "length_email"},
+         {"text": "Add Context",         "callback_data": "add_context_email"},
+         {"text": "👁 View current",     "callback_data": "view_current"}],
+        [{"text": "✏️ Submit revised",   "callback_data": "submit_revised_email"},
+         {"text": "✏️ Manual Edit",      "callback_data": "manual_edit_email"}],
+        [{"text": "𝐁 Format",             "callback_data": "format_email"}],
     ]
 
 def ad_action_keyboard():
@@ -2515,7 +2572,8 @@ def social_action_keyboard():
         [{"text": "🎨 Visual brief",          "callback_data": "vb_auto"},
          {"text": "✏️ Submit revised",        "callback_data": "submit_revised_social"}],
         [{"text": "👁 View current version",  "callback_data": "view_current"}],
-        [{"text": "✏️ Manual Edit",           "callback_data": "manual_edit_social"}],
+        [{"text": "✏️ Manual Edit",           "callback_data": "manual_edit_social"},
+         {"text": "𝐁 Format",                 "callback_data": "format_social"}],
     ]
 
 def mark_complete_keyboard():
@@ -2576,7 +2634,7 @@ def gen_angles(chat_id):
         text = "*Pick an angle:*\n_(Used for both Free and Pro emails)_\n\n"
         keyboard = []
         for i, a in enumerate(angles):
-            text += "*" + str(i+1) + ".* " + a + "\n\n"
+            text += "*" + str(i+1) + ".* " + strip_ui_text(a) + "\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "angle_" + str(i)}])
         keyboard.append([{"text": "✏️ Write my own angle", "callback_data": "custom_angle"}])
         keyboard.append([{"text": "Regenerate angles",     "callback_data": "regen_angles"}])
@@ -2618,7 +2676,7 @@ def gen_hooks(chat_id):
         text = "*Pick a hook:*\n_(Used for both Free and Pro emails)_\n\n"
         keyboard = []
         for i, h in enumerate(hooks):
-            text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
+            text += "*" + str(i+1) + ".* " + strip_ui_text(h["subject"]) + "\n_" + strip_ui_text(h["preview"]) + "_\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "free_hook_" + str(i)}])
         keyboard.append([{"text": "✏️ Write my own",  "callback_data": "custom_free_hook"}])
         keyboard.append([{"text": "🔄 Regenerate",    "callback_data": "regen_free_hooks"}])
@@ -2638,7 +2696,7 @@ def show_pro_angle_picker(chat_id):
     text = "*PRO EMAIL — Pick an angle:*\n_(Full analysis, data-led, complete conviction)_\n\n"
     keyboard = []
     for i, a in enumerate(pro_angles):
-        text += "*" + str(i+1) + ".* " + a + "\n\n"
+        text += "*" + str(i+1) + ".* " + strip_ui_text(a) + "\n\n"
         keyboard.append([{"text": str(i+1), "callback_data": "pro_angle_" + str(i)}])
     keyboard.append([{"text": "✏️ Write my own", "callback_data": "custom_pro_angle"}])
     keyboard.append([{"text": "Regenerate", "callback_data": "regen_pro_angles"}])
@@ -2676,7 +2734,7 @@ def gen_pro_hooks(chat_id):
         text = "*PRO EMAIL — Pick a hook:*\n_(Data-led, authoritative, specific)_\n\n"
         keyboard = []
         for i, h in enumerate(hooks):
-            text += "*" + str(i+1) + ".* " + h["subject"] + "\n_" + h["preview"] + "_\n\n"
+            text += "*" + str(i+1) + ".* " + strip_ui_text(h["subject"]) + "\n_" + strip_ui_text(h["preview"]) + "_\n\n"
             keyboard.append([{"text": str(i+1), "callback_data": "pro_hook_" + str(i)}])
         keyboard.append([{"text": "✏️ Write my own",   "callback_data": "custom_pro_hook"}])
         keyboard.append([{"text": "🔄 Regenerate",     "callback_data": "regen_pro_hooks"}])
@@ -3386,7 +3444,7 @@ def gen_story(chat_id, multi=False):
             ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            "\n\nRULES:\n- Write ONLY the text/copy for each slide — no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 15 words]\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') — the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
+            "\n\nRULES:\n- Write ONLY the text/copy for each slide — no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 30 words — enough to land the point with full context]\n- Each slide should carry ONE complete thought or insight — don't truncate ideas to hit a word count\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') — the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
             max_tokens=700
         )
         social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
@@ -3940,11 +3998,8 @@ def handle_message(msg):
                 except Exception:
                     pass
                 user_state[chat_id]["yt_content"] = fetched[:4000]
-                keyboard = [
-                    [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
-                    [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
-                ]
-                send(chat_id, "Do you also have an existing description to work from?", keyboard)
+                user_state[chat_id]["stage"] = "yt_awaiting_content"
+                gen_yt_desc(chat_id)
             else:
                 send(chat_id, "Could not read that link. Paste the content directly instead.")
             return
@@ -4008,6 +4063,148 @@ def handle_message(msg):
             shown = True
         if not shown:
             send(chat_id, "Nothing in the current session yet. Generate content first.")
+        return
+
+    if text.startswith("/format"):
+        # Apply Telegram formatting to current content on request
+        # Usage: /format bold the key numbers
+        #        /format add italics to the P.S.
+        #        /format — shows formatting reference
+        instruction = text.replace("/format", "").strip()
+        user_state.setdefault(chat_id, {"stage": "idle"})
+        st = user_state[chat_id]
+        if not instruction:
+            send(chat_id,
+                 "*Telegram Formatting Guide*\n\n"
+                 "*bold text* — wrap in \\*asterisks\\*\n"
+                 "_italic text_ — wrap in \\_underscores\\_\n"
+                 "`inline code` — wrap in \\`backticks\\`\n"
+                 "```code block``` — wrap in \\`\\`\\`triple backticks\\`\\`\\`\n\n"
+                 "*To apply formatting to your current copy:*\n"
+                 "`/format bold all the price levels`\n"
+                 "`/format italicise the P.S.`\n"
+                 "`/format make the subject line bold`")
+            return
+        # Get current content to format
+        emails = st.get("current_emails", {})
+        content_to_format = None
+        content_label = ""
+        if emails.get("free") or emails.get("pro"):
+            # Format emails
+            free = emails.get("free", "")
+            pro = emails.get("pro", "")
+            content_to_format = ("FREE EMAIL:\n" + free[:2000] if free else "") + ("\n\nPRO EMAIL:\n" + pro[:2000] if pro else "")
+            content_label = "emails"
+        elif st.get("current_social"):
+            content_to_format = st["current_social"][:3000]
+            content_label = st.get("current_social_type", "social content")
+        elif st.get("current_ad_output"):
+            content_to_format = st["current_ad_output"][:3000]
+            content_label = "ad copy"
+        if not content_to_format:
+            send(chat_id, "Nothing in session to format. Generate content first.")
+            return
+        send(chat_id, "Applying formatting...")
+        try:
+            result = claude(
+                f"Apply Telegram Markdown formatting to this copy based on this instruction: {instruction}\n\n"
+                "TELEGRAM MARKDOWN RULES:\n"
+                "- Bold: *text* (single asterisks)\n"
+                "- Italic: _text_\n"
+                "- Only format what the instruction specifies\n"
+                "- Do not add formatting that wasn't requested\n"
+                "- Do not change the copy itself — only add/adjust formatting markers\n\n"
+                f"CONTENT:\n{content_to_format}\n\nReturn the formatted content as plain text with Telegram markdown markers.",
+                max_tokens=2000
+            )
+            # Store formatted version
+            if content_label == "emails":
+                parsed = parse_delimited_emails(result) if "===FREE EMAIL" in result else None
+                if parsed:
+                    st["current_emails"] = parsed
+                    if parsed.get("free"):
+                        send_formatted(chat_id, "FORMATTED FREE EMAIL\n\n" + parsed["free"])
+                    if parsed.get("pro"):
+                        send_formatted(chat_id, "FORMATTED PRO EMAIL\n\n" + parsed["pro"])
+                else:
+                    send_formatted(chat_id, "FORMATTED:\n\n" + result)
+            else:
+                send_formatted(chat_id, "FORMATTED " + content_label.upper() + "\n\n" + result)
+            send(chat_id, "Formatting applied. Use /view to see current version.",
+                 [[{"text": "Back to email tools", "callback_data": "back_to_emails"}]] if content_label == "emails" else None)
+        except Exception as e:
+            send(chat_id, "Formatting failed: " + str(e)[:150])
+        return
+
+    if text.startswith("/format") or text.lower().startswith("format this:") or text.lower().startswith("apply formatting:"):
+        # Format the current content with Telegram markdown
+        user_state.setdefault(chat_id, {"stage": "idle"})
+        st = user_state[chat_id]
+        instruction = text.replace("/format", "").replace("format this:", "").replace("Format this:", "").replace("apply formatting:", "").strip()
+        # Get current content
+        emails = st.get("current_emails", {})
+        social = st.get("current_social", "")
+        ad = st.get("current_ad_output", "")
+        yt = st.get("yt_output", "")
+        content = ""
+        label = ""
+        if emails.get("free") or emails.get("pro"):
+            # Default to free email for formatting
+            content = emails.get("free", emails.get("pro", ""))
+            label = "email"
+        elif social:
+            content = social
+            label = "social content"
+        elif ad:
+            content = ad
+            label = "ad copy"
+        elif yt:
+            content = yt
+            label = "YouTube description"
+        if not content:
+            send(chat_id, "No content in session to format. Generate something first.")
+            return
+        if not instruction:
+            send(chat_id,
+                 "*Format command:*\n\n"
+                 "Use `/format` followed by your instruction:\n\n"
+                 "_/format bold all the price levels_\n"
+                 "_/format add italic on the P.S._\n"
+                 "_/format make the CTA bold_\n\n"
+                 "Telegram supports: `*bold*` `_italic_` `__underline__` `~strikethrough~` `` `code` ``")
+            return
+        send(chat_id, "Applying formatting...")
+        try:
+            result = claude(
+                "Apply the following Telegram markdown formatting to this " + label + ".\n\n"
+                "Instruction: " + instruction + "\n\n"
+                "Telegram formatting syntax:\n"
+                "- Bold: *text*\n"
+                "- Italic: _text_\n"
+                "- Underline: __text__\n"
+                "- Strikethrough: ~text~\n"
+                "- Monospace/code: `text`\n\n"
+                "IMPORTANT: Only apply formatting where the instruction specifies. "
+                "Do not change any copy — only add markdown syntax.\n\n"
+                "CONTENT:\n" + content[:3000] +
+                "\n\nReturn the formatted content only. No explanation.",
+                max_tokens=2000
+            )
+            # Store back
+            if label == "email":
+                emails["free"] = result
+                st["current_emails"] = emails
+            elif label == "social content":
+                st["current_social"] = result
+            elif label == "ad copy":
+                st["current_ad_output"] = result
+            elif label == "YouTube description":
+                st["yt_output"] = result
+            # Send with formatting preserved
+            send_formatted(chat_id, "*FORMATTED " + label.upper() + ":*\n\n" + result)
+            send(chat_id, "Formatting applied. The copy in your session is updated.")
+        except Exception as e:
+            send(chat_id, "Formatting failed: " + str(e)[:150])
         return
 
     if text == "/imageprompt" or text.startswith("/imageprompt "):
@@ -4108,6 +4305,58 @@ def handle_message(msg):
              "*Context added:*\n\n_" + context[:400] + "_\n\n"
              "Correct? Confirm and I'll find angles based on the report + this context.",
              keyboard)
+        return
+
+    if stage == "awaiting_format_instruction":
+        instruction = text.strip()
+        st = user_state[chat_id]
+        target = st.get("format_target", "email")
+        # Get the content to format
+        emails = st.get("current_emails", {})
+        content_map = {
+            "email":  emails.get("free", emails.get("pro", "")),
+            "social": st.get("current_social", ""),
+            "ad":     st.get("current_ad_output", ""),
+            "yt":     st.get("yt_output", ""),
+        }
+        content = content_map.get(target, "")
+        if not content:
+            send(chat_id, "No content found to format. Generate content first.")
+            return
+        send(chat_id, "Applying formatting...")
+        try:
+            result = claude(
+                "Apply Telegram markdown formatting to this content.\n\n"
+                "Instruction: " + instruction + "\n\n"
+                "Formatting syntax:\n"
+                "- Bold: *text*\n"
+                "- Italic: _text_\n"
+                "- Underline: __text__\n"
+                "- Strikethrough: ~text~\n\n"
+                "IMPORTANT: Only add formatting markers — do NOT change any copy. "
+                "Only format what the instruction specifies.\n\n"
+                "CONTENT:\n" + content[:3000] +
+                "\n\nReturn the formatted content only.",
+                max_tokens=2000
+            )
+            # Store back
+            if target == "email":
+                emails["free"] = result
+                st["current_emails"] = emails
+            elif target == "social":
+                st["current_social"] = result
+            elif target == "ad":
+                st["current_ad_output"] = result
+            elif target == "yt":
+                st["yt_output"] = result
+            st["stage"] = "emails_ready" if target == "email" else st.get("stage", "idle")
+            send_formatted(chat_id, "*FORMATTED:*\n\n" + result)
+            kb_map = {"email": email_action_keyboard, "social": social_action_keyboard, "ad": ad_action_keyboard}
+            kb_fn = kb_map.get(target)
+            send(chat_id, "Formatting applied.", kb_fn() if kb_fn else [[{"text": "Back", "callback_data": "open_content_studio"}]])
+        except Exception as e:
+            send(chat_id, "Formatting failed: " + str(e)[:150])
+            st["stage"] = "emails_ready" if target == "email" else "idle"
         return
 
     if stage == "awaiting_manual_edit":
@@ -5096,14 +5345,8 @@ def handle_message(msg):
     if stage == "yt_awaiting_content":
         state["yt_content"] = text
         state["yt_mode"] = state.get("yt_mode", "fresh")
-        if state.get("yt_existing"):
-            gen_yt_desc(chat_id)
-        else:
-            keyboard = [
-                [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
-                [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
-            ]
-            send(chat_id, "Got it. Do you also have an existing description you want me to work from?", keyboard)
+        # Generate immediately — no extra questions
+        gen_yt_desc(chat_id)
         return
 
     if stage == "yt_awaiting_existing":
@@ -5164,7 +5407,8 @@ def handle_callback(cb):
     message_id = cb["message"]["message_id"]
     data = cb["data"]
     tg("answerCallbackQuery", {"callback_query_id": cb["id"]})
-    state = user_state.get(chat_id, {})
+    user_state.setdefault(chat_id, {"stage": "idle"})
+    state = user_state[chat_id]
 
     # Cooldown: ignore duplicate callbacks fired within 1.5s (queued updates / double-tap)
     cb_key = str(chat_id) + ":" + data
@@ -5360,9 +5604,19 @@ def handle_callback(cb):
     elif data == "mode_yt_desc":
         user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
         keyboard = [
-            [{"text": "I have an existing description to edit", "callback_data": "yt_mode_edit"}],
+            [{"text": "Edit an existing description instead", "callback_data": "yt_mode_edit"}],
         ]
-        send(chat_id, "*YouTube Description*\n\nPaste your video content — transcript, script, report, or a brief summary of what the video covers.\n\nI'll write the full description from that.\n\n_Optional: tap below if you already have a description and just want the packaging tightened._", keyboard)
+        send(chat_id,
+             "*YouTube Description*\n\nPaste anything — transcript, script, report, email copy, or a quick brief.\n\nI'll write the full description from it.\n\n_Already have a description and want it tightened? Tap below._",
+             keyboard)
+
+    elif data == "social_mode_yt":
+        # YouTube Description entry from within Social Content flow
+        user_state[chat_id] = {"stage": "yt_awaiting_content", "yt_mode": "fresh", "yt_content": "", "yt_existing": ""}
+        keyboard = [[{"text": "Edit an existing description instead", "callback_data": "yt_mode_edit"}]]
+        send(chat_id,
+             "*YouTube Description*\n\nPaste anything — transcript, script, report, email copy, or a quick brief.\n\n_Already have a description? Tap below to tighten it instead._",
+             keyboard)
 
     elif data == "yt_mode_edit":
         state["yt_mode"] = "edit"
@@ -5926,6 +6180,18 @@ def handle_callback(cb):
         state["stage"] = "awaiting_manual_edit"
         send(chat_id, "*Manual Edit*\n\nReply with your final version. Paste the complete edited content and I\'ll store it as approved.\n\n_For emails: paste Free and Pro separated by a blank line, or just paste one._")
 
+    elif data in ("format_email", "format_social", "format_ad"):
+        content_type = data.replace("format_", "")
+        state["format_target"] = content_type
+        state["stage"] = "awaiting_format_instruction"
+        send(chat_id,
+             "*Add Telegram Formatting*\n\n"
+             "What would you like formatted?\n\n"
+             "_e.g. 'bold all price levels' / 'italic the P.S.' / 'bold the CTA line'_\n\n"
+             "Telegram supports:\n"
+             "`*bold*` `_italic_` `__underline__` `~strikethrough~`")
+
+
     elif data == "approve_emails":
         # Ask which to approve first
         emails = state.get("current_emails", {})
@@ -6210,10 +6476,11 @@ def handle_callback(cb):
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         keyboard = [
-            [{"text": "Generate another format",   "callback_data": "social_yes"}],
-            [{"text": "🎨 Visual brief + image",   "callback_data": "vb_auto"}],
-            [{"text": "✏️ Submit revised version", "callback_data": "submit_revised_social"}],
-            [{"text": "✅ Mark complete",           "callback_data": "mark_complete"}],
+            [{"text": "📤 Push to Brevo",            "callback_data": "brevo_push_start"}],
+            [{"text": "Generate another format",      "callback_data": "social_yes"}],
+            [{"text": "🎨 Visual brief + image",      "callback_data": "vb_auto"}],
+            [{"text": "✏️ Submit revised version",    "callback_data": "submit_revised_social"}],
+            [{"text": "✅ Mark complete",              "callback_data": "mark_complete"}],
         ]
         send(chat_id, social_type + " approved.", keyboard)
 
@@ -7802,7 +8069,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction"]
                             ie_stages = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -7822,7 +8089,7 @@ def poll():
                                 "awaiting_email_report",
                                 "awaiting_social_report","awaiting_ad_theme",
                                 "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing"]
+                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction"]
                             ie_stages_doc = ["ie_awaiting_screenshot_ideas",
                                 "ie_awaiting_screenshot_critique",
                                 "ie_awaiting_pasted_text",
@@ -8885,7 +9152,7 @@ def gen_social_angles(chat_id):
         keyboard = []
         for i, a in enumerate(angles):
             text += str(i+1) + ". " + a + "\n\n"
-            keyboard.append([{"text": str(i+1) + ". " + a[:50], "callback_data": "social_angle_" + str(i)}])
+            keyboard.append([{"text": str(i+1) + ". " + strip_ui_text(a)[:50], "callback_data": "social_angle_" + str(i)}])
         keyboard.append([{"text": "Write my own angle",  "callback_data": "social_custom_angle"}])
         keyboard.append([{"text": "Regenerate angles",   "callback_data": "social_regen_angles"}])
         send(chat_id, text, keyboard)
@@ -9034,11 +9301,12 @@ def show_standalone_social_menu(chat_id):
     """Single-tap format picker — one format per run, no checkboxes."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     keyboard = [
-        [{"text": "Reel Script (45-60s)",   "callback_data": "pick_fmt_fmt_reel"}],
-        [{"text": "Carousel (5-8 slides)",  "callback_data": "pick_fmt_fmt_carousel"}],
-        [{"text": "Static Post + Caption",  "callback_data": "pick_fmt_fmt_static"}],
-        [{"text": "Story — Single slide",   "callback_data": "pick_fmt_fmt_story_single"}],
-        [{"text": "Story — Multi slide",    "callback_data": "pick_fmt_fmt_story_multi"}],
+        [{"text": "Reel Script (45-60s)",    "callback_data": "pick_fmt_fmt_reel"}],
+        [{"text": "Carousel (5-8 slides)",   "callback_data": "pick_fmt_fmt_carousel"}],
+        [{"text": "Static Post + Caption",   "callback_data": "pick_fmt_fmt_static"}],
+        [{"text": "Story — Single slide",    "callback_data": "pick_fmt_fmt_story_single"}],
+        [{"text": "Story — Multi slide",     "callback_data": "pick_fmt_fmt_story_multi"}],
+        [{"text": "🎬 YouTube Description",  "callback_data": "social_mode_yt"}],
     ]
     send(chat_id, "*Pick a format:*", keyboard)
 
@@ -13153,8 +13421,10 @@ def create_brevo_draft(subject, preview_text, html_content, list_ids=None, templ
             payload["templateId"] = template_id
         else:
             payload["htmlContent"] = html_content
-        if list_ids:
-            payload["recipients"] = {"listIds": list_ids if isinstance(list_ids, list) else [list_ids]}
+        # Note: Brevo campaign recipients.listIds requires CONTACT LIST IDs (static lists),
+        # not segment IDs. Our BREVO_SEGMENTS use segment IDs (dynamic segments) which
+        # are different. We create the draft without recipients — set them in Brevo UI.
+        # This avoids the "documentnotfound" / invalid list ids error.
         body_bytes = json.dumps(payload).encode()
         req = urllib.request.Request(
             "https://api.brevo.com/v3/emailCampaigns",
@@ -14535,11 +14805,8 @@ def handle_content_file(chat_id, file_info, file_type="image"):
             if user_state[chat_id].get("yt_existing"):
                 gen_yt_desc(chat_id)
             else:
-                keyboard = [
-                    [{"text": "Yes — paste existing description", "callback_data": "yt_mode_edit"}],
-                    [{"text": "No — generate fresh from this", "callback_data": "yt_regen"}],
-                ]
-                send(chat_id, "Got it. Do you also have an existing description you want me to work from?", keyboard)
+                # Generate immediately — no extra question
+                gen_yt_desc(chat_id)
 
         elif stage == "yt_awaiting_existing":
             user_state[chat_id]["yt_existing"] = sanitise(extracted)
