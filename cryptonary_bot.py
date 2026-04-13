@@ -4858,9 +4858,9 @@ def handle_message(msg):
         if len(original) < 20:
             send(chat_id, "That looks too short. Paste the full copy you want to edit.")
             return
-        state["ec_original"] = original
-        state["stage"] = "ec_awaiting_specific"
-        intent = state.get("ec_intent", "voice")
+        user_state[chat_id]["ec_original"] = original
+        user_state[chat_id]["stage"] = "ec_awaiting_specific"
+        intent = user_state[chat_id].get("ec_intent", "voice")
         intent_questions = {
             "voice":   "Got it. Any specific instruction, or should I do a full rewrite in Adam's voice?\n\n_e.g. 'Keep the structure, just restyle the voice' / 'Full rewrite'_",
             "punch":   "Got it. Any specific areas to focus on, or punch up everything?\n\n_e.g. 'The opening is weak' / 'Everything, especially the CTA'_",
@@ -4874,9 +4874,10 @@ def handle_message(msg):
     if stage == "ec_awaiting_specific":
         # Second input — specific instruction
         instruction = text.strip()
-        original = state.get("ec_original", "")
-        ec_type = state.get("ec_type", "general")
-        intent = state.get("ec_intent", "voice")
+        st = user_state[chat_id]
+        original = st.get("ec_original", "")
+        ec_type = st.get("ec_type", "general")
+        intent = st.get("ec_intent", "voice")
         if not original:
             send(chat_id, "Lost the original copy. Please start again.", [[{"text": "Edit Existing Copy", "callback_data": "mode_edit_existing"}]])
             return
@@ -4905,8 +4906,8 @@ def handle_message(msg):
         try:
             result = claude(prompt, max_tokens=2000)
             result = clean_copy(result)
-            state["ec_rewritten"] = result
-            state["stage"] = "ec_done"
+            st["ec_rewritten"] = result
+            st["stage"] = "ec_done"
             # Show before and after clearly
             send_plain(chat_id, "ORIGINAL:\n\n" + original[:1500] + ("..." if len(original) > 1500 else ""))
             send_plain(chat_id, "REWRITTEN:\n\n" + result)
@@ -4920,12 +4921,13 @@ def handle_message(msg):
         except Exception as e:
             err = str(e)
             send(chat_id, "Rewrite failed: " + err[:150], [[{"text": "Try again", "callback_data": "ec_rerun_voice"}]])
-            state["stage"] = "ec_awaiting_specific"
+            st["stage"] = "ec_awaiting_specific"
         return
 
     if stage == "ec_quick_editing":
         instruction = text.strip()
-        rewritten = state.get("ec_rewritten", "")
+        st = user_state[chat_id]
+        rewritten = st.get("ec_rewritten", "")
         if not rewritten:
             send(chat_id, "Nothing to edit. Start again.", [[{"text": "Edit Existing Copy", "callback_data": "mode_edit_existing"}]])
             return
@@ -4938,8 +4940,8 @@ def handle_message(msg):
                 max_tokens=1500
             )
             result = clean_copy(result)
-            state["ec_rewritten"] = result
-            state["stage"] = "ec_done"
+            st["ec_rewritten"] = result
+            st["stage"] = "ec_done"
             send_plain(chat_id, "EDITED:\n\n" + result)
             keyboard = [
                 [{"text": "✅ Use this version",          "callback_data": "ec_use_version"}],
@@ -4950,7 +4952,7 @@ def handle_message(msg):
             send(chat_id, "Edit applied.", keyboard)
         except Exception as e:
             send(chat_id, "Edit failed: " + str(e)[:150], [[{"text": "Try again", "callback_data": "ec_quick_edit_result"}]])
-            state["stage"] = "ec_done"
+            st["stage"] = "ec_done"
         return
 
     if stage == "awaiting_revised_email":
