@@ -2807,9 +2807,13 @@ def gen_emails(chat_id):
     prompt += "\n\nAngle: " + angle
     prompt += "\nSubject: " + hook.get("subject", "")
     prompt += "\nPreview: " + hook.get("preview", "")
-    prompt += "\n\nFREE EMAIL CTA: " + free_cta_instruction
-    prompt += "\nPRO EMAIL CTA: " + pro_cta_instruction
-    prompt += "\n\nCRITICAL RULES: No em dashes (- or –) anywhere. Use commas or short sentences instead. No markdown bold. British-casual voice.\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
+    prompt += "\n\nCRITICAL RULES:"
+    prompt += "\n1. No em dashes (- or –) anywhere. Use commas or short sentences instead."
+    prompt += "\n2. No markdown bold. British-casual voice."
+    prompt += "\n3. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with a clear CTA button line in square brackets e.g. [Upgrade to Pro] or [Read the report]. This is the clickable button the reader sees. It must match the CTA instruction exactly."
+    prompt += "\n4. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — Same rule. End with a clear CTA button line in square brackets."
+    prompt += "\n5. Write BOTH emails in full. Do not truncate the Pro email."
+    prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
         raw = claude(prompt, max_tokens=3000, timeout=120, retries=2)
@@ -2829,11 +2833,24 @@ def gen_emails(chat_id):
             "date": time.strftime("%Y-%m-%d"),
             "timestamp": time.strftime("%Y-%m-%d %H:%M")
         }
-        if "free" in emails:
+        has_free = "free" in emails and len(emails["free"].strip()) > 50
+        has_pro = "pro" in emails and len(emails["pro"].strip()) > 50
+        if has_free:
             send_plain(chat_id, "FREE EMAIL\n\n" + clean_copy(extract_text(emails["free"])))
-        if "pro" in emails:
+        if has_pro:
             send_plain(chat_id, "PRO EMAIL\n\n" + clean_copy(extract_text(emails["pro"])))
-        send(chat_id, "Emails ready. What would you like to do?", email_action_keyboard())
+        # Warn if only one email was generated
+        if has_free and not has_pro:
+            send(chat_id, "⚠️ Only the Free email was generated. Pro email may have been cut off.\n\nTap Regenerate to try again, or continue with Free only.", email_action_keyboard())
+        elif has_pro and not has_free:
+            send(chat_id, "⚠️ Only the Pro email was generated. Free email may have been cut off.\n\nTap Regenerate to try again, or continue with Pro only.", email_action_keyboard())
+        elif not has_free and not has_pro:
+            send(chat_id, "⚠️ Neither email parsed correctly. Tap Regenerate to try again.", [
+                [{"text": "🔄 Regenerate", "callback_data": "regen_emails"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ])
+        else:
+            send(chat_id, "Both emails ready. What would you like to do?", email_action_keyboard())
     except Exception as e:
         err = str(e)
         if "timed out" in err.lower() or "timeout" in err.lower():
@@ -4108,15 +4125,6 @@ def handle_message(msg):
             send(chat_id, "Current version shown above.", keyboard)
             shown = True
             return
-        if not shown:
-            send(chat_id, "Nothing in the current session yet. Generate content first.")
-        returnue
-        if st.get("current_ad_output"):
-            send_plain(chat_id, "AD COPY (current version)\n\n" + st["current_ad_output"][:3000])
-            shown = True
-        if st.get("yt_output"):
-            send_plain(chat_id, "YOUTUBE DESCRIPTION (current version)\n\n" + st["yt_output"])
-            shown = True
         if not shown:
             send(chat_id, "Nothing in the current session yet. Generate content first.")
         return
@@ -6602,12 +6610,19 @@ def handle_callback(cb):
 
     elif data == "view_current":
         emails = state.get("current_emails", {})
-        if emails.get("free") or emails.get("pro"):
-            if emails.get("free"):
+        has_free = bool(emails.get("free") and len(extract_text(emails["free"]).strip()) > 50)
+        has_pro = bool(emails.get("pro") and len(extract_text(emails["pro"]).strip()) > 50)
+        if has_free or has_pro:
+            if has_free:
                 send_plain(chat_id, "FREE EMAIL (current)\n\n" + clean_copy(extract_text(emails["free"])))
-            if emails.get("pro"):
+            if has_pro:
                 send_plain(chat_id, "PRO EMAIL (current)\n\n" + clean_copy(extract_text(emails["pro"])))
-            send(chat_id, "Current version shown above.", email_action_keyboard())
+            if has_free and not has_pro:
+                send(chat_id, "⚠️ No Pro email in session. Tap Regenerate to generate both.", email_action_keyboard())
+            elif has_pro and not has_free:
+                send(chat_id, "⚠️ No Free email in session. Tap Regenerate to generate both.", email_action_keyboard())
+            else:
+                send(chat_id, "Current versions shown above.", email_action_keyboard())
         elif state.get("current_social"):
             social_type = state.get("current_social_type", "Social content")
             send_plain(chat_id, social_type.upper() + " (current)\n\n" + state["current_social"])
