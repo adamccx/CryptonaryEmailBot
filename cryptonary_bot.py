@@ -2116,8 +2116,6 @@ def send_formatted(chat_id, text, keyboard=None):
             _send_with_fallback(chat_id, data)
             if not is_last:
                 time.sleep(0.3)
-    if error:
-        print(f"FAILURE [{context}]: {error}", flush=True)
 
     messages = {
         "brevo_lists": (
@@ -11177,6 +11175,10 @@ def handle_voice_message(chat_id, voice):
         # Active content stages - voice = quick edit instruction
         "social_ready", "social_approved",
         "emails_ready", "emails_approved",
+        # Mid-flow email stages — voice should also be a quick edit here
+        "pick_angle", "pick_free_hook", "pick_pro_hook",
+        "pick_free_cta", "pick_pro_cta", "subject_select",
+        "segments_ready", "enhance_select", "context_preview",
         # YouTube description flow
         "yt_awaiting_content", "yt_awaiting_existing",
         # Revised copy memory
@@ -11197,6 +11199,22 @@ def handle_voice_message(chat_id, voice):
     if current_stage in input_stages:
         # Show what was heard, then route as typed text
         send(chat_id, "🎙️ _\"" + transcript[:200] + "\"_")
+        fake_msg = {"chat": {"id": chat_id}, "text": transcript, "from": {"id": chat_id}}
+        handle_message(fake_msg)
+        return
+
+    # Even if stage is unknown/idle, if there's active content treat voice as a quick edit
+    st = user_state.get(chat_id, {})
+    has_emails = bool(st.get("current_emails", {}).get("free") or st.get("current_emails", {}).get("pro"))
+    has_social = bool(st.get("current_social", ""))
+    if has_emails or has_social:
+        send(chat_id, "🎙️ _\"" + transcript[:200] + "\"_")
+        if has_emails:
+            st["quick_edit_mode"] = "email"
+            st["stage"] = "emails_ready"
+        else:
+            st["quick_edit_mode"] = "social"
+            st["stage"] = "social_ready"
         fake_msg = {"chat": {"id": chat_id}, "text": transcript, "from": {"id": chat_id}}
         handle_message(fake_msg)
         return
@@ -14606,69 +14624,145 @@ def run_critique(chat_id, content_type):
         print("Critique error:", e, flush=True)
 
 def apply_critique_fixes(chat_id, fix_numbers):
-    """Apply one or more critique fixes, show diff, offer revert."""
+    """Apply one or more critique fixes, show result, offer revert."""
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
     critique = state.get("current_critique", "")
     original = state.get("critique_original", "")
+    blocks = state.get("critique_blocks", [])
     content_type = state.get("critique_content_type", "email")
 
-    if not critique or not original:
+    if not original:
         send(chat_id, "No active critique to apply.")
         return
 
     fix_list = ", ".join(str(n) for n in fix_numbers)
     send(chat_id, "Applying fix" + ("es " if len(fix_numbers) > 1 else " ") + fix_list + "...")
 
+    # Extract the specific Fix: instructions from selected blocks
+    import re as _re
+    selected_fixes = []
+    for num in fix_numbers:
+        idx = num - 1
+        if idx < len(blocks):
+            block = blocks[idx]
+            # Pull out the Fix: line specifically
+            fix_match = _re.search(r'Fix:\s*(.+?)(?:\n[A-Z]|\Z)', block, _re.DOTALL | _re.IGNORECASE)
+            if fix_match:
+                fix_text = fix_match.group(1).strip()
+            else:
+                # Fall back to the whole block
+                fix_text = block.strip()
+            # Also get the issue for context
+            issue_match = _re.search(r'Issue:\s*(.+?)(?:\nFix:|\Z)', block, _re.DOTALL | _re.IGNORECASE)
+            issue_text = issue_match.group(1).strip() if issue_match else ""
+            selected_fixes.append(f"FIX {num}:\nIssue: {issue_text}\nAction: {fix_text}")
+
+    if not selected_fixes:
+        send(chat_id, "Could not extract fix instructions. Try again.")
+        return
+
+    fixes_block = "\n\n".join(selected_fixes)
+
+    # Build a targeted prompt with the exact fix actions
+    is_email = content_type == "email"
+    output_format = (
+        "\n\nReturn ONLY the rewritten content in this exact format — no explanation, no changelog, no diff:\n\n"
+        "===FREE EMAIL START===\n[complete rewritten free email]\n===FREE EMAIL END===\n\n"
+        "===PRO EMAIL START===\n[complete rewritten pro email]\n===PRO EMAIL END==="
+        if is_email else
+        "\n\nReturn ONLY the rewritten content as plain text — no explanation, no changelog, no summary of changes."
+    )
+
     try:
-        fix_instruction = ("fixes " + fix_list) if len(fix_numbers) > 1 else ("fix " + fix_list)
         result = claude(
-            "ORIGINAL CONTENT:\n" + original[:4000] +
-            "\n\nCRITIQUE:\n" + critique[:2000] +
-            "\n\nApply ONLY " + fix_instruction + " from the critique above. "
-            "Return the full revised content with those specific changes applied. "
-            "Do not apply other changes. Do not explain what you changed. "
-            "No em dashes. Keep Adam's voice.",
-            max_tokens=2500
+            "You are rewriting Cryptonary marketing copy. Apply ONLY the specific changes listed below — "
+            "do not change anything else, do not remove sections, do not summarise what you did.\n\n"
+            "SPECIFIC CHANGES TO MAKE:\n" + fixes_block +
+            "\n\nORIGINAL CONTENT:\n" + original[:4000] +
+            output_format +
+            "\n\nRules: No em dashes. Keep Adam's voice exactly. Every other word, sentence and section must remain identical.",
+            max_tokens=2500,
+            timeout=120
         )
         result = clean_copy(result)
 
         # Store previous version for revert
         state["critique_pre_fix"] = original
 
-        # Update state with clean copy
+        # Run a verification pass — compare original vs result and report exactly what changed
+        # This tells you whether each fix was actually applied, and shows the exact before/after
+        try:
+            verify_prompt = (
+                "Compare these two versions of a Cryptonary email and report EXACTLY what changed.\n\n"
+                "For each change found, output:\n"
+                "CHANGE N:\n"
+                "REMOVED: [exact sentence or phrase that was deleted or replaced]\n"
+                "ADDED: [exact new sentence or phrase that replaced it, or 'nothing' if deleted]\n"
+                "WHERE: [which email - Free or Pro - and roughly where: opening / body / P.S. / CTA]\n\n"
+                "Be specific and literal. Quote the actual text. If nothing changed in a section, say so.\n"
+                "Do not summarise. Do not say 'the tone was improved'. Show the exact words.\n\n"
+                "ORIGINAL:\n" + original[:3000] +
+                "\n\nNEW VERSION:\n" + result[:3000]
+            )
+            verification = claude(verify_prompt, max_tokens=800, timeout=60)
+            send(chat_id, "*Exactly what changed:*\n\n" + verification.strip())
+        except Exception:
+            # Verification failed — fall back to intent summary
+            change_summary = "*Changes applied:*\n\n"
+            for i, num in enumerate(fix_numbers):
+                if i < len(selected_fixes):
+                    action_match = _re.search(r'Action:\s*(.+?)(?:\n\n|\Z)', selected_fixes[i], _re.DOTALL)
+                    if action_match:
+                        action = action_match.group(1).strip()[:250]
+                        change_summary += f"*Fix {num}:* {action}\n\n"
+            send(chat_id, change_summary.strip())
+
+        # Update state
         if content_type == "email":
             improved = parse_delimited_emails(result)
-            if improved:
-                # Apply clean_copy to parsed emails
+            if improved and (improved.get("free") or improved.get("pro")):
                 if "free" in improved:
                     improved["free"] = clean_copy(extract_text(improved["free"]))
                 if "pro" in improved:
                     improved["pro"] = clean_copy(extract_text(improved["pro"]))
                 state["current_emails"] = improved
-            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
+                if improved.get("free"):
+                    send_plain(chat_id, "FREE EMAIL — updated\n\n" + improved["free"])
+                if improved.get("pro"):
+                    send_plain(chat_id, "PRO EMAIL — updated\n\n" + improved["pro"])
+            else:
+                # Delimiters not found — show raw and keep in state as-is
+                send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:3000])
         elif content_type == "ad":
             state["current_ad_output"] = result
-            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
+            send_plain(chat_id, "AD COPY — updated\n\n" + result[:2500])
         elif content_type == "social":
             state["current_social"] = result
-            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2000])
+            send_plain(chat_id, "SOCIAL — updated\n\n" + result[:2500])
+        elif content_type == "yt":
+            state["yt_output"] = result
+            send_plain(chat_id, "YT DESCRIPTION — updated\n\n" + result[:2500])
+        else:
+            send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2500])
 
-        # Save as voice example
         save_voice_example(chat_id, result[:600], "critique_fix_" + content_type)
 
-        kb_map = {"email": email_action_keyboard, "ad": ad_action_keyboard, "social": social_action_keyboard}
+        kb_map = {"email": email_action_keyboard, "ad": ad_action_keyboard,
+                  "social": social_action_keyboard}
         kb_fn = kb_map.get(content_type, email_action_keyboard)
         keyboard = kb_fn()
-        keyboard.insert(0, [{"text": "Revert changes", "callback_data": "revert_critique"},
-                             {"text": "Critique again", "callback_data": "critique_" + content_type}])
-        state["stage"] = "emails_ready" if content_type == "email" else "social_ready" if content_type == "social" else "ads_ready"
-        send(chat_id, "Fix applied. Revert if needed or proceed:", keyboard)
+        keyboard.insert(0, [{"text": "↩️ Revert changes",  "callback_data": "revert_critique"},
+                             {"text": "Critique again",     "callback_data": "critique_" + content_type}])
+        state["stage"] = ("emails_ready" if content_type == "email"
+                          else "social_ready" if content_type == "social"
+                          else "ads_ready")
+        send(chat_id, str(len(fix_numbers)) + " fix(es) applied. Revert if needed:", keyboard)
 
     except Exception as e:
         err = str(e)
         if "429" in err or "rate" in err.lower():
-            send(chat_id, "Rate limit hit - wait 30 seconds and try applying the fix again.",
+            send(chat_id, "Rate limit hit — wait 30 seconds and try again.",
                  [[{"text": "Try again", "callback_data": "apply_critique_" + fix_list.replace(", ", "_")}]])
         else:
             send(chat_id, "Error applying fix: " + err[:200])
