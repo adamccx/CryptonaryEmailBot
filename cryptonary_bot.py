@@ -2117,6 +2117,9 @@ def send_formatted(chat_id, text, keyboard=None):
             if not is_last:
                 time.sleep(0.3)
 
+
+def notify_failure(chat_id, context, error=None, fallback_action=None, fallback_keyboard=None):
+    """Central failure handler — context-specific messages with recovery keyboards."""
     messages = {
         "brevo_lists": (
             "Couldn't pull live list sizes from Brevo.",
@@ -3130,12 +3133,15 @@ def apply_enhancements(chat_id):
                 max_tokens=1500
             )
             result = clean_copy(result)
+            prev_social = state.get("current_social", "")
             state["current_social"] = result
             state["stage"] = "social_ready"
             # Save back to social_outputs
             if fmt_key and "social_outputs" in state and fmt_key in state["social_outputs"]:
                 state["social_outputs"][fmt_key]["content"] = result
             send_plain(chat_id, "*IMPROVED " + social_type.upper() + "*\n\n" + result)
+            # Show what actually changed
+            show_diff_with_revert(chat_id, prev_social, result, "social")
             # Restore format-specific keyboard if came from format view
             if fmt_key:
                 fmt_labels = {"fmt_reel": "Reel Script", "fmt_carousel": "Carousel",
@@ -3381,8 +3387,8 @@ def gen_carousel(chat_id):
     source_email = get_social_source_text(chat_id)[:500]
     hook = state.get("selected_social_hooks", {}).get("fmt_carousel", "")
     voice_examples = get_voice_corpus_context(chat_id)
-    # Scale max_tokens with slide count - more slides needs more output budget
-    carousel_tokens = max(900, slide_count * 160)
+    # Budget: ~280 tokens per slide for headline + body text. Min 1500.
+    carousel_tokens = max(1500, slide_count * 280)
     try:
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
@@ -7571,6 +7577,9 @@ def handle_callback(cb):
 
     elif data.startswith("critique_") and data != "critique_":
         content_type = data.replace("critique_", "")
+        # Strip format suffix from social format critiques e.g. "social_fmt_carousel" → "social"
+        if content_type.startswith("social_fmt_"):
+            content_type = "social"
         run_critique(chat_id, content_type)
 
     elif data.startswith("toggle_critique_"):
