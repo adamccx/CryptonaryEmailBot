@@ -2812,7 +2812,7 @@ def gen_emails(chat_id):
     prompt += "\n\nCRITICAL RULES: No em dashes (- or –) anywhere. Use commas or short sentences instead. No markdown bold. British-casual voice.\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
-        raw = claude(prompt, max_tokens=2500, timeout=120, retries=2)
+        raw = claude(prompt, max_tokens=3000, timeout=120, retries=2)
         emails = parse_delimited_emails(raw)
         # Apply clean_copy at storage time to catch any em dashes that slip through
         if "free" in emails:
@@ -4298,47 +4298,77 @@ def handle_message(msg):
         target = st.get("format_target", "email")
         # Get the content to format
         emails = st.get("current_emails", {})
-        content_map = {
-            "email":  emails.get("free", emails.get("pro", "")),
-            "social": st.get("current_social", ""),
-            "ad":     st.get("current_ad_output", ""),
-            "yt":     st.get("yt_output", ""),
-        }
-        content = content_map.get(target, "")
+        if target == "email":
+            # Build combined email text like apply_tone does
+            free_email = extract_text(emails.get("free", "")) if "free" in emails else ""
+            pro_email = extract_text(emails.get("pro", "")) if "pro" in emails else ""
+            content = ""
+            if free_email: content += "===FREE EMAIL START===\n" + free_email + "\n===FREE EMAIL END===\n\n"
+            if pro_email: content += "===PRO EMAIL START===\n" + pro_email + "\n===PRO EMAIL END==="
+        else:
+            content_map = {
+                "social": st.get("current_social", ""),
+                "ad":     st.get("current_ad_output", ""),
+                "yt":     st.get("yt_output", ""),
+            }
+            content = content_map.get(target, "")
         if not content:
             send(chat_id, "No content found to format. Generate content first.")
             return
         send(chat_id, "Applying formatting...")
         try:
-            result = claude(
-                "Apply Telegram markdown formatting to this content.\n\n"
-                "Instruction: " + instruction + "\n\n"
-                "Formatting syntax:\n"
-                "- Bold: *text*\n"
-                "- Italic: _text_\n"
-                "- Underline: __text__\n"
-                "- Strikethrough: ~text~\n\n"
-                "IMPORTANT: Only add formatting markers - do NOT change any copy. "
-                "Only format what the instruction specifies.\n\n"
-                "CONTENT:\n" + content[:3000] +
-                "\n\nReturn the formatted content only.",
-                max_tokens=2000
-            )
-            # Store back
             if target == "email":
-                emails["free"] = result
+                result = claude(
+                    "Apply Telegram markdown formatting to BOTH emails below.\n\n"
+                    "Instruction: " + instruction + "\n\n"
+                    "Formatting syntax:\n"
+                    "- Bold: *text*\n"
+                    "- Italic: _text_\n"
+                    "- Underline: __text__\n"
+                    "- Strikethrough: ~text~\n\n"
+                    "IMPORTANT: Only add formatting markers - do NOT change any copy. "
+                    "Only format what the instruction specifies.\n\n"
+                    "EMAILS:\n" + content +
+                    "\n\nReturn BOTH emails using the same ===FREE EMAIL START=== / ===PRO EMAIL START=== delimiters.",
+                    max_tokens=2500
+                )
+                formatted = parse_delimited_emails(result)
+                if "free" in formatted:
+                    emails["free"] = formatted["free"]
+                if "pro" in formatted:
+                    emails["pro"] = formatted["pro"]
                 st["current_emails"] = emails
-            elif target == "social":
-                st["current_social"] = result
-            elif target == "ad":
-                st["current_ad_output"] = result
-            elif target == "yt":
-                st["yt_output"] = result
-            st["stage"] = "emails_ready" if target == "email" else st.get("stage", "idle")
-            send_formatted(chat_id, "*FORMATTED:*\n\n" + result)
-            kb_map = {"email": email_action_keyboard, "social": social_action_keyboard, "ad": ad_action_keyboard}
-            kb_fn = kb_map.get(target)
-            send(chat_id, "Formatting applied.", kb_fn() if kb_fn else [[{"text": "Back", "callback_data": "open_content_studio"}]])
+                st["stage"] = "emails_ready"
+                if "free" in formatted:
+                    send_formatted(chat_id, "*FORMATTED FREE EMAIL*\n\n" + formatted["free"])
+                if "pro" in formatted:
+                    send_formatted(chat_id, "*FORMATTED PRO EMAIL*\n\n" + formatted["pro"])
+                send(chat_id, "Formatting applied to both emails.", email_action_keyboard())
+            else:
+                result = claude(
+                    "Apply Telegram markdown formatting to this content.\n\n"
+                    "Instruction: " + instruction + "\n\n"
+                    "Formatting syntax:\n"
+                    "- Bold: *text*\n"
+                    "- Italic: _text_\n"
+                    "- Underline: __text__\n"
+                    "- Strikethrough: ~text~\n\n"
+                    "IMPORTANT: Only add formatting markers - do NOT change any copy. "
+                    "Only format what the instruction specifies.\n\n"
+                    "CONTENT:\n" + content[:3000] +
+                    "\n\nReturn the formatted content only.",
+                    max_tokens=2000
+                )
+                if target == "social":
+                    st["current_social"] = result
+                elif target == "ad":
+                    st["current_ad_output"] = result
+                elif target == "yt":
+                    st["yt_output"] = result
+                kb_map = {"social": social_action_keyboard, "ad": ad_action_keyboard}
+                kb_fn = kb_map.get(target)
+                send_formatted(chat_id, "*FORMATTED:*\n\n" + result)
+                send(chat_id, "Formatting applied.", kb_fn() if kb_fn else [[{"text": "Back", "callback_data": "open_content_studio"}]])
         except Exception as e:
             send(chat_id, "Formatting failed: " + str(e)[:150])
             st["stage"] = "emails_ready" if target == "email" else "idle"
@@ -5356,9 +5386,22 @@ def handle_message(msg):
         gen_yt_desc(chat_id)
         return
 
-    if len(text) > 100:
-        current_stage = user_state.get(chat_id, {}).get("stage", "idle")
+    current_stage = user_state.get(chat_id, {}).get("stage", "idle")
 
+    # ── Short text in awaiting stages should go straight through ──
+    # Only buffer/gate long text for multi-chunk pastes
+    if current_stage in ("awaiting_email_report", "awaiting_social_report") and len(text) <= 100:
+        # Short brief — treat as complete input, no buffering needed
+        if current_stage == "awaiting_email_report":
+            user_state[chat_id] = {"stage": "awaiting_context_choice", "report": text, "mode": "email"}
+            ask_context(chat_id)
+            return
+        elif current_stage == "awaiting_social_report":
+            user_state[chat_id]["report"] = text
+            show_standalone_social_menu(chat_id)
+            return
+
+    if len(text) > 100:
         # Already buffering - append and extend the window, never trigger twice
         if current_stage == "buffering_report":
             user_state[chat_id]["report_buffer"] += "\n" + text
