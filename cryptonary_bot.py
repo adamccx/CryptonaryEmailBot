@@ -2801,7 +2801,7 @@ def gen_emails(chat_id):
     voice_examples = get_voice_corpus_context(chat_id)
     prompt = "Write BOTH a Free email and a Pro email for Cryptonary. Apply all copywriting principles.\n\n"
     if voice_examples:
-        prompt += voice_examples + "\n\n"
+        prompt += "STYLE REFERENCE (match tone, rhythm, and structure ONLY — do NOT import any specific assets, prices, calls, or data from these examples):\n" + voice_examples + "\n\n"
     prompt += "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT (weave in naturally):\n" + context
     prompt += "\n\nAngle: " + angle
@@ -2810,9 +2810,10 @@ def gen_emails(chat_id):
     prompt += "\n\nCRITICAL RULES:"
     prompt += "\n1. No em dashes (- or –) anywhere. Use commas or short sentences instead."
     prompt += "\n2. No markdown bold. British-casual voice."
-    prompt += "\n3. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with a clear CTA button line in square brackets e.g. [Upgrade to Pro] or [Read the report]. This is the clickable button the reader sees. It must match the CTA instruction exactly."
-    prompt += "\n4. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — Same rule. End with a clear CTA button line in square brackets."
-    prompt += "\n5. Write BOTH emails in full. Do not truncate the Pro email."
+    prompt += "\n3. ONLY reference specific assets, tokens, prices, levels, and data points that are explicitly mentioned in the REPORT or EXTRA CONTEXT above. Do NOT invent data, import tokens from the style reference examples, or mention any asset not in the report. If the report mentions BTC and ETH, the emails mention BTC and ETH only."
+    prompt += "\n4. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with a clear CTA button line in square brackets e.g. [Upgrade to Pro] or [Read the report]. This is the clickable button the reader sees. It must match the CTA instruction exactly."
+    prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — Same rule. End with a clear CTA button line in square brackets."
+    prompt += "\n6. Write BOTH emails in full. Do not truncate the Pro email."
     prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     send(chat_id, "Writing your emails...")
     try:
@@ -2989,14 +2990,27 @@ def apply_quick_edit(chat_id, instruction):
             try:
                 raw = claude(
                     "Edit these Cryptonary emails based on this instruction: " + instruction +
-                    "\n\nRules: Keep Adam's voice. Only change what is specified. No em dashes. No bold markdown.\n\n"
+                    "\n\nRules: Keep Adam's voice. Only change what is specified. No em dashes. No bold markdown."
+                    "\nIMPORTANT: Return the COMPLETE edited emails in full. Do not truncate or summarise. If the instruction only applies to one email, return the other email unchanged.\n\n"
                     "EMAILS:\n" + email_text +
                     "\n\nReturn ONLY the edited emails in this exact format:\n\n"
-                    "===FREE EMAIL START===\n[edited free email]\n===FREE EMAIL END===\n\n"
-                    "===PRO EMAIL START===\n[edited pro email]\n===PRO EMAIL END===",
-                    max_tokens=2500
+                    "===FREE EMAIL START===\n[complete edited free email]\n===FREE EMAIL END===\n\n"
+                    "===PRO EMAIL START===\n[complete edited pro email]\n===PRO EMAIL END===",
+                    max_tokens=3000
                 )
                 edited = parse_delimited_emails(raw)
+                # Validate: if parsed emails are very short, the parse likely failed
+                free_ok = "free" in edited and len(extract_text(edited["free"]).strip()) > 80
+                pro_ok = "pro" in edited and len(extract_text(edited["pro"]).strip()) > 80
+                if not free_ok and not pro_ok:
+                    # Parse failed — don't overwrite good emails with garbage
+                    send(chat_id, "⚠️ Edit didn't return properly formatted emails. Your originals are untouched.\n\nTry editing Free and Pro separately instead of both at once.", [
+                        [{"text": "✏️ Edit Free email", "callback_data": "quick_edit_free"},
+                         {"text": "✏️ Edit Pro email",  "callback_data": "quick_edit_pro"}],
+                        [{"text": "👁 View current",    "callback_data": "view_current"}],
+                    ])
+                    state["stage"] = "emails_ready"
+                    return
                 if "free" in edited:
                     edited["free"] = clean_copy(extract_text(edited["free"]))
                 if "pro" in edited:
@@ -5309,11 +5323,8 @@ def handle_message(msg):
             state["current_ad"] = revised
             state["current_ad_output"] = revised
             state["stage"] = "ads_ready"
-            keyboard = [
-                [{"text": "🎨 Visual brief", "callback_data": "vb_type_ad_static"}],
-                [{"text": "✅ Mark complete", "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, "Ad copy saved. Updated version is now active.", keyboard)
+            send_plain(chat_id, "*AD COPY (revised)*\n\n" + revised[:3000])
+            send(chat_id, "Revised version saved. This is now the active version.", ad_action_keyboard())
         else:
             send(chat_id, "That looks too short. Paste the full ad copy.")
         return
@@ -5355,11 +5366,16 @@ def handle_message(msg):
             save_voice_example(chat_id, revised[:800], "revised_approved_yt_description")
             state["yt_output"] = revised
             state["stage"] = "yt_desc_ready"
+            send_plain(chat_id, "*YOUTUBE DESCRIPTION (revised)*\n\n" + revised)
             keyboard = [
-                [{"text": "🎬 Matching thumbnail",  "callback_data": "yt_gen_thumbnail"}],
+                [{"text": "Quick Edit",             "callback_data": "yt_quick_edit"},
+                 {"text": "Regenerate",             "callback_data": "yt_regen"}],
+                [{"text": "🎬 Matching thumbnail",  "callback_data": "yt_gen_thumbnail"},
+                 {"text": "Critique",               "callback_data": "critique_yt"}],
+                [{"text": "✏️ Submit revised",      "callback_data": "submit_revised_yt"}],
                 [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
             ]
-            send(chat_id, "Saved. Your edits will improve future descriptions.", keyboard)
+            send(chat_id, "Revised version saved. This is now the active version.", keyboard)
         else:
             send(chat_id, "That looks too short. Paste the full description.")
         return
@@ -5372,11 +5388,11 @@ def handle_message(msg):
             corpus_key = "revised_approved_" + social_type.lower().replace(" ", "_")
             save_voice_example(chat_id, revised[:600], corpus_key)
             state["last_approved_social_copy"] = revised[:600]
-            keyboard = [
-                [{"text": "Generate another format", "callback_data": "social_yes"}],
-                [{"text": "✅ Mark complete",         "callback_data": "mark_complete"}],
-            ]
-            send(chat_id, "Saved. Your edits will inform future " + social_type.lower() + " generation.", keyboard)
+            # Store revised version as the active content
+            state["current_social"] = revised
+            state["stage"] = "social_ready"
+            send_plain(chat_id, "*" + social_type.upper() + " (revised)*\n\n" + revised)
+            send(chat_id, "Revised version saved. This is now the active version.", social_action_keyboard())
         else:
             send(chat_id, "That looks too short. Paste the full caption or script.")
         return
@@ -5504,10 +5520,8 @@ def handle_callback(cb):
     elif data == "open_content_studio":
         keyboard = [
             [{"text": "Emails",              "callback_data": "mode_email"}],
-            [{"text": "Ad Copy",             "callback_data": "mode_ads"}],
             [{"text": "Social Content",      "callback_data": "mode_social"}],
-            [{"text": "YouTube Description", "callback_data": "mode_yt_desc"}],
-            [{"text": "Landing Page",        "callback_data": "mode_landing"}],
+            [{"text": "Adverts",             "callback_data": "mode_ads"}],
             [{"text": "✏️ Edit Existing Copy", "callback_data": "mode_edit_existing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
@@ -5537,8 +5551,9 @@ def handle_callback(cb):
             keyboard = [
                 [{"text": "✍️ Write copy for an existing creative", "callback_data": "ad_quick_creative"}],
                 [{"text": "🎯 Create Ad",                           "callback_data": "ad_build_campaign"}],
+                [{"text": "🌐 Landing Page",                        "callback_data": "mode_landing"}],
             ]
-            send(chat_id, "*Ad Creation*\n\nWhat would you like to do?", keyboard)
+            send(chat_id, "*Adverts*\n\nWhat would you like to do?", keyboard)
 
     elif data == "mode_social":
         prev_analysis = user_state.get(chat_id, {}).get("last_ds_analysis", "")
@@ -6202,7 +6217,7 @@ def handle_callback(cb):
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         state["stage"] = "social_approved"
         keyboard = [
-            [{"text": "Generate another format", "callback_data": "social_yes"}],
+            [{"text": "Generate another format", "callback_data": "social_another_format"}],
             [{"text": "🎨 Visual brief + image",  "callback_data": "vb_auto"}],
             [{"text": "✏️ Submit revised version","callback_data": "submit_revised_social"}],
             [{"text": "Mark Complete",            "callback_data": "mark_complete"}],
@@ -6407,6 +6422,17 @@ def handle_callback(cb):
         social_type = state.get("current_social_type", "social content")
         send(chat_id, f"*Submit Revised {social_type}*\n\nPaste your final edited version.\n\nThis will be saved as an approved example and used to improve future {social_type.lower()} generation.\n\n_Paste the full caption/script._")
 
+    elif data == "social_another_format":
+        # Generate another format — keep same angle and hook, just pick a new format
+        state["selected_social_formats"] = []
+        state["social_hooks"] = {}
+        state["selected_social_hooks"] = {}
+        # Preserve angle — it's already in state from the previous generation
+        if not state.get("social_angle") and state.get("selected_angle"):
+            state["social_angle"] = state["selected_angle"]
+        state["stage"] = "pick_social_formats"
+        show_standalone_social_menu(chat_id)
+
     elif data == "social_yes":
         state["selected_social_formats"] = []
         # Coming from approved email - report and angle already in state, skip straight to format picker
@@ -6520,16 +6546,31 @@ def handle_callback(cb):
         state["selected_social_formats"] = [fmt]
         state["social_hooks"] = {}
         state["selected_social_hooks"] = {}
-        # Auto-set framework
+        state["stage"] = "pick_social_formats"
+        # For reels and stories, ask framework before generating
         if fmt in {"fmt_reel", "fmt_story_single", "fmt_story_multi"}:
-            state["social_framework"] = "PAS"
+            keyboard = [
+                [{"text": "PAS (Problem → Agitate → Solution)", "callback_data": "fw_pick_PAS"}],
+                [{"text": "AIDA (Attention → Interest → Desire → Action)", "callback_data": "fw_pick_AIDA"}],
+            ]
+            send(chat_id, "*Pick a framework:*", keyboard)
         else:
             state["social_framework"] = "AIDA"
-        state["stage"] = "pick_social_formats"
-        # If angle already exists (e.g. coming from email flow or idea engine), skip to hooks
+            # If angle already exists, skip to hooks
+            has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
+            if has_angle:
+                if not state.get("social_angle") and state.get("selected_angle"):
+                    state["social_angle"] = state["selected_angle"]
+                gen_social_hooks(chat_id)
+            else:
+                gen_social_angles(chat_id)
+
+    elif data.startswith("fw_pick_"):
+        fw = data.replace("fw_pick_", "")
+        state["social_framework"] = fw
+        # Now continue to angle/hook flow
         has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
         if has_angle:
-            # Carry existing angle into social_angle so gen_social_hooks can use it
             if not state.get("social_angle") and state.get("selected_angle"):
                 state["social_angle"] = state["selected_angle"]
             gen_social_hooks(chat_id)
@@ -6539,9 +6580,16 @@ def handle_callback(cb):
     elif data.startswith("fmt_"):
         # Legacy: redirect to single format flow
         state["selected_social_formats"] = [data]
-        state["social_framework"] = "PAS" if data in {"fmt_reel", "fmt_story_single", "fmt_story_multi"} else "AIDA"
         state["stage"] = "pick_social_formats"
-        gen_social_angles(chat_id)
+        if data in {"fmt_reel", "fmt_story_single", "fmt_story_multi"}:
+            keyboard = [
+                [{"text": "PAS (Problem → Agitate → Solution)", "callback_data": "fw_pick_PAS"}],
+                [{"text": "AIDA (Attention → Interest → Desire → Action)", "callback_data": "fw_pick_AIDA"}],
+            ]
+            send(chat_id, "*Pick a framework:*", keyboard)
+        else:
+            state["social_framework"] = "AIDA"
+            gen_social_angles(chat_id)
 
     elif data == "gen_social_selected":
         gen_social_selected(chat_id)
@@ -6555,8 +6603,7 @@ def handle_callback(cb):
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         keyboard = [
-            [{"text": "📤 Push to Brevo",            "callback_data": "brevo_push_start"}],
-            [{"text": "Generate another format",      "callback_data": "social_yes"}],
+            [{"text": "Generate another format",      "callback_data": "social_another_format"}],
             [{"text": "🎨 Visual brief + image",      "callback_data": "vb_auto"}],
             [{"text": "✏️ Submit revised version",    "callback_data": "submit_revised_social"}],
             [{"text": "✅ Mark complete",              "callback_data": "mark_complete"}],
@@ -14667,7 +14714,7 @@ def run_critique(chat_id, content_type):
             blocks = [b.strip() for b in result.strip().split('\n\n') if b.strip() and len(b.strip()) > 20]
         state["critique_blocks"] = blocks
         state["critique_selected_fixes"] = []  # reset selection
-        state["critique_fixes_available"] = min(len(blocks), 6)  # for toggle rebuild
+        state["critique_fixes_available"] = min(len(blocks), 10)  # for toggle rebuild
 
         # Display with numbers
         numbered = "CRITIQUE\n\n"
@@ -14677,7 +14724,7 @@ def run_critique(chat_id, content_type):
 
         # Build multi-select checkbox keyboard
         keyboard = []
-        for i in range(min(len(blocks), 6)):
+        for i in range(min(len(blocks), 10)):
             keyboard.append([{"text": "[ ] Fix " + str(i+1), "callback_data": "toggle_critique_" + str(i+1)}])
         keyboard.append([
             {"text": "Apply selected (0)", "callback_data": "apply_critique_selected"},
