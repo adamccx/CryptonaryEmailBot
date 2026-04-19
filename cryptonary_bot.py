@@ -2258,10 +2258,18 @@ def strip_ui_text(text):
     text = _re.sub(r'  +', ' ', text)
     return text.strip()
 
+# ── MODEL CONFIGURATION ──────────────────────────────────────────
+# Adam AI 4.7 — Opus for quality, Sonnet for speed
+MODEL_OPUS   = "claude-opus-4-7"      # Emails, edits, critiques, content generation
+MODEL_SONNET = "claude-sonnet-4-6"    # Hooks, angles, summaries, data analysis
 
-def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2):
+VOICE_LITE = "You write for Cryptonary, a crypto research brand. Voice: direct, data-led, British-casual, punchy. No em dashes. No fluff. Adam is the Co-Founder."
+
+
+def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=None):
+    use_model = model or MODEL_OPUS
     payload = json.dumps({
-        "model": "claude-sonnet-4-5",
+        "model": use_model,
         "max_tokens": max_tokens,
         "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
@@ -2298,7 +2306,7 @@ def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2):
 def anthropic_vision(messages, max_tokens=1500, system=None):
     """Make a direct Anthropic API call with vision/multimodal content. Proper error logging."""
     payload = json.dumps({
-        "model": "claude-sonnet-4-5",
+        "model": MODEL_SONNET,
         "max_tokens": max_tokens,
         "system": system if system else "You are a helpful assistant.",
         "messages": messages
@@ -2474,7 +2482,23 @@ def parse_delimited_emails(text):
         try:
             emails = json.loads(clean_json(text))
         except:
-            emails = {"free": text, "pro": text}
+            # Last resort: try to split on obvious FREE/PRO markers in raw text
+            if "FREE EMAIL" in text.upper() and "PRO EMAIL" in text.upper():
+                parts = text.upper().split("PRO EMAIL")
+                free_part = text[:len(parts[0])].strip()
+                pro_part = text[len(parts[0]):].strip()
+                # Strip the label lines
+                for prefix in ["FREE EMAIL:", "FREE EMAIL", "---"]:
+                    if free_part.upper().startswith(prefix.upper()):
+                        free_part = free_part[len(prefix):].strip()
+                for prefix in ["PRO EMAIL:", "PRO EMAIL", "---"]:
+                    if pro_part.upper().startswith(prefix.upper()):
+                        pro_part = pro_part[len(prefix):].strip()
+                if len(free_part) > 80 and len(pro_part) > 80:
+                    emails = {"free": free_part, "pro": pro_part}
+            # If still nothing usable, return empty — caller must handle
+            if not emails:
+                emails = {}
     return emails
 
 def parse_delimited_segments(text):
@@ -2572,6 +2596,15 @@ def social_action_keyboard():
          {"text": "𝐁 Format",                 "callback_data": "format_social"}],
     ]
 
+def social_approved_keyboard():
+    """Centralised keyboard shown after any social content is approved."""
+    return [
+        [{"text": "Generate another format",      "callback_data": "social_another_format"}],
+        [{"text": "🎨 Visual brief + image",      "callback_data": "vb_auto"}],
+        [{"text": "✏️ Submit revised version",    "callback_data": "submit_revised_social"}],
+        [{"text": "✅ Mark complete",              "callback_data": "mark_complete"}],
+    ]
+
 def mark_complete_keyboard():
     return [
         [{"text": "New session", "callback_data": "start_over"}],
@@ -2638,7 +2671,7 @@ def gen_angles(chat_id):
         # Validate - if GPT returned placeholders, fall back to Claude
         placeholder_signs = ["alternative angle", "angle 1", "angle 2", "angle 3", "angle 4"]
         if any(any(p in a.lower() for p in placeholder_signs) for a in angles):
-            raw = claude(prompt, max_tokens=600)
+            raw = claude(prompt, max_tokens=600, model=MODEL_SONNET, system=VOICE_LITE)
             angles = parse_numbered_list(raw, 4)
         user_state[chat_id]["angles"] = angles
         user_state[chat_id]["free_angles"] = angles
@@ -2695,7 +2728,7 @@ def gen_hooks(chat_id):
         hooks = parse_hooks(raw)
         # Validate - if hooks look generic/placeholder, fall back to Claude
         if not hooks or len(hooks) < 2:
-            raw = claude(prompt, max_tokens=400)
+            raw = claude(prompt, max_tokens=400, model=MODEL_SONNET, system=VOICE_LITE)
             hooks = parse_hooks(raw)
         state["free_hooks"] = hooks
         state["pro_hooks"] = hooks
@@ -2755,7 +2788,7 @@ def gen_pro_hooks(chat_id):
         raw = claude(base + "\n\nPRO EMAIL ANGLE: " + pro_angle + avoid +
             "\n\nWrite 4 subject line + preview text combos for the PRO email.\n"
             "PRO hooks: Data-led, specific, authoritative. Paying members expect depth and directness.\n\n"
-            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400)
+            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400, model=MODEL_SONNET, system=VOICE_LITE)
         hooks = parse_hooks(raw)
         state["pro_hooks"] = hooks
         state["stage"] = "pick_pro_hook"
@@ -2815,10 +2848,25 @@ def gen_emails(chat_id):
     prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — Same rule. End with a clear CTA button line in square brackets."
     prompt += "\n6. Write BOTH emails in full. Do not truncate the Pro email."
     prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
-    send(chat_id, "Writing your emails...")
+    # Pre-generation confirmation
+    summary = "Generating Free + Pro emails:\n"
+    summary += "Angle: _" + (angle[:60] if angle else "none") + "_\n"
+    summary += "Hook: _" + (hook.get("subject", "")[:60] if hook.get("subject") else "none") + "_\n"
+    summary += "Free CTA: _" + (free_cta_instruction[:40] if free_cta_instruction else "default") + "_\n"
+    summary += "Pro CTA: _" + (pro_cta_instruction[:40] if pro_cta_instruction else "default") + "_\n"
+    summary += "Model: Opus 4.7"
+    send(chat_id, summary)
     try:
         raw = claude(prompt, max_tokens=3000, timeout=120, retries=2)
         emails = parse_delimited_emails(raw)
+        # Handle parse failure — new safe fallback returns empty dict
+        if not emails:
+            send(chat_id, "⚠️ Email generation didn't return the expected format. Tap Regenerate to try again.", [
+                [{"text": "🔄 Regenerate", "callback_data": "regen_emails"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ])
+            state["stage"] = "idle"
+            return
         # Apply clean_copy at storage time to catch any em dashes that slip through
         if "free" in emails:
             emails["free"] = clean_copy(extract_text(emails["free"]))
@@ -3369,6 +3417,87 @@ def gen_social_selected(chat_id):
             fn(chat_id)
     state["selected_social_formats"] = []
 
+def _continue_social_after_format(chat_id):
+    """After format (and framework) selected, check if report exists."""
+    state = user_state.get(chat_id, {})
+    has_report = bool(state.get("report", "").strip())
+
+    if has_report:
+        fmt = state.get("selected_social_formats", [""])[0]
+        if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+            _extract_content_outline(chat_id)
+        else:
+            _go_to_social_angles(chat_id)
+    else:
+        state["stage"] = "awaiting_social_report"
+        send(chat_id, "Paste your report or content:")
+
+
+def _go_to_social_angles(chat_id):
+    """Route to angle picker or hooks if angle already exists."""
+    state = user_state.get(chat_id, {})
+    has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
+    if has_angle:
+        if not state.get("social_angle") and state.get("selected_angle"):
+            state["social_angle"] = state["selected_angle"]
+        gen_social_hooks(chat_id)
+    else:
+        gen_social_angles(chat_id)
+
+
+def _extract_content_outline(chat_id):
+    """Extract all distinct points from report for carousel/story. User approves before generation."""
+    state = user_state.get(chat_id, {})
+    report = state.get("report", "")
+    fmt = state.get("selected_social_formats", [""])[0]
+    fmt_labels = {"fmt_carousel": "carousel", "fmt_story_single": "story", "fmt_story_multi": "multi-slide story"}
+    fmt_label = fmt_labels.get(fmt, "content")
+
+    send(chat_id, "Extracting key points from your report...")
+    try:
+        raw = claude(
+            "Extract every distinct point, insight, data point, and key piece of information from this report. "
+            "Be exhaustive. Include every specific number, level, asset, direction call, macro point, and actionable detail. "
+            "Each point should be ONE specific thing. Do not group or summarise multiple things into one point.\n\n"
+            "REPORT:\n" + report[:3000] +
+            "\n\nFormat:\n1. [point]\n2. [point]\n... and so on. Nothing else.",
+            max_tokens=1000, model=MODEL_SONNET
+        )
+        points = []
+        for line in raw.strip().split('\n'):
+            line = line.strip()
+            if line and line[0].isdigit():
+                cleaned = line.lstrip('0123456789').lstrip('.').lstrip(')').strip()
+                if cleaned:
+                    points.append(cleaned)
+
+        if not points or len(points) < 2:
+            _go_to_social_angles(chat_id)
+            return
+
+        state["content_outline_points"] = points
+        state["content_outline_selected"] = list(range(len(points)))
+        state["stage"] = "outline_review"
+
+        text = "*Content outline for your " + fmt_label + ":*\n_Tap to deselect points you want to cut._\n\n"
+        keyboard = []
+        for i, point in enumerate(points):
+            text += str(i+1) + ". " + point + "\n"
+            keyboard.append([{"text": "[x] " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
+        keyboard.append([
+            {"text": "✅ Generate with selected (" + str(len(points)) + ")", "callback_data": "outline_confirm"},
+        ])
+        keyboard.append([
+            {"text": "Select all", "callback_data": "outline_select_all"},
+            {"text": "Skip outline", "callback_data": "outline_skip"},
+        ])
+        send(chat_id, text, keyboard)
+
+    except Exception as e:
+        send(chat_id, "Couldn't extract outline. Continuing...")
+        _go_to_social_angles(chat_id)
+
+
 def gen_reel(chat_id):
     user_state.setdefault(chat_id, {"stage": "idle"})
     state = user_state[chat_id]
@@ -3418,16 +3547,21 @@ def gen_carousel(chat_id):
     source_email = get_social_source_text(chat_id)[:500]
     hook = state.get("selected_social_hooks", {}).get("fmt_carousel", "")
     voice_examples = get_voice_corpus_context(chat_id)
+    approved_outline = state.get("approved_outline", "")
     # Budget: ~280 tokens per slide for headline + body text. Min 1500.
     carousel_tokens = max(1500, slide_count * 280)
     try:
+        outline_block = ""
+        if approved_outline:
+            outline_block = "\n\nAPPROVED CONTENT POINTS (you MUST include all of these — do not omit any):\n" + approved_outline + "\n"
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
             "Create a " + str(slide_count) + "-slide Instagram Carousel for Cryptonary.\n\n" +
             ("COVER SLIDE HEADLINE (use this): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report[:1500] + ("\nContext: " + context[:300] if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Write ONLY the text/copy for each slide - no visual directions, no brackets, no design notes\n- Format: SLIDE N:\\n[headline max 8 words]\\n[body text if needed, max 2 lines]\n- Mix bold statement slides, data slides, list slides\n- Each slide earns the next swipe\n- Final slide: follow for more CTA\n\nReturn as plain string.",
+            outline_block +
+            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Write ONLY the text/copy for each slide - no visual directions, no brackets, no design notes\n- Format: SLIDE N:\\n[headline max 8 words]\\n[body text — include enough detail to make the point land. Use specific numbers, levels, and data from the report. Do NOT be vague.]\n- Each slide should carry substantive content, not just a headline\n- Each slide earns the next swipe\n- Final slide: follow for more CTA\n\nReturn as plain string.",
             max_tokens=carousel_tokens
         )
         result = clean_copy(result)
@@ -3498,13 +3632,18 @@ def gen_story(chat_id, multi=False):
     hook = state.get("selected_social_hooks", {}).get(fmt_key, "")
     slide_instruction = str(story_slides) + " slides" if multi else "1 single slide"
     voice_examples_story = get_voice_corpus_context(chat_id)
+    approved_outline = state.get("approved_outline", "")
     try:
+        outline_block = ""
+        if approved_outline:
+            outline_block = "\n\nAPPROVED CONTENT POINTS (include all of these):\n" + approved_outline + "\n"
         result = claude(
             (voice_examples_story + "\n\n" if voice_examples_story else "") +
             "Create an Instagram Story for Cryptonary: " + slide_instruction + "\n\n" +
             ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
+            outline_block +
             "\n\nRULES:\n- Write ONLY the text/copy for each slide - no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 30 words - enough to land the point with full context]\n- Each slide should carry ONE complete thought or insight - don't truncate ideas to hit a word count\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') - the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
             max_tokens=700
         )
@@ -3715,7 +3854,7 @@ def gen_subject_ab(chat_id):
             "\nCurrent subject: " + current_subject +
             avoid +
             "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nFormat each option as:\n1. PRINCIPLE: [principle name]\nSUBJECT: [subject line]\nPREVIEW: [preview text]\nREASON: [one sentence]\n\n2. PRINCIPLE: ...\nAnd so on for all 3. Nothing else.",
-            max_tokens=700
+            max_tokens=700, model=MODEL_SONNET
         )
         alternatives = parse_subject_alternatives(raw)
         state["subject_alternatives"] = alternatives
@@ -5144,8 +5283,17 @@ def handle_message(msg):
     if stage == "awaiting_social_report":
         user_state[chat_id]["report"] = text
         user_state[chat_id]["context"] = ""
-        # Format selection first (moved before angles)
-        show_standalone_social_menu(chat_id)
+        # Format is already selected (new flow: format first, then report)
+        fmt = state.get("selected_social_formats", [""])[0] if state.get("selected_social_formats") else ""
+        if fmt:
+            # Format already picked — go to outline (carousel/story) or angles
+            if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+                _extract_content_outline(chat_id)
+            else:
+                _go_to_social_angles(chat_id)
+        else:
+            # No format yet (legacy path) — show format picker
+            show_standalone_social_menu(chat_id)
         return
 
     if stage == "awaiting_storyboard_brief" or stage == "awaiting_storyboard_report":
@@ -5422,7 +5570,14 @@ def handle_message(msg):
             return
         elif current_stage == "awaiting_social_report":
             user_state[chat_id]["report"] = text
-            show_standalone_social_menu(chat_id)
+            fmt = user_state[chat_id].get("selected_social_formats", [""])[0] if user_state[chat_id].get("selected_social_formats") else ""
+            if fmt:
+                if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+                    _extract_content_outline(chat_id)
+                else:
+                    _go_to_social_angles(chat_id)
+            else:
+                show_standalone_social_menu(chat_id)
             return
 
     if len(text) > 100:
@@ -5562,8 +5717,8 @@ def handle_callback(cb):
             send(chat_id, "Using your data analysis as the content brief.")
             show_standalone_social_menu(chat_id)
         else:
-            user_state[chat_id] = {"stage": "awaiting_social_report", "selected_social_formats": []}
-            send(chat_id, "Paste your report or content to base social posts on:")
+            user_state[chat_id] = {"stage": "pick_social_formats", "selected_social_formats": []}
+            show_standalone_social_menu(chat_id)
 
     elif data == "mode_landing":
         user_state[chat_id] = {"stage": "lp_idle", "selected_avatars": [], "lp_outline": {}, "lp_full_copy": {}}
@@ -6216,12 +6371,7 @@ def handle_callback(cb):
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
         state["stage"] = "social_approved"
-        keyboard = [
-            [{"text": "Generate another format", "callback_data": "social_another_format"}],
-            [{"text": "🎨 Visual brief + image",  "callback_data": "vb_auto"}],
-            [{"text": "✏️ Submit revised version","callback_data": "submit_revised_social"}],
-            [{"text": "Mark Complete",            "callback_data": "mark_complete"}],
-        ]
+        keyboard = social_approved_keyboard()
         send(chat_id, social_type + " approved.", keyboard)
 
     elif data.startswith("enh_"):
@@ -6477,6 +6627,59 @@ def handle_callback(cb):
         state["social_hooks"] = None  # force re-generate
         gen_social_selected(chat_id)
 
+    elif data.startswith("outline_toggle_"):
+        idx = int(data.replace("outline_toggle_", ""))
+        selected = state.get("content_outline_selected", [])
+        if idx in selected:
+            selected.remove(idx)
+        else:
+            selected.append(idx)
+            selected.sort()
+        state["content_outline_selected"] = selected
+        points = state.get("content_outline_points", [])
+        # Rebuild keyboard with updated ticks
+        keyboard = []
+        for i, point in enumerate(points):
+            tick = "[x]" if i in selected else "[ ]"
+            keyboard.append([{"text": tick + " " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
+        keyboard.append([
+            {"text": "✅ Generate with selected (" + str(len(selected)) + ")", "callback_data": "outline_confirm"},
+        ])
+        keyboard.append([
+            {"text": "Select all", "callback_data": "outline_select_all"},
+            {"text": "Skip outline", "callback_data": "outline_skip"},
+        ])
+        send(chat_id, "Tap to toggle. " + str(len(selected)) + " of " + str(len(points)) + " selected.", keyboard)
+
+    elif data == "outline_select_all":
+        points = state.get("content_outline_points", [])
+        state["content_outline_selected"] = list(range(len(points)))
+        keyboard = []
+        for i, point in enumerate(points):
+            keyboard.append([{"text": "[x] " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
+        keyboard.append([
+            {"text": "✅ Generate with selected (" + str(len(points)) + ")", "callback_data": "outline_confirm"},
+        ])
+        keyboard.append([
+            {"text": "Select all", "callback_data": "outline_select_all"},
+            {"text": "Skip outline", "callback_data": "outline_skip"},
+        ])
+        send(chat_id, "All " + str(len(points)) + " points selected.", keyboard)
+
+    elif data == "outline_confirm":
+        # Build approved outline and store it, then continue to angles
+        points = state.get("content_outline_points", [])
+        selected = state.get("content_outline_selected", [])
+        approved = [points[i] for i in selected if i < len(points)]
+        state["approved_outline"] = "\n".join(str(i+1) + ". " + p for i, p in enumerate(approved))
+        state["stage"] = "pick_social_formats"
+        _go_to_social_angles(chat_id)
+
+    elif data == "outline_skip":
+        state["approved_outline"] = ""
+        state["stage"] = "pick_social_formats"
+        _go_to_social_angles(chat_id)
+
     elif data == "gen_social_confirmed":
         gen_social_selected(chat_id)
 
@@ -6556,26 +6759,12 @@ def handle_callback(cb):
             send(chat_id, "*Pick a framework:*", keyboard)
         else:
             state["social_framework"] = "AIDA"
-            # If angle already exists, skip to hooks
-            has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
-            if has_angle:
-                if not state.get("social_angle") and state.get("selected_angle"):
-                    state["social_angle"] = state["selected_angle"]
-                gen_social_hooks(chat_id)
-            else:
-                gen_social_angles(chat_id)
+            _continue_social_after_format(chat_id)
 
     elif data.startswith("fw_pick_"):
         fw = data.replace("fw_pick_", "")
         state["social_framework"] = fw
-        # Now continue to angle/hook flow
-        has_angle = bool(state.get("social_angle") or state.get("selected_angle"))
-        if has_angle:
-            if not state.get("social_angle") and state.get("selected_angle"):
-                state["social_angle"] = state["selected_angle"]
-            gen_social_hooks(chat_id)
-        else:
-            gen_social_angles(chat_id)
+        _continue_social_after_format(chat_id)
 
     elif data.startswith("fmt_"):
         # Legacy: redirect to single format flow
@@ -6602,13 +6791,7 @@ def handle_callback(cb):
         social_type = state.get("current_social_type", "social")
         if social_body:
             save_voice_example(chat_id, social_body[:600], "approved_" + social_type.lower().replace(" ", "_"))
-        keyboard = [
-            [{"text": "Generate another format",      "callback_data": "social_another_format"}],
-            [{"text": "🎨 Visual brief + image",      "callback_data": "vb_auto"}],
-            [{"text": "✏️ Submit revised version",    "callback_data": "submit_revised_social"}],
-            [{"text": "✅ Mark complete",              "callback_data": "mark_complete"}],
-        ]
-        send(chat_id, social_type + " approved.", keyboard)
+        send(chat_id, social_type + " approved.", social_approved_keyboard())
 
     elif data == "subject_ab":
         gen_subject_ab(chat_id)
@@ -8126,7 +8309,7 @@ def poll():
     global _bot_running
     offset = 0
     processed_updates = set()
-    print("Cryptonary Bot V9 running.", flush=True)
+    print("Adam AI 4.7 running. Opus for writing, Sonnet for speed.", flush=True)
 
     # Step 1: Delete webhook and drop pending updates
     for attempt in range(3):
@@ -8316,9 +8499,8 @@ def show_main_menu(chat_id):
     keyboard = [
         [{"text": "✍️ Writing Studio",  "callback_data": "open_content_studio"}],
         [{"text": "📊 Data Studio",     "callback_data": "open_data_studio"}],
-        [{"text": "💡 Creative Studio", "callback_data": "open_idea_engine"}],
     ]
-    send(chat_id, "*Adam AI*\n\nWhat would you like to do?", keyboard)
+    send(chat_id, "*Adam AI 4.7*\n\nWhat would you like to do?", keyboard)
 
 
 # ── AD CREATION FLOW ──────────────────────────────────────────────
@@ -8792,7 +8974,7 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
         if frame_b64:
             import json as _json
             payload = {
-                "model": "claude-sonnet-4-5",
+                "model": MODEL_SONNET,
                 "max_tokens": 1500,
                 "messages": [{
                     "role": "user",
@@ -9194,7 +9376,7 @@ def handle_video_idea_generation(chat_id, video_obj):
         import json as _json
         if frame_b64:
             payload = {
-                "model": "claude-sonnet-4-5",
+                "model": MODEL_SONNET,
                 "max_tokens": 1500,
                 "messages": [{
                     "role": "user",
@@ -9209,7 +9391,7 @@ def handle_video_idea_generation(chat_id, video_obj):
         else:
             # No frame - text-only with just metadata
             payload = {
-                "model": "claude-sonnet-4-5",
+                "model": MODEL_SONNET,
                 "max_tokens": 1500,
                 "messages": [{"role": "user", "content":
                     ideas_prompt + "\n\n(No frame available - base ideas on the video metadata and market context.)"}]
@@ -9702,7 +9884,7 @@ def run_email_analysis(chat_id):
 
     prompt = "Analyse this Cryptonary email performance data and provide:\n\n1. TOP PERFORMERS - top 3 emails and exactly what made them work (subject style, angle type, CTA)\n2. WORST PERFORMERS - bottom 3 and what likely caused underperformance\n3. PATTERN RECOGNITION - what patterns emerge across the data (which subject styles, angles, CTAs consistently outperform)\n4. SPLIT TEST RESULTS - if split test data exists, declare the winner with the aggregated numbers and statistical context\n5. ITERATION IDEAS - for the top performers, give 3 specific variations to test next\n6. IMPROVEMENT SUGGESTIONS - for underperformers, give specific fixes based on the copywriting principles you know\n\n" + summary + "\n\nBe specific and actionable. Reference actual subject lines and numbers."
     try:
-        analysis = claude(prompt, max_tokens=2000)
+        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
         send_plain(chat_id, "EMAIL PERFORMANCE ANALYSIS\n\n" + analysis)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -9739,7 +9921,7 @@ def run_ad_analysis(chat_id):
 
     prompt = "Analyse this Cryptonary Meta ad performance data and provide:\n\n1. TOP PERFORMERS - best 3 ads with exactly what made them work (avatar, stage, hook type, which metrics stood out)\n2. WORST PERFORMERS - bottom 3 and diagnose where they failed (for video: which AIDA stage had the biggest drop-off? for static: which metric was weakest?)\n3. PATTERN RECOGNITION - what patterns emerge? (which avatars convert best, which stages perform, which ad types win)\n4. VIDEO AIDA DIAGNOSIS - for video ads, map the drop-off: high attention but low interest = hook works but body fails. High desire but low action = landing page issue. Give specific diagnosis per video.\n5. ITERATION IDEAS FOR WINNERS - for top performers, give 3 specific variants to test next\n6. IMPROVEMENT SUGGESTIONS FOR LOSERS - specific creative fixes based on the AIDA failure point or static metric weakness\n\n" + summary + "\n\nBe specific. Reference actual headlines and numbers."
     try:
-        analysis = claude(prompt, max_tokens=2000)
+        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
         send_plain(chat_id, "AD PERFORMANCE ANALYSIS\n\n" + analysis)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -10230,7 +10412,7 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     MAX_IMGS = 5
     def _call(blocks, prompt, tokens):
         blocks_with_prompt = blocks + [{"type": "text", "text": prompt}]
-        pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": tokens,
+        pay = json.dumps({"model": MODEL_SONNET, "max_tokens": tokens,
             "system": system_prompt, "messages": [{"role": "user", "content": blocks_with_prompt}]}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
             headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10261,7 +10443,7 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     send(chat_id, "Synthesising all data...")
     combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
     synth_blocks = [{"type": "text", "text": "Synthesise all batches into one complete analysis:\n\n" + combined + "\n\n" + analysis_prompt}]
-    synth_pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": max_tokens,
+    synth_pay = json.dumps({"model": MODEL_SONNET, "max_tokens": max_tokens,
         "system": system_prompt, "messages": [{"role": "user", "content": synth_blocks}]}).encode()
     synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_pay,
         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10377,7 +10559,7 @@ def analyse_ads(chat_id):
                 }
                 # Store full ads list for data-grounded best/worst/patterns
                 state["ds_verified_ads"] = parsed["ads"]
-            pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+            pay = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this Meta Ads Manager data:\n\n" + verified_data + "\n\n" + ads_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
@@ -10532,7 +10714,7 @@ Format clearly with headers."""
                         content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
                     batch_prompt = analysis_prompt if batch_num == 1 else "Extract all post data from these screenshots. For each post: caption snippet, format, reach, likes, comments, saves, shares, views if reel. Calculate engagement rate. Return as a data table only - no analysis yet."
                     content_blocks.append({"type": "text", "text": batch_prompt})
-                    batch_payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 2000,
+                    batch_payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 2000,
                         "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content": content_blocks}]}).encode()
                     batch_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=batch_payload,
                         headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10542,7 +10724,7 @@ Format clearly with headers."""
                 # Final synthesis pass combining all batch data
                 send(chat_id, "Synthesising all data...")
                 combined = "\n\n---\n\n".join(["BATCH " + str(i+1) + ":\n" + r for i, r in enumerate(batch_results)])
-                synth_payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+                synth_payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                     "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                         "I have extracted Instagram data in batches. Synthesise all of it into a single complete analysis.\n\n" +
                         combined + "\n\n" + analysis_prompt}]}).encode()
@@ -10556,7 +10738,7 @@ Format clearly with headers."""
                     content_blocks.append({"type": "image", "source": {"type": "base64", "media_type": img_data["type"], "data": img_data["data"]}})
                 content_blocks.append({"type": "text", "text": analysis_prompt})
                 messages = [{"role": "user", "content": content_blocks}]
-                payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+                payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                     "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
                 req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                     headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10564,7 +10746,7 @@ Format clearly with headers."""
                     result = json.loads(r.read())["content"][0]["text"]
         else:
             messages = [{"role": "user", "content": "Analyse this Instagram CSV data:\n\n" + csv_text + "\n\n" + analysis_prompt}]
-            payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+            payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
                 headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10717,7 +10899,7 @@ STEP 5 - IDEAS:
         if images:
             result = batched_vision_call(chat_id, images, analysis_prompt, email_extraction_prompt, DATA_STUDIO_SYSTEM)
         else:
-            pay = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+            pay = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this email CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
@@ -10819,7 +11001,7 @@ STEP 5 - VERDICT: Winner, confidence, one recommendation. Keep it simple.
         else:
             messages = [{"role": "user", "content": "Analyse this landing page CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]
 
-        payload = json.dumps({"model": "claude-sonnet-4-5", "max_tokens": 3000,
+        payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
             "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
             headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
@@ -10880,7 +11062,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
             else:
                 try:
                     check_payload = json.dumps({
-                        "model": "claude-sonnet-4-5",
+                        "model": MODEL_SONNET,
                         "max_tokens": 150,
                         "messages": [{"role": "user", "content": [
                             {"type": "image", "source": {"type": "base64", "media_type": mime, "data": encoded}},
@@ -11750,7 +11932,7 @@ RULES:
 - Make it look professional and on-brand""")
 
     try:
-        result = claude(prompt, max_tokens=2000)
+        result = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
         # Extract SVG - handle markdown wrapping, code blocks, preamble text
         import re as _re
         # Strip markdown code blocks
@@ -13830,7 +14012,7 @@ TONE FOR TODAY
 
 Keep it tight. Every line should be actionable. No fluff. No padding."""
 
-        result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM)
+        result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM, model=MODEL_SONNET)
 
         # Format header
         from datetime import datetime as _dt2
