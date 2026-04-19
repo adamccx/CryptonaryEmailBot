@@ -2610,7 +2610,6 @@ def mark_complete_keyboard():
         [{"text": "New session", "callback_data": "start_over"}],
         [{"text": "Writing Studio", "callback_data": "open_content_studio"},
          {"text": "Data Studio", "callback_data": "open_data_studio"}],
-        [{"text": "Creative Studio", "callback_data": "open_idea_engine"}],
     ]
 
 def get_perf_context(chat_id):
@@ -2837,6 +2836,10 @@ def gen_emails(chat_id):
         prompt += "STYLE REFERENCE (match tone, rhythm, and structure ONLY — do NOT import any specific assets, prices, calls, or data from these examples):\n" + voice_examples + "\n\n"
     prompt += "REPORT:\n" + report
     if context: prompt += "\n\nEXTRA CONTEXT (weave in naturally):\n" + context
+    regen_feedback = state.get("regen_instruction", "")
+    if regen_feedback:
+        prompt += "\n\nFEEDBACK ON PREVIOUS VERSION (address this specifically):\n" + regen_feedback
+        state.pop("regen_instruction", None)  # clear after use
     prompt += "\n\nAngle: " + angle
     prompt += "\nSubject: " + hook.get("subject", "")
     prompt += "\nPreview: " + hook.get("preview", "")
@@ -2884,22 +2887,49 @@ def gen_emails(chat_id):
         }
         has_free = "free" in emails and len(emails["free"].strip()) > 50
         has_pro = "pro" in emails and len(emails["pro"].strip()) > 50
+        # Auto voice-rule check
+        voice_issues = []
+        if has_free:
+            emails["free"], issues_f = _check_voice_rules(emails["free"])
+            voice_issues.extend(["Free: " + i for i in issues_f])
+        if has_pro:
+            emails["pro"], issues_p = _check_voice_rules(emails["pro"])
+            voice_issues.extend(["Pro: " + i for i in issues_p])
+        state["current_emails"] = emails
         if has_free:
             send_plain(chat_id, "FREE EMAIL\n\n" + clean_copy(extract_text(emails["free"])))
         if has_pro:
             send_plain(chat_id, "PRO EMAIL\n\n" + clean_copy(extract_text(emails["pro"])))
+        # Stats line: word count + CTA + voice issues
+        stats = ""
+        if has_free:
+            stats += "Free: " + _word_count_line(emails["free"])
+            free_ctas = _extract_cta_buttons(emails["free"])
+            if free_ctas:
+                stats += " | CTA: " + free_ctas[0]
+            stats += "\n"
+        if has_pro:
+            stats += "Pro: " + _word_count_line(emails["pro"])
+            pro_ctas = _extract_cta_buttons(emails["pro"])
+            if pro_ctas:
+                stats += " | CTA: " + pro_ctas[0]
+            stats += "\n"
+        if voice_issues:
+            stats += "⚠️ " + " | ".join(voice_issues) + "\n"
         # Warn if only one email was generated
         if has_free and not has_pro:
-            send(chat_id, "⚠️ Only the Free email was generated. Pro email may have been cut off.\n\nTap Regenerate to try again, or continue with Free only.", email_action_keyboard())
+            stats += "⚠️ Only Free email generated. Pro may have been cut off."
+            send(chat_id, stats, email_action_keyboard())
         elif has_pro and not has_free:
-            send(chat_id, "⚠️ Only the Pro email was generated. Free email may have been cut off.\n\nTap Regenerate to try again, or continue with Pro only.", email_action_keyboard())
+            stats += "⚠️ Only Pro email generated. Free may have been cut off."
+            send(chat_id, stats, email_action_keyboard())
         elif not has_free and not has_pro:
             send(chat_id, "⚠️ Neither email parsed correctly. Tap Regenerate to try again.", [
                 [{"text": "🔄 Regenerate", "callback_data": "regen_emails"}],
                 [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
             ])
         else:
-            send(chat_id, "Both emails ready. What would you like to do?", email_action_keyboard())
+            send(chat_id, stats + "Both emails ready.", email_action_keyboard())
     except Exception as e:
         err = str(e)
         if "timed out" in err.lower() or "timeout" in err.lower():
@@ -3417,6 +3447,65 @@ def gen_social_selected(chat_id):
             fn(chat_id)
     state["selected_social_formats"] = []
 
+def _thorough_summary(text):
+    """Generate a thorough bullet-point summary of content. Used for URL/file drops."""
+    try:
+        return claude(
+            "Summarise this content thoroughly in numbered bullet point format.\n\n"
+            "Include:\n"
+            "• What it is (article, report, analysis, etc)\n"
+            "• The main thesis or argument\n"
+            "• Every specific data point, number, level, or metric mentioned\n"
+            "• Key assets/tokens referenced with their specific prices/levels\n"
+            "• Any directional calls or conclusions\n"
+            "• Any notable context (dates, sources, market conditions)\n\n"
+            "Be specific — include actual numbers, not 'various metrics'.\n\n"
+            "CONTENT:\n" + text[:3000],
+            max_tokens=500, model=MODEL_SONNET, system=VOICE_LITE
+        )
+    except Exception:
+        return ""
+
+
+def _word_count_line(text, content_type=""):
+    """Return a word count summary line for any generated content."""
+    words = len(text.split())
+    line = str(words) + " words"
+    if "reel" in content_type.lower():
+        seconds = round(words / 2.3)
+        line += " (~" + str(seconds) + "s)"
+    return line
+
+
+def _check_voice_rules(text):
+    """Check for voice rule violations. Returns (fixed_text, list_of_issues)."""
+    issues = []
+    fixed = text
+    import re as _re
+    # Em dashes
+    for em in [" \u2014 ", "\u2014 ", " \u2014", "\u2014"]:
+        if em in fixed:
+            issues.append("Em dash found — auto-fixed")
+            fixed = fixed.replace(em, ", " if " " in em else " ")
+            break  # only report once
+    # Markdown bold
+    if _re.search(r'\*\*[^*]+\*\*', fixed):
+        issues.append("Markdown bold (**) found — auto-fixed")
+        fixed = _re.sub(r'\*\*([^*]+)\*\*', r'\1', fixed)
+    return fixed, issues
+
+
+def _extract_cta_buttons(text):
+    """Extract [CTA Button] text from generated emails."""
+    import re as _re
+    buttons = _re.findall(r'\[([^\]]{3,60})\]', text)
+    cta_keywords = ["upgrade", "pro", "read", "join", "apply", "get", "check", "watch",
+                    "learn", "start", "claim", "book", "view", "access", "download", "sign",
+                    "report", "levels", "inner", "circle", "subscribe"]
+    ctas = [b for b in buttons if any(k in b.lower() for k in cta_keywords)]
+    return ctas
+
+
 def _continue_social_after_format(chat_id):
     """After format (and framework) selected, check if report exists."""
     state = user_state.get(chat_id, {})
@@ -3446,19 +3535,19 @@ def _go_to_social_angles(chat_id):
 
 
 def _extract_content_outline(chat_id):
-    """Extract all distinct points from report for carousel/story. User approves before generation."""
+    """Extract key points from report for carousel/story. Show numbered list, user types numbers to include."""
     state = user_state.get(chat_id, {})
     report = state.get("report", "")
     fmt = state.get("selected_social_formats", [""])[0]
     fmt_labels = {"fmt_carousel": "carousel", "fmt_story_single": "story", "fmt_story_multi": "multi-slide story"}
     fmt_label = fmt_labels.get(fmt, "content")
 
-    send(chat_id, "Extracting key points from your report...")
+    send(chat_id, "Extracting key points...")
     try:
         raw = claude(
             "Extract every distinct point, insight, data point, and key piece of information from this report. "
             "Be exhaustive. Include every specific number, level, asset, direction call, macro point, and actionable detail. "
-            "Each point should be ONE specific thing. Do not group or summarise multiple things into one point.\n\n"
+            "Each point should be ONE specific thing.\n\n"
             "REPORT:\n" + report[:3000] +
             "\n\nFormat:\n1. [point]\n2. [point]\n... and so on. Nothing else.",
             max_tokens=1000, model=MODEL_SONNET
@@ -3476,22 +3565,13 @@ def _extract_content_outline(chat_id):
             return
 
         state["content_outline_points"] = points
-        state["content_outline_selected"] = list(range(len(points)))
-        state["stage"] = "outline_review"
+        state["stage"] = "outline_awaiting_numbers"
 
-        text = "*Content outline for your " + fmt_label + ":*\n_Tap to deselect points you want to cut._\n\n"
-        keyboard = []
+        text = "*Key points for your " + fmt_label + ":*\n\n"
         for i, point in enumerate(points):
             text += str(i+1) + ". " + point + "\n"
-            keyboard.append([{"text": "[x] " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
-        keyboard.append([
-            {"text": "✅ Generate with selected (" + str(len(points)) + ")", "callback_data": "outline_confirm"},
-        ])
-        keyboard.append([
-            {"text": "Select all", "callback_data": "outline_select_all"},
-            {"text": "Skip outline", "callback_data": "outline_skip"},
-        ])
-        send(chat_id, text, keyboard)
+        text += "\nType the numbers to include (e.g. *1,3,5,7*) plus any extra content to add.\nOr type *all* to include everything."
+        send_plain(chat_id, text)
 
     except Exception as e:
         send(chat_id, "Couldn't extract outline. Continuing...")
@@ -3526,6 +3606,7 @@ def gen_reel(chat_id):
             max_tokens=1500
         )
         result = clean_copy(result)
+        result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
         state["stage"] = "social_ready"
@@ -3533,7 +3614,10 @@ def gen_reel(chat_id):
         send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s) - " + framework + "*\n\n" + result)
         reel_kb = format_action_keyboard("fmt_reel", "Reel Script")
         reel_kb.append([{"text": "Switch to " + other_fw, "callback_data": "social_switch_fw"}])
-        send(chat_id, "Reel script ready.", reel_kb)
+        stats = _word_count_line(result, "Reel Script")
+        if voice_issues:
+            stats += " | ⚠️ " + " | ".join(voice_issues)
+        send(chat_id, stats, reel_kb)
     except Exception as e:
         send(chat_id, "Error generating reel: " + str(e))
 
@@ -3556,20 +3640,38 @@ def gen_carousel(chat_id):
             outline_block = "\n\nAPPROVED CONTENT POINTS (you MUST include all of these — do not omit any):\n" + approved_outline + "\n"
         result = claude(
             (voice_examples + "\n\n" if voice_examples else "") +
-            "Create a " + str(slide_count) + "-slide Instagram Carousel for Cryptonary.\n\n" +
-            ("COVER SLIDE HEADLINE (use this): " + hook + "\n\n" if hook else "") +
+            "Create EXACTLY " + str(slide_count) + " slides for an Instagram Carousel for Cryptonary. This is non-negotiable — the carousel MUST have exactly " + str(slide_count) + " slides.\n\n" +
+            ("COVER SLIDE HEADLINE (use this as slide 1): " + hook + "\n\n" if hook else "") +
             "SOURCE:\nReport: " + report[:1500] + ("\nContext: " + context[:300] if context else "") +
             "\nAngle: " + angle + "\nEmail reference: " + source_email +
             outline_block +
-            "\n\nRULES:\n- Exactly " + str(slide_count) + " slides including cover and CTA final slide\n- Write ONLY the text/copy for each slide - no visual directions, no brackets, no design notes\n- Format: SLIDE N:\\n[headline max 8 words]\\n[body text — include enough detail to make the point land. Use specific numbers, levels, and data from the report. Do NOT be vague.]\n- Each slide should carry substantive content, not just a headline\n- Each slide earns the next swipe\n- Final slide: follow for more CTA\n\nReturn as plain string.",
+            "\n\nRULES:\n"
+            "- EXACTLY " + str(slide_count) + " slides numbered SLIDE 1 through SLIDE " + str(slide_count) + "\n"
+            "- Slide 1: cover slide with bold headline\n"
+            "- Slide " + str(slide_count) + ": CTA slide (follow Cryptonary / join Pro)\n"
+            "- Slides 2-" + str(slide_count - 1) + ": content slides, each with a headline AND 2-3 lines of body text\n"
+            "- Write ONLY the text/copy for each slide - no visual directions, no brackets, no design notes\n"
+            "- Format: SLIDE N:\n[headline max 8 words]\n[body text — include specific numbers, levels, and data. Do NOT be vague.]\n"
+            "- Each slide should carry substantive content, not just a headline\n"
+            "- Each slide earns the next swipe\n\n"
+            "Return as plain string. You MUST write all " + str(slide_count) + " slides.",
             max_tokens=carousel_tokens
         )
         result = clean_copy(result)
+        result, voice_issues = _check_voice_rules(result)
+        # Validate slide count
+        import re as _re
+        actual_slides = len(_re.findall(r'SLIDE\s+\d+', result, _re.IGNORECASE))
         state["current_social"] = result
         state["current_social_type"] = "Carousel"
         state["stage"] = "social_ready"
         send_plain(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
-        send(chat_id, "Carousel ready.", format_action_keyboard("fmt_carousel", "Carousel"))
+        stats = _word_count_line(result, "Carousel")
+        if actual_slides < slide_count:
+            stats += " | ⚠️ Only " + str(actual_slides) + "/" + str(slide_count) + " slides generated"
+        if voice_issues:
+            stats += " | ⚠️ " + " | ".join(voice_issues)
+        send(chat_id, stats, format_action_keyboard("fmt_carousel", "Carousel"))
     except Exception as e:
         err_msg = str(e)
         if "400" in err_msg or "Bad Request" in err_msg:
@@ -3612,11 +3714,15 @@ def gen_static(chat_id):
             max_tokens=700
         )
         result = clean_copy(result)
+        result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = "Static Post"
         state["stage"] = "social_ready"
         send_plain(chat_id, "*STATIC POST*\n\n" + result)
-        send(chat_id, "Static post ready.", social_action_keyboard())
+        stats = _word_count_line(result, "Static Post")
+        if voice_issues:
+            stats += " | ⚠️ " + " | ".join(voice_issues)
+        send(chat_id, stats, social_action_keyboard())
     except Exception as e:
         send(chat_id, "Error generating static post: " + str(e))
 
@@ -3649,11 +3755,15 @@ def gen_story(chat_id, multi=False):
         )
         social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
         result = clean_copy(result)
+        result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = social_type
         state["stage"] = "social_ready"
         send_plain(chat_id, "*" + social_type.upper() + "*\n\n" + result)
-        send(chat_id, "Done.", social_action_keyboard())
+        stats = _word_count_line(result, social_type)
+        if voice_issues:
+            stats += " | ⚠️ " + " | ".join(voice_issues)
+        send(chat_id, stats, social_action_keyboard())
     except Exception as e:
         send(chat_id, "Error generating story: " + str(e))
 
@@ -4118,16 +4228,9 @@ def handle_message(msg):
             if fetched and len(fetched.strip()) > 50:
                 user_state[chat_id]["report"] = fetched[:4000]
                 user_state[chat_id]["mode"] = "email"
-                # Show summary so Adam can confirm the right content was fetched
-                try:
-                    summary = claude(
-                        "Summarise this in 2-3 sentences - what it is, main topic, key points.\n\n" + fetched[:3000],
-                        max_tokens=150,
-                        system="You are a concise research assistant. Be specific. No fluff."
-                    )
+                summary = _thorough_summary(fetched)
+                if summary:
                     send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
-                except Exception:
-                    pass
                 user_state[chat_id]["stage"] = "awaiting_context_choice"
                 ask_context(chat_id)
             else:
@@ -4135,7 +4238,7 @@ def handle_message(msg):
             return
 
         # SOCIAL FLOW - if in social mode, fetch and use as report
-        social_stages = {"awaiting_social_report"}
+        social_stages = {"awaiting_social_report", "pick_social_formats"}
         if current_stage in social_stages:
             send(chat_id, "Fetching content from link...")
             fetched = fetch_url_content(url, detect_url_type(url))
@@ -4143,16 +4246,15 @@ def handle_message(msg):
                 user_state[chat_id]["report"] = fetched[:4000]
                 user_state[chat_id]["social_source"] = "url"
                 user_state[chat_id]["social_source_label"] = url.split("/")[2] if "/" in url else url[:40]
-                try:
-                    summary = claude(
-                        "Summarise this in 2-3 sentences - what it is, main topic, key insight.\n\n" + fetched[:3000],
-                        max_tokens=150,
-                        system="You are a concise research assistant. Be specific. No fluff."
-                    )
+                summary = _thorough_summary(fetched)
+                if summary:
                     send_plain(chat_id, "*Link read. Here\'s what I found:*\n\n" + summary)
-                except Exception:
-                    pass
-                show_standalone_social_menu(chat_id)
+                # If format already picked, continue flow. If not, show picker.
+                fmt = user_state[chat_id].get("selected_social_formats", [])
+                if fmt:
+                    _continue_social_after_format(chat_id)
+                else:
+                    show_standalone_social_menu(chat_id)
             else:
                 send(chat_id, "Could not read content from that link. Paste the text directly instead.")
             return
@@ -4557,6 +4659,21 @@ def handle_message(msg):
             user_state[chat_id]["current_ad_output"] = edited
             user_state[chat_id]["stage"] = "ads_ready"
             send(chat_id, "Manual edit saved and approved. Voice memory updated.", ad_action_keyboard())
+        return
+
+    if stage == "awaiting_regen_feedback":
+        feedback = text.strip()
+        target = state.get("regen_target", "email")
+        state["regen_feedback"] = feedback
+        if target == "email":
+            # Store feedback and regenerate with it
+            state["regen_instruction"] = feedback
+            send(chat_id, "Regenerating with your feedback...")
+            gen_emails(chat_id)
+        else:
+            state["stage"] = "social_ready"
+            send(chat_id, "Regenerating...")
+            gen_social_selected(chat_id)
         return
 
     if stage in ("awaiting_quick_edit", "social_quick_edit",
@@ -5280,6 +5397,45 @@ def handle_message(msg):
         handle_image_direction(chat_id, text)
         return
 
+    if stage == "outline_awaiting_numbers":
+        # User types numbers like "1,3,5,7" or "all" + optional extra content
+        points = state.get("content_outline_points", [])
+        text_lower = text.strip().lower()
+        if text_lower.startswith("all"):
+            selected_indices = list(range(len(points)))
+            extra = text.strip()[3:].strip().lstrip(",").lstrip(".").strip()
+        else:
+            import re as _re
+            nums = _re.findall(r'\d+', text)
+            selected_indices = [int(n) - 1 for n in nums if 0 < int(n) <= len(points)]
+            # Everything after the last number is extra content
+            last_num_match = list(_re.finditer(r'\d+', text))
+            extra = text[last_num_match[-1].end():].strip().lstrip(",").strip() if last_num_match else ""
+        approved = [points[i] for i in selected_indices if i < len(points)]
+        outline_text = "\n".join(str(i+1) + ". " + p for i, p in enumerate(approved))
+        if extra:
+            outline_text += "\n\nADDITIONAL CONTEXT: " + extra
+        state["approved_outline"] = outline_text
+        count = len(approved)
+        fmt = state.get("selected_social_formats", [""])[0]
+        # For carousels, ask slide count with smart default based on points
+        if fmt == "fmt_carousel":
+            default_slides = max(5, min(count + 2, 10))  # points + cover + CTA, clamped 5-10
+            state["carousel_slides"] = default_slides
+            state["stage"] = "carousel_slide_count"
+            keyboard = [
+                [{"text": "5 slides", "callback_data": "carousel_set_5"},
+                 {"text": "6 slides", "callback_data": "carousel_set_6"}],
+                [{"text": "8 slides", "callback_data": "carousel_set_8"},
+                 {"text": "10 slides", "callback_data": "carousel_set_10"}],
+            ]
+            send(chat_id, str(count) + " points selected." + (" Extra context added." if extra else "") + "\n\nHow many slides? (Recommended: " + str(default_slides) + ")", keyboard)
+        else:
+            state["stage"] = "pick_social_formats"
+            send(chat_id, str(count) + " points selected." + (" Extra context added." if extra else "") + " Continuing...")
+            _go_to_social_angles(chat_id)
+        return
+
     if stage == "awaiting_social_report":
         user_state[chat_id]["report"] = text
         user_state[chat_id]["context"] = ""
@@ -5626,6 +5782,7 @@ def handle_message(msg):
             "awaiting_revised_yt", "yt_awaiting_quick_edit", "yt_awaiting_content",
             "yt_awaiting_existing", "lp_awaiting_paste_back", "lp_awaiting_length_instruction",
             "awaiting_storyboard_brief", "awaiting_storyboard_report",
+            "outline_awaiting_numbers", "awaiting_regen_feedback",
         }
         if current_stage in _legitimate_input_stages:
             return  # Let handle_message's stage routing handle it below
@@ -6290,13 +6447,25 @@ def handle_callback(cb):
             gen_emails(chat_id)
 
     elif data == "regen_emails":
-        # Regenerate emails with same report/angle
+        # Offer feedback option before regenerating
         report = state.get("report", "")
         if not report:
             send(chat_id, "No report in session. Paste a new report to regenerate.")
         else:
-            send(chat_id, "Regenerating emails...")
-            gen_emails(chat_id)
+            keyboard = [
+                [{"text": "Regenerate now", "callback_data": "regen_emails_go"}],
+                [{"text": "Tell it what was wrong first", "callback_data": "regen_emails_feedback"}],
+            ]
+            send(chat_id, "Regenerate emails?", keyboard)
+
+    elif data == "regen_emails_go":
+        send(chat_id, "Regenerating emails...")
+        gen_emails(chat_id)
+
+    elif data == "regen_emails_feedback":
+        state["stage"] = "awaiting_regen_feedback"
+        state["regen_target"] = "email"
+        send(chat_id, "What was wrong with the last version?\n\n_e.g. 'Pro was too long' / 'Didn't mention the ceasefire' / 'CTA was weak' / 'Too generic'_")
 
     elif data == "quick_edit":
         user_state[chat_id]["pre_edit_stage"] = "emails_ready"
@@ -6627,57 +6796,16 @@ def handle_callback(cb):
         state["social_hooks"] = None  # force re-generate
         gen_social_selected(chat_id)
 
-    elif data.startswith("outline_toggle_"):
-        idx = int(data.replace("outline_toggle_", ""))
-        selected = state.get("content_outline_selected", [])
-        if idx in selected:
-            selected.remove(idx)
-        else:
-            selected.append(idx)
-            selected.sort()
-        state["content_outline_selected"] = selected
-        points = state.get("content_outline_points", [])
-        # Rebuild keyboard with updated ticks
-        keyboard = []
-        for i, point in enumerate(points):
-            tick = "[x]" if i in selected else "[ ]"
-            keyboard.append([{"text": tick + " " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
-        keyboard.append([
-            {"text": "✅ Generate with selected (" + str(len(selected)) + ")", "callback_data": "outline_confirm"},
-        ])
-        keyboard.append([
-            {"text": "Select all", "callback_data": "outline_select_all"},
-            {"text": "Skip outline", "callback_data": "outline_skip"},
-        ])
-        send(chat_id, "Tap to toggle. " + str(len(selected)) + " of " + str(len(points)) + " selected.", keyboard)
-
-    elif data == "outline_select_all":
-        points = state.get("content_outline_points", [])
-        state["content_outline_selected"] = list(range(len(points)))
-        keyboard = []
-        for i, point in enumerate(points):
-            keyboard.append([{"text": "[x] " + str(i+1) + ". " + point[:45], "callback_data": "outline_toggle_" + str(i)}])
-        keyboard.append([
-            {"text": "✅ Generate with selected (" + str(len(points)) + ")", "callback_data": "outline_confirm"},
-        ])
-        keyboard.append([
-            {"text": "Select all", "callback_data": "outline_select_all"},
-            {"text": "Skip outline", "callback_data": "outline_skip"},
-        ])
-        send(chat_id, "All " + str(len(points)) + " points selected.", keyboard)
-
-    elif data == "outline_confirm":
-        # Build approved outline and store it, then continue to angles
-        points = state.get("content_outline_points", [])
-        selected = state.get("content_outline_selected", [])
-        approved = [points[i] for i in selected if i < len(points)]
-        state["approved_outline"] = "\n".join(str(i+1) + ". " + p for i, p in enumerate(approved))
-        state["stage"] = "pick_social_formats"
-        _go_to_social_angles(chat_id)
-
     elif data == "outline_skip":
         state["approved_outline"] = ""
         state["stage"] = "pick_social_formats"
+        _go_to_social_angles(chat_id)
+
+    elif data.startswith("carousel_set_"):
+        count = int(data.replace("carousel_set_", ""))
+        state["carousel_slides"] = count
+        state["stage"] = "pick_social_formats"
+        send(chat_id, str(count) + "-slide carousel. Continuing...")
         _go_to_social_angles(chat_id)
 
     elif data == "gen_social_confirmed":
