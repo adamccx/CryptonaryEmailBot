@@ -5485,15 +5485,15 @@ def handle_message(msg):
         ec_type = st.get("ec_type", "general")
         intent = st.get("ec_intent", "voice")
         if not original:
-            send(chat_id, "Lost the original copy. Please start again.", [[{"text": "Edit Existing Copy", "callback_data": "mode_edit_existing"}]])
+            send(chat_id, "Lost the original copy. Please start again.", [[{"text": "Rework", "callback_data": "mode_edit_existing"}]])
             return
 
         type_labels = {"email": "email", "social": "social content", "ad": "ad copy", "lp": "landing page", "general": "copy"}
         label = type_labels.get(ec_type, "copy")
 
         intent_instructions = {
-            "voice":   f"Rewrite this Cryptonary {label} in Adam's voice. Rules: British-casual, direct, short punchy sentences, no em dashes, no corporate speak, first person. Instruction: {instruction}",
-            "punch":   f"Punch up this Cryptonary {label}. Keep the structure. Make every sentence earn its place. Sharper hooks, stronger verbs, tighter sentences. Instruction: {instruction}",
+            "voice":   f"Rewrite this Cryptonary {label} in Adam's voice. Rules: British-casual, direct, short punchy sentences, no em dashes, no corporate speak, first person. Instruction: {instruction}\n\nAfter the rewrite, add a section headed CHANGES MADE: listing every specific change you made and why (e.g. 'Changed opening from passive to direct address', 'Replaced corporate jargon X with casual equivalent Y'). Be specific — don't say 'improved tone', say exactly what you changed.",
+            "punch":   f"Punch up this Cryptonary {label}. Keep the structure. Make every sentence earn its place. Sharper hooks, stronger verbs, tighter sentences. Instruction: {instruction}\n\nAfter the rewrite, add a section headed CHANGES MADE: listing every specific change you made and why (e.g. 'Replaced weak verb X with Y', 'Cut filler sentence about Z', 'Strengthened CTA from A to B'). Be specific.",
             "cred":    f"Rewrite this Cryptonary {label} weaving in Cryptonary's credibility and track record naturally. Don't make it a list - integrate the proof points into the copy flow. Instruction: {instruction}",
             "convert": f"Convert this copy into the requested format for Cryptonary. Maintain the core message and Adam's voice throughout. Instruction: {instruction}",
             "fix":     f"Fix the specific issue in this Cryptonary {label}. Only change what needs fixing - leave the rest intact. Issue to fix: {instruction}",
@@ -5514,16 +5514,29 @@ def handle_message(msg):
             result = clean_copy(result)
             st["ec_rewritten"] = result
             st["stage"] = "ec_done"
+            # Parse out changes explanation if present
+            changes_marker = "CHANGES MADE:"
+            changes_text = ""
+            if changes_marker in result:
+                parts = result.split(changes_marker, 1)
+                clean_result = parts[0].strip()
+                changes_text = parts[1].strip()
+                st["ec_rewritten"] = clean_result
+                result = clean_result
             # Show before and after clearly
             send_plain(chat_id, "ORIGINAL:\n\n" + original[:1500] + ("..." if len(original) > 1500 else ""))
             send_plain(chat_id, "REWRITTEN:\n\n" + result)
+            if changes_text:
+                send_plain(chat_id, "CHANGES MADE:\n\n" + changes_text)
             keyboard = [
                 [{"text": "✅ Use this version",          "callback_data": "ec_use_version"}],
                 [{"text": "🔄 Try different instruction", "callback_data": "ec_rerun_voice"}],
                 [{"text": "✏️ Quick edit",                "callback_data": "ec_quick_edit_result"}],
+                [{"text": "Critique",                     "callback_data": "ec_critique"}],
+                [{"text": "Enhance",                      "callback_data": "ec_enhance"}],
                 [{"text": "Back to Writing Studio",       "callback_data": "open_content_studio"}],
             ]
-            send(chat_id, "Here's the rewrite. Happy with it?", keyboard)
+            send(chat_id, _word_count_line(result) + " | Ready to use or refine.", keyboard)
         except Exception as e:
             err = str(e)
             send(chat_id, "Rewrite failed: " + err[:150], [[{"text": "Try again", "callback_data": "ec_rerun_voice"}]])
@@ -5535,7 +5548,7 @@ def handle_message(msg):
         st = user_state[chat_id]
         rewritten = st.get("ec_rewritten", "")
         if not rewritten:
-            send(chat_id, "Nothing to edit. Start again.", [[{"text": "Edit Existing Copy", "callback_data": "mode_edit_existing"}]])
+            send(chat_id, "Nothing to edit. Start again.", [[{"text": "Rework", "callback_data": "mode_edit_existing"}]])
             return
         send(chat_id, "Applying edit...")
         try:
@@ -5832,9 +5845,9 @@ def handle_callback(cb):
     elif data == "open_content_studio":
         keyboard = [
             [{"text": "Emails",              "callback_data": "mode_email"}],
-            [{"text": "Social Content",      "callback_data": "mode_social"}],
+            [{"text": "Socials",             "callback_data": "mode_social"}],
             [{"text": "Adverts",             "callback_data": "mode_ads"}],
-            [{"text": "✏️ Edit Existing Copy", "callback_data": "mode_edit_existing"}],
+            [{"text": "✏️ Rework",           "callback_data": "mode_edit_existing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -5863,7 +5876,6 @@ def handle_callback(cb):
             keyboard = [
                 [{"text": "✍️ Write copy for an existing creative", "callback_data": "ad_quick_creative"}],
                 [{"text": "🎯 Create Ad",                           "callback_data": "ad_build_campaign"}],
-                [{"text": "🌐 Landing Page",                        "callback_data": "mode_landing"}],
             ]
             send(chat_id, "*Adverts*\n\nWhat would you like to do?", keyboard)
 
@@ -5884,14 +5896,12 @@ def handle_callback(cb):
     elif data == "mode_edit_existing":
         user_state[chat_id] = {"stage": "ec_pick_type"}
         keyboard = [
-            [{"text": "📧 Email",        "callback_data": "ec_type_email"}],
-            [{"text": "📱 Social",       "callback_data": "ec_type_social"}],
-            [{"text": "🎯 Ad Copy",      "callback_data": "ec_type_ad"}],
-            [{"text": "🌐 Landing Page", "callback_data": "ec_type_lp"}],
-            [{"text": "📄 Other / General", "callback_data": "ec_type_general"}],
-            [{"text": "Back",            "callback_data": "open_content_studio"}],
+            [{"text": "📧 Email",           "callback_data": "ec_type_email"}],
+            [{"text": "📱 Socials",          "callback_data": "ec_type_social"}],
+            [{"text": "📄 General",          "callback_data": "ec_type_general"}],
+            [{"text": "Back",               "callback_data": "open_content_studio"}],
         ]
-        send(chat_id, "*Edit Existing Copy*\n\nWhat type of copy are you bringing in?", keyboard)
+        send(chat_id, "*Rework*\n\nWhat type of copy are you bringing in?", keyboard)
 
     elif data.startswith("ec_type_"):
         ec_type = data.replace("ec_type_", "")
@@ -5938,6 +5948,36 @@ def handle_callback(cb):
         send_plain(chat_id, "CURRENT VERSION:\n\n" + rewritten[:1500])
         send(chat_id, "What would you like to change?\n\n_e.g. 'Make the opening stronger' / 'Shorten by 30%' / 'Harder CTA'_")
 
+    elif data == "ec_critique":
+        rewritten = state.get("ec_rewritten", "")
+        ec_type = state.get("ec_type", "general")
+        if not rewritten:
+            send(chat_id, "No content to critique.")
+            return
+        # Store in current_social or current_emails temporarily for run_critique
+        if ec_type == "email":
+            state["current_emails"] = {"free": rewritten}
+            state["critique_content_type"] = "email"
+        else:
+            state["current_social"] = rewritten
+            state["current_social_type"] = "Reworked " + ec_type
+            state["critique_content_type"] = "social"
+        run_critique(chat_id, state["critique_content_type"])
+
+    elif data == "ec_enhance":
+        rewritten = state.get("ec_rewritten", "")
+        ec_type = state.get("ec_type", "general")
+        if not rewritten:
+            send(chat_id, "No content to enhance.")
+            return
+        if ec_type == "email":
+            state["current_emails"] = {"free": rewritten}
+            gen_enhance(chat_id, mode="email")
+        else:
+            state["current_social"] = rewritten
+            state["current_social_type"] = "Reworked " + ec_type
+            gen_enhance(chat_id, mode="social")
+
     elif data == "ec_approve":
         # Save the rewritten version to voice corpus and proceed
         rewritten = state.get("ec_rewritten", "")
@@ -5960,7 +6000,7 @@ def handle_callback(cb):
         rewritten = state.get("ec_rewritten", "")
         ec_type = state.get("ec_type", "general")
         if not rewritten:
-            send(chat_id, "No rewritten version found. Start again.", [[{"text": "Edit Existing Copy", "callback_data": "mode_edit_existing"}]])
+            send(chat_id, "No rewritten version found. Start again.", [[{"text": "Rework", "callback_data": "mode_edit_existing"}]])
         elif ec_type == "email":
             # Load into email state so all email tools work on it
             state["current_emails"] = {"free": rewritten}
@@ -6694,8 +6734,18 @@ def handle_callback(cb):
         send(chat_id, "*Write copy for an existing creative*\n\nUpload a screenshot or image of your ad creative.\n\nI'll read it and generate:\n• 3 primary text options (with character counts)\n• 5 headline options (with character counts)\n\nAll following Meta best practice lengths.")
 
     elif data == "ad_build_campaign":
-        user_state[chat_id] = {"stage": "awaiting_ad_theme", "selected_avatars": [], "selected_stages": []}
-        send(chat_id, "*Create Ad*\n\nPaste your brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
+        user_state[chat_id] = {"stage": "pick_ad_format", "selected_avatars": [], "selected_stages": []}
+        keyboard = [
+            [{"text": "Static Ad — 3 copy variants",           "callback_data": "ad_fmt_static"}],
+            [{"text": "Video Ad — AIDA script + 3 hook variants", "callback_data": "ad_fmt_video"}],
+        ]
+        send(chat_id, "*Create Ad*\n\nWhat format?", keyboard)
+
+    elif data in ("ad_fmt_static", "ad_fmt_video"):
+        ad_format = "static" if data == "ad_fmt_static" else "video"
+        state["ad_format"] = ad_format
+        state["stage"] = "awaiting_ad_theme"
+        send(chat_id, "*" + ad_format.title() + " Ad*\n\nPaste your brief, theme, or context:\n\n_Examples: Bitcoin halving setup, inner circle launch, market crash, weekly market update, SOL breakout..._")
 
     elif data == "submit_revised_email":
         emails = state.get("current_emails", {})
