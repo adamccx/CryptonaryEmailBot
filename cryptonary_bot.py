@@ -3609,6 +3609,7 @@ def gen_reel(chat_id):
         result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = "Reel Script"
+        state["current_social_format"] = "fmt_reel"
         state["stage"] = "social_ready"
         other_fw = "PAS" if framework == "AIDA" else "AIDA"
         send_plain(chat_id, "*REEL SCRIPT (" + str(reel_duration) + "s) - " + framework + "*\n\n" + result)
@@ -3664,6 +3665,7 @@ def gen_carousel(chat_id):
         actual_slides = len(_re.findall(r'SLIDE\s+\d+', result, _re.IGNORECASE))
         state["current_social"] = result
         state["current_social_type"] = "Carousel"
+        state["current_social_format"] = "fmt_carousel"
         state["stage"] = "social_ready"
         send_plain(chat_id, "*CAROUSEL (" + str(slide_count) + " slides)*\n\n" + result)
         stats = _word_count_line(result, "Carousel")
@@ -3717,6 +3719,7 @@ def gen_static(chat_id):
         result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = "Static Post"
+        state["current_social_format"] = "fmt_static"
         state["stage"] = "social_ready"
         send_plain(chat_id, "*STATIC POST*\n\n" + result)
         stats = _word_count_line(result, "Static Post")
@@ -3758,6 +3761,7 @@ def gen_story(chat_id, multi=False):
         result, voice_issues = _check_voice_rules(result)
         state["current_social"] = result
         state["current_social_type"] = social_type
+        state["current_social_format"] = fmt_key
         state["stage"] = "social_ready"
         send_plain(chat_id, "*" + social_type.upper() + "*\n\n" + result)
         stats = _word_count_line(result, social_type)
@@ -5847,7 +5851,7 @@ def handle_callback(cb):
             [{"text": "Emails",              "callback_data": "mode_email"}],
             [{"text": "Socials",             "callback_data": "mode_social"}],
             [{"text": "Adverts",             "callback_data": "mode_ads"}],
-            [{"text": "✏️ Rework",           "callback_data": "mode_edit_existing"}],
+            [{"text": "Rework",              "callback_data": "mode_edit_existing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
 
@@ -8356,27 +8360,26 @@ def handle_callback(cb):
     elif data == "vb_auto":
         # Auto-detect type from current content - skip picker
         social_type = state.get("current_social_type", "")
+        fmt_key = state.get("current_social_format", "")
         last_vb_type = state.get("last_visual_type", "")
         # Determine content type from whatever is available
-        if "Carousel" in social_type:
+        if "Carousel" in social_type or fmt_key == "fmt_carousel":
             state["img_engine"] = "claude"
             generate_visual_brief(chat_id, "carousel")
-        elif "Reel" in social_type:
+        elif "Reel" in social_type or fmt_key == "fmt_reel":
             state["img_engine"] = "claude"
             generate_visual_brief(chat_id, "reel")
-        elif "Static" in social_type:
+        elif "Static" in social_type or fmt_key == "fmt_static":
             generate_visual_brief(chat_id, "static")
-        elif "Story" in social_type:
+        elif "Story" in social_type or fmt_key in ("fmt_story_single", "fmt_story_multi"):
             generate_visual_brief(chat_id, "story")
         elif state.get("current_emails"):
             generate_visual_brief(chat_id, "email")
         elif state.get("current_ad") or state.get("current_ad_output"):
             generate_visual_brief(chat_id, "ad_static")
         elif last_vb_type:
-            # Reuse last known type
             generate_visual_brief(chat_id, last_vb_type)
         else:
-            # Fallback - ask which type
             keyboard = [
                 [{"text": "Static post",      "callback_data": "vb_type_static"}],
                 [{"text": "Carousel",         "callback_data": "vb_type_carousel"}],
