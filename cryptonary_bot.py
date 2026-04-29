@@ -2266,14 +2266,23 @@ MODEL_SONNET = "claude-sonnet-4-6"    # Hooks, angles, summaries, data analysis
 VOICE_LITE = "You write for Cryptonary, a crypto research brand. Voice: direct, data-led, British-casual, punchy. No em dashes. No fluff. Adam is the Co-Founder."
 
 
-def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=None):
+def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=None, effort=None):
     use_model = model or MODEL_OPUS
-    payload = json.dumps({
+    is_opus = "opus" in use_model.lower()
+    # Build payload
+    body = {
         "model": use_model,
         "max_tokens": max_tokens,
         "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
-    }).encode()
+    }
+    # Opus 4.7: adaptive thinking + effort parameter
+    if is_opus:
+        body["thinking"] = {"type": "adaptive"}
+        body["effort"] = effort or "high"
+    elif effort:
+        body["effort"] = effort
+    payload = json.dumps(body).encode()
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=payload,
@@ -2284,15 +2293,15 @@ def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=No
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.loads(r.read())
-                return "".join(c.get("text", "") for c in data["content"])
+                return "".join(c.get("text", "") for c in data["content"] if c.get("type") == "text")
         except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="ignore")
-            print(f"Claude API error {e.code} (attempt {attempt+1}): {body[:200]}", flush=True)
+            body_err = e.read().decode("utf-8", errors="ignore")
+            print(f"Claude API error {e.code} (attempt {attempt+1}): {body_err[:200]}", flush=True)
             if e.code in (500, 529) and attempt < retries:
-                time.sleep(5 * (attempt + 1))  # 5s, 10s backoff
-                last_err = Exception("API error " + str(e.code) + ": " + body[:200])
+                time.sleep(5 * (attempt + 1))
+                last_err = Exception("API error " + str(e.code) + ": " + body_err[:200])
                 continue
-            raise Exception("API error " + str(e.code) + ": " + body[:200])
+            raise Exception("API error " + str(e.code) + ": " + body_err[:200])
         except Exception as e:
             err_str = str(e)
             print(f"Claude call error (attempt {attempt+1}): {err_str[:200]}", flush=True)
@@ -2528,7 +2537,7 @@ def extract_text(v):
 
 def email_action_keyboard():
     return [
-        # Per-email editing - surgical
+        # Per-email editing
         [{"text": "✏️ Edit Free email",  "callback_data": "quick_edit_free"},
          {"text": "✏️ Edit Pro email",   "callback_data": "quick_edit_pro"}],
         [{"text": "✏️ Edit both emails", "callback_data": "quick_edit"}],
@@ -2536,15 +2545,11 @@ def email_action_keyboard():
         [{"text": "✅ Approve Free",      "callback_data": "approve_emails_free"},
          {"text": "✅ Approve Pro",       "callback_data": "approve_emails_pro"}],
         [{"text": "✅ Approve both",      "callback_data": "approve_emails_both"}],
-        # Global tools
+        # Tools
         [{"text": "Enhance",             "callback_data": "enhance"},
-         {"text": "🔄 Regenerate",       "callback_data": "regen_emails"},
-         {"text": "Tone",                "callback_data": "tone_menu"}],
-        [{"text": "Subject Lines",       "callback_data": "subject_ab"},
          {"text": "Critique",            "callback_data": "critique_email"},
-         {"text": "Segments",            "callback_data": "segments"}],
-        [{"text": "Length",              "callback_data": "length_email"},
-         {"text": "Add Context",         "callback_data": "add_context_email"},
+         {"text": "Length",              "callback_data": "length_email"}],
+        [{"text": "Add Context",         "callback_data": "add_context_email"},
          {"text": "👁 View current",     "callback_data": "view_current"}],
         [{"text": "✏️ Submit revised",   "callback_data": "submit_revised_email"},
          {"text": "✏️ Manual Edit",      "callback_data": "manual_edit_email"}],
@@ -2571,8 +2576,7 @@ def format_action_keyboard(fmt_key, fmt_label):
     kb = [
         [{"text": "Quick Edit", "callback_data": "sfmt_edit_" + fmt_key},
          {"text": "Enhance",    "callback_data": "sfmt_enhance_" + fmt_key}],
-        [{"text": "Approve",    "callback_data": "sfmt_approve_" + fmt_key}],
-        [{"text": "🔄 Regenerate", "callback_data": "sfmt_regen_" + fmt_key},
+        [{"text": "Approve",    "callback_data": "sfmt_approve_" + fmt_key},
          {"text": "Critique",  "callback_data": "critique_social_" + fmt_key},
          {"text": "Length",    "callback_data": "length_social"}],
         [{"text": "🎨 Visual brief",          "callback_data": "vb_auto"}],
@@ -2586,8 +2590,7 @@ def social_action_keyboard():
         [{"text": "Quick Edit",   "callback_data": "social_quick_edit"},
          {"text": "Enhance",      "callback_data": "social_enhance"},
          {"text": "Approve",      "callback_data": "approve_social"}],
-        [{"text": "🔄 Regenerate","callback_data": "gen_social_confirmed"},
-         {"text": "Length",       "callback_data": "length_social"},
+        [{"text": "Length",       "callback_data": "length_social"},
          {"text": "Critique",     "callback_data": "critique_social"}],
         [{"text": "🎨 Visual brief",          "callback_data": "vb_auto"},
          {"text": "✏️ Submit revised",        "callback_data": "submit_revised_social"}],
@@ -2670,7 +2673,7 @@ def gen_angles(chat_id):
         # Validate - if GPT returned placeholders, fall back to Claude
         placeholder_signs = ["alternative angle", "angle 1", "angle 2", "angle 3", "angle 4"]
         if any(any(p in a.lower() for p in placeholder_signs) for a in angles):
-            raw = claude(prompt, max_tokens=600, model=MODEL_SONNET, system=VOICE_LITE)
+            raw = claude(prompt, max_tokens=600, model=MODEL_SONNET, effort="medium", system=VOICE_LITE)
             angles = parse_numbered_list(raw, 4)
         user_state[chat_id]["angles"] = angles
         user_state[chat_id]["free_angles"] = angles
@@ -2727,7 +2730,7 @@ def gen_hooks(chat_id):
         hooks = parse_hooks(raw)
         # Validate - if hooks look generic/placeholder, fall back to Claude
         if not hooks or len(hooks) < 2:
-            raw = claude(prompt, max_tokens=400, model=MODEL_SONNET, system=VOICE_LITE)
+            raw = claude(prompt, max_tokens=400, model=MODEL_SONNET, effort="medium", system=VOICE_LITE)
             hooks = parse_hooks(raw)
         state["free_hooks"] = hooks
         state["pro_hooks"] = hooks
@@ -2787,7 +2790,7 @@ def gen_pro_hooks(chat_id):
         raw = claude(base + "\n\nPRO EMAIL ANGLE: " + pro_angle + avoid +
             "\n\nWrite 4 subject line + preview text combos for the PRO email.\n"
             "PRO hooks: Data-led, specific, authoritative. Paying members expect depth and directness.\n\n"
-            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400, model=MODEL_SONNET, system=VOICE_LITE)
+            "1. SUBJECT: [subject]\nPREVIEW: [preview]\n\n(repeat for all 4)", max_tokens=400, model=MODEL_SONNET, effort="medium", system=VOICE_LITE)
         hooks = parse_hooks(raw)
         state["pro_hooks"] = hooks
         state["stage"] = "pick_pro_hook"
@@ -2848,7 +2851,7 @@ def gen_emails(chat_id):
     prompt += "\n2. No markdown bold. British-casual voice."
     prompt += "\n3. ONLY reference specific assets, tokens, prices, levels, and data points that are explicitly mentioned in the REPORT or EXTRA CONTEXT above. Do NOT invent data, import tokens from the style reference examples, or mention any asset not in the report. If the report mentions BTC and ETH, the emails mention BTC and ETH only."
     prompt += "\n4. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with a clear CTA button line in square brackets e.g. [Upgrade to Pro] or [Read the report]. This is the clickable button the reader sees. It must match the CTA instruction exactly."
-    prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — Same rule. End with a clear CTA button line in square brackets."
+    prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — End with a clear CTA button line in square brackets e.g. [Read the Full Setup] or [View the Levels]. CRITICAL: The Pro email is sent to PAYING Pro members who already have Pro. NEVER suggest they 'Upgrade to Pro' or 'Join Pro' — they already have it. Pro CTAs should drive them to read the report, check the levels, view the analysis, etc."
     prompt += "\n6. Write BOTH emails in full. Do not truncate the Pro email."
     prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     # Pre-generation confirmation
@@ -3461,7 +3464,7 @@ def _thorough_summary(text):
             "• Any notable context (dates, sources, market conditions)\n\n"
             "Be specific — include actual numbers, not 'various metrics'.\n\n"
             "CONTENT:\n" + text[:3000],
-            max_tokens=500, model=MODEL_SONNET, system=VOICE_LITE
+            max_tokens=500, model=MODEL_SONNET, effort="medium", system=VOICE_LITE
         )
     except Exception:
         return ""
@@ -3550,7 +3553,7 @@ def _extract_content_outline(chat_id):
             "Each point should be ONE specific thing.\n\n"
             "REPORT:\n" + report[:3000] +
             "\n\nFormat:\n1. [point]\n2. [point]\n... and so on. Nothing else.",
-            max_tokens=1000, model=MODEL_SONNET
+            max_tokens=1000, model=MODEL_SONNET, effort="medium"
         )
         points = []
         for line in raw.strip().split('\n'):
@@ -3968,7 +3971,7 @@ def gen_subject_ab(chat_id):
             "\nCurrent subject: " + current_subject +
             avoid +
             "\n\nPrinciples to use (one each): curiosity gap, fear with specific data, contrarian/counterintuitive.\n\nFormat each option as:\n1. PRINCIPLE: [principle name]\nSUBJECT: [subject line]\nPREVIEW: [preview text]\nREASON: [one sentence]\n\n2. PRINCIPLE: ...\nAnd so on for all 3. Nothing else.",
-            max_tokens=700, model=MODEL_SONNET
+            max_tokens=700, model=MODEL_SONNET, effort="medium"
         )
         alternatives = parse_subject_alternatives(raw)
         state["subject_alternatives"] = alternatives
@@ -5919,7 +5922,6 @@ def handle_callback(cb):
         keyboard = [
             [{"text": "🎨 Rewrite in Adam's voice",       "callback_data": "ec_intent_voice"}],
             [{"text": "⚡ Punch it up (keep structure)",   "callback_data": "ec_intent_punch"}],
-            [{"text": "🏆 Add Cryptonary credibility",     "callback_data": "ec_intent_cred"}],
             [{"text": "🔄 Convert format",                 "callback_data": "ec_intent_convert"}],
             [{"text": "🎯 Fix one specific thing",         "callback_data": "ec_intent_fix"}],
             [{"text": "Back",                              "callback_data": "mode_edit_existing"}],
@@ -10065,7 +10067,7 @@ def run_email_analysis(chat_id):
 
     prompt = "Analyse this Cryptonary email performance data and provide:\n\n1. TOP PERFORMERS - top 3 emails and exactly what made them work (subject style, angle type, CTA)\n2. WORST PERFORMERS - bottom 3 and what likely caused underperformance\n3. PATTERN RECOGNITION - what patterns emerge across the data (which subject styles, angles, CTAs consistently outperform)\n4. SPLIT TEST RESULTS - if split test data exists, declare the winner with the aggregated numbers and statistical context\n5. ITERATION IDEAS - for the top performers, give 3 specific variations to test next\n6. IMPROVEMENT SUGGESTIONS - for underperformers, give specific fixes based on the copywriting principles you know\n\n" + summary + "\n\nBe specific and actionable. Reference actual subject lines and numbers."
     try:
-        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
+        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET, effort="medium")
         send_plain(chat_id, "EMAIL PERFORMANCE ANALYSIS\n\n" + analysis)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -10102,7 +10104,7 @@ def run_ad_analysis(chat_id):
 
     prompt = "Analyse this Cryptonary Meta ad performance data and provide:\n\n1. TOP PERFORMERS - best 3 ads with exactly what made them work (avatar, stage, hook type, which metrics stood out)\n2. WORST PERFORMERS - bottom 3 and diagnose where they failed (for video: which AIDA stage had the biggest drop-off? for static: which metric was weakest?)\n3. PATTERN RECOGNITION - what patterns emerge? (which avatars convert best, which stages perform, which ad types win)\n4. VIDEO AIDA DIAGNOSIS - for video ads, map the drop-off: high attention but low interest = hook works but body fails. High desire but low action = landing page issue. Give specific diagnosis per video.\n5. ITERATION IDEAS FOR WINNERS - for top performers, give 3 specific variants to test next\n6. IMPROVEMENT SUGGESTIONS FOR LOSERS - specific creative fixes based on the AIDA failure point or static metric weakness\n\n" + summary + "\n\nBe specific. Reference actual headlines and numbers."
     try:
-        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
+        analysis = claude(prompt, max_tokens=2000, model=MODEL_SONNET, effort="medium")
         send_plain(chat_id, "AD PERFORMANCE ANALYSIS\n\n" + analysis)
     except Exception as e:
         send(chat_id, "Error: " + str(e))
@@ -11975,17 +11977,16 @@ def build_image_prompt(concept, angle, post_type="breaking_news", extra_directio
 
 
 def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
-    """Call DALL-E 3 API and return the image URL."""
+    """Call GPT Image 2 API and return the image URL. Replaces DALL-E 3."""
     if not OPENAI_KEY:
         return None, "OpenAI key not configured. Add OPENAI_KEY to Render."
     try:
         body = json.dumps({
-            "model": "dall-e-3",
+            "model": "gpt-image-2",
             "prompt": prompt,
             "n": 1,
             "size": size,
-            "quality": quality,
-            "response_format": "url"
+            "quality": quality
         }).encode()
         req = urllib.request.Request(
             "https://api.openai.com/v1/images/generations",
@@ -11995,13 +11996,21 @@ def generate_dalle_image(prompt, size="1024x1024", quality="standard"):
                 "Content-Type": "application/json"
             }
         )
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=90) as r:
             result = json.loads(r.read())
-        url = result["data"][0]["url"]
-        revised = result["data"][0].get("revised_prompt", "")
-        return url, revised
+        # GPT Image 2 returns base64 by default, but we request URL
+        if result.get("data") and result["data"][0].get("url"):
+            url = result["data"][0]["url"]
+            revised = result["data"][0].get("revised_prompt", "")
+            return url, revised
+        elif result.get("data") and result["data"][0].get("b64_json"):
+            # Fallback: save base64 and return as data URI
+            b64 = result["data"][0]["b64_json"]
+            return "data:image/png;base64," + b64, ""
+        else:
+            return None, "Unexpected response format"
     except Exception as e:
-        print("DALL-E error:", e, flush=True)
+        print("GPT Image 2 error:", e, flush=True)
         return None, "Image generation failed: " + str(e)
 
 
@@ -12113,7 +12122,7 @@ RULES:
 - Make it look professional and on-brand""")
 
     try:
-        result = claude(prompt, max_tokens=2000, model=MODEL_SONNET)
+        result = claude(prompt, max_tokens=2000, model=MODEL_SONNET, effort="medium")
         # Extract SVG - handle markdown wrapping, code blocks, preamble text
         import re as _re
         # Strip markdown code blocks
@@ -14193,7 +14202,7 @@ TONE FOR TODAY
 
 Keep it tight. Every line should be actionable. No fluff. No padding."""
 
-        result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM, model=MODEL_SONNET)
+        result = claude(briefing_prompt, max_tokens=1500, system=DATA_STUDIO_SYSTEM, model=MODEL_SONNET, effort="medium")
 
         # Format header
         from datetime import datetime as _dt2
@@ -15159,7 +15168,7 @@ def apply_critique_fixes(chat_id, fix_numbers):
             "\n\nORIGINAL CONTENT:\n" + original[:4000] +
             output_format +
             "\n\nRules: No em dashes. Keep Adam's voice exactly. Every other word, sentence and section must remain identical.",
-            max_tokens=2500,
+            max_tokens=3000,
             timeout=120
         )
         result = clean_copy(result)
@@ -15224,6 +15233,10 @@ def apply_critique_fixes(chat_id, fix_numbers):
             send_plain(chat_id, str(len(fix_numbers)) + " fix(es) applied:\n\n" + result[:2500])
 
         save_voice_example(chat_id, result[:600], "critique_fix_" + content_type)
+
+        # Sync ec_rewritten if in Rework flow so quick edit shows the latest version
+        if state.get("ec_rewritten"):
+            state["ec_rewritten"] = result
 
         kb_map = {"email": email_action_keyboard, "ad": ad_action_keyboard,
                   "social": social_action_keyboard}
