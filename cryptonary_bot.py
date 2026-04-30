@@ -2276,17 +2276,18 @@ def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=No
         "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
     }
-    # Opus 4.7: adaptive thinking + effort parameter
+    # Opus 4.7: adaptive thinking
     if is_opus:
         body["thinking"] = {"type": "adaptive"}
-        body["effort"] = effort or "high"
-    elif effort:
-        body["effort"] = effort
+    # Effort goes in output_config for Claude 4.6+ models
+    eff = effort or ("high" if is_opus else None)
+    if eff:
+        body["output_config"] = {"effort": eff}
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=payload,
-        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"}
+        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"}
     )
     last_err = None
     for attempt in range(retries + 1):
@@ -2323,7 +2324,7 @@ def anthropic_vision(messages, max_tokens=1500, system=None):
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=payload,
-        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"}
+        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"}
     )
     try:
         with urllib.request.urlopen(req, timeout=180) as r:
@@ -9174,7 +9175,7 @@ def handle_reel_analysis(chat_id, video_obj, mode="analysis"):
                 headers={
                     "Content-Type": "application/json",
                     "x-api-key": ANTHROPIC_KEY,
-                    "anthropic-version": "2023-06-01"
+                    "anthropic-version": "2025-01-01"
                 }
             )
             with urllib.request.urlopen(req, timeout=60) as r:
@@ -9587,7 +9588,7 @@ def handle_video_idea_generation(chat_id, video_obj):
             headers={
                 "Content-Type": "application/json",
                 "x-api-key": ANTHROPIC_KEY,
-                "anthropic-version": "2023-06-01"
+                "anthropic-version": "2025-01-01"
             }
         )
         with urllib.request.urlopen(req, timeout=90) as r:
@@ -10598,7 +10599,7 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
         pay = json.dumps({"model": MODEL_SONNET, "max_tokens": tokens,
             "system": system_prompt, "messages": [{"role": "user", "content": blocks_with_prompt}]}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
-            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.loads(r.read())["content"][0]["text"]
@@ -10629,7 +10630,7 @@ def batched_vision_call(chat_id, images, analysis_prompt, extraction_prompt, sys
     synth_pay = json.dumps({"model": MODEL_SONNET, "max_tokens": max_tokens,
         "system": system_prompt, "messages": [{"role": "user", "content": synth_blocks}]}).encode()
     synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_pay,
-        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
     with urllib.request.urlopen(synth_req, timeout=timeout) as r:
         return json.loads(r.read())["content"][0]["text"]
 
@@ -10746,7 +10747,7 @@ def analyse_ads(chat_id):
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this Meta Ads Manager data:\n\n" + verified_data + "\n\n" + ads_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
             with urllib.request.urlopen(req, timeout=90) as r:
                 result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
@@ -10900,7 +10901,7 @@ Format clearly with headers."""
                     batch_payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 2000,
                         "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content": content_blocks}]}).encode()
                     batch_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=batch_payload,
-                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
                     with urllib.request.urlopen(batch_req, timeout=90) as r:
                         batch_results.append(json.loads(r.read())["content"][0]["text"])
 
@@ -10912,7 +10913,7 @@ Format clearly with headers."""
                         "I have extracted Instagram data in batches. Synthesise all of it into a single complete analysis.\n\n" +
                         combined + "\n\n" + analysis_prompt}]}).encode()
                 synth_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=synth_payload,
-                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
                 with urllib.request.urlopen(synth_req, timeout=90) as r:
                     result = json.loads(r.read())["content"][0]["text"]
             else:
@@ -10924,7 +10925,7 @@ Format clearly with headers."""
                 payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                     "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
                 req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                    headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
                 with urllib.request.urlopen(req, timeout=90) as r:
                     result = json.loads(r.read())["content"][0]["text"]
         else:
@@ -10932,7 +10933,7 @@ Format clearly with headers."""
             payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
                 "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
             with urllib.request.urlopen(req, timeout=90) as r:
                 result = json.loads(r.read())["content"][0]["text"]
 
@@ -11086,7 +11087,7 @@ STEP 5 - IDEAS:
                 "system": DATA_STUDIO_SYSTEM, "messages": [{"role": "user", "content":
                 "Analyse this email CSV:\n\n" + csv_text + "\n\n" + analysis_prompt}]}).encode()
             req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=pay,
-                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
             with urllib.request.urlopen(req, timeout=90) as r:
                 result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
@@ -11187,7 +11188,7 @@ STEP 5 - VERDICT: Winner, confidence, one recommendation. Keep it simple.
         payload = json.dumps({"model": MODEL_SONNET, "max_tokens": 3000,
             "system": DATA_STUDIO_SYSTEM, "messages": messages}).encode()
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload,
-            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+            headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
         with urllib.request.urlopen(req, timeout=90) as r:
             result = json.loads(r.read())["content"][0]["text"]
         state["last_ds_analysis"] = result
@@ -11253,7 +11254,7 @@ def handle_ds_file(chat_id, file_info, file_type="image"):
                         ]}]
                     }).encode()
                     check_req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=check_payload,
-                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"})
+                        headers={"Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2025-01-01"})
                     with urllib.request.urlopen(check_req, timeout=30) as r:
                         preview = json.loads(r.read())["content"][0]["text"].strip()
                 except:
