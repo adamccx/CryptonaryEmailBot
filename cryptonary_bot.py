@@ -2541,7 +2541,6 @@ def email_action_keyboard():
         # Per-email editing
         [{"text": "✏️ Edit Free email",  "callback_data": "quick_edit_free"},
          {"text": "✏️ Edit Pro email",   "callback_data": "quick_edit_pro"}],
-        [{"text": "✏️ Edit both emails", "callback_data": "quick_edit"}],
         # Approval
         [{"text": "✅ Approve Free",      "callback_data": "approve_emails_free"},
          {"text": "✅ Approve Pro",       "callback_data": "approve_emails_pro"}],
@@ -2851,8 +2850,8 @@ def gen_emails(chat_id):
     prompt += "\n1. No em dashes (- or –) anywhere. Use commas or short sentences instead."
     prompt += "\n2. No markdown bold. British-casual voice."
     prompt += "\n3. ONLY reference specific assets, tokens, prices, levels, and data points that are explicitly mentioned in the REPORT or EXTRA CONTEXT above. Do NOT invent data, import tokens from the style reference examples, or mention any asset not in the report. If the report mentions BTC and ETH, the emails mention BTC and ETH only."
-    prompt += "\n4. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with a clear CTA button line in square brackets e.g. [Upgrade to Pro] or [Read the report]. This is the clickable button the reader sees. It must match the CTA instruction exactly."
-    prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — End with a clear CTA button line in square brackets e.g. [Read the Full Setup] or [View the Levels]. CRITICAL: The Pro email is sent to PAYING Pro members who already have Pro. NEVER suggest they 'Upgrade to Pro' or 'Join Pro' — they already have it. Pro CTAs should drive them to read the report, check the levels, view the analysis, etc."
+    prompt += "\n4. FREE EMAIL CTA BUTTON: " + free_cta_instruction + " — The email MUST end with EXACTLY this CTA button in square brackets. The reader clicks this button. Write it as: [Button Text Here]. Match the CTA instruction as closely as possible."
+    prompt += "\n5. PRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — The email MUST end with EXACTLY this CTA button in square brackets. CRITICAL: Pro readers ALREADY PAY FOR PRO. NEVER use 'Upgrade to Pro', 'Join Pro', or any upgrade language. The CTA should drive them to read/view/access the content, e.g. [Read the Full Setup] or [" + pro_cta_instruction.split('.')[0][:40] + "]."
     prompt += "\n6. Write BOTH emails in full. Do not truncate the Pro email."
     prompt += "\n\nWrite the two emails separated by this exact delimiter. Do not use JSON. IMPORTANT: Every email MUST begin with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete free email body here]\n===FREE EMAIL END===\n\n===PRO EMAIL START===\nSubject Line: [subject here]\nPreview: [preview here]\n\n[complete pro email body here]\n===PRO EMAIL END==="
     # Pre-generation confirmation
@@ -2864,7 +2863,7 @@ def gen_emails(chat_id):
     summary += "Model: Opus 4.7"
     send(chat_id, summary)
     try:
-        raw = claude(prompt, max_tokens=3000, timeout=120, retries=2)
+        raw = claude(prompt, max_tokens=4096, timeout=120, retries=2)
         emails = parse_delimited_emails(raw)
         # Handle parse failure — new safe fallback returns empty dict
         if not emails:
@@ -2874,6 +2873,47 @@ def gen_emails(chat_id):
             ])
             state["stage"] = "idle"
             return
+
+        # Auto-generate missing email if only one parsed
+        has_free = "free" in emails and len(emails.get("free", "").strip()) > 50
+        has_pro = "pro" in emails and len(emails.get("pro", "").strip()) > 50
+        if has_free and not has_pro:
+            send(chat_id, "Free email ready. Generating Pro email...")
+            try:
+                pro_raw = claude(
+                    "Write a Pro email for Cryptonary based on this Free email and report.\n\n"
+                    "FREE EMAIL (already approved — use same angle and tone):\n" + emails["free"][:2000] +
+                    "\n\nREPORT:\n" + report[:1500] +
+                    "\n\nAngle: " + angle +
+                    "\n\nPRO EMAIL CTA BUTTON: " + pro_cta_instruction + " — in square brackets. Pro readers ALREADY PAY FOR PRO. Never use 'Upgrade to Pro'."
+                    "\n\nRules: No em dashes. British-casual. Pro email should be deeper, more data-dense, and directly actionable. Include specific levels, targets, and setups."
+                    "\n\nWrite ONLY the Pro email. Start with Subject Line: and Preview: on the first two lines.\n\n===PRO EMAIL START===\nSubject Line: [subject]\nPreview: [preview]\n\n[complete pro email]\n===PRO EMAIL END===",
+                    max_tokens=2000, timeout=90
+                )
+                pro_parsed = parse_delimited_emails(pro_raw)
+                if "pro" in pro_parsed and len(pro_parsed["pro"].strip()) > 50:
+                    emails["pro"] = pro_parsed["pro"]
+                    has_pro = True
+            except Exception as e2:
+                print(f"Pro email follow-up failed: {e2}", flush=True)
+        elif has_pro and not has_free:
+            send(chat_id, "Pro email ready. Generating Free email...")
+            try:
+                free_raw = claude(
+                    "Write a Free email for Cryptonary based on this Pro email.\n\n"
+                    "PRO EMAIL (already written — use same angle):\n" + emails["pro"][:2000] +
+                    "\n\nAngle: " + angle +
+                    "\n\nFREE EMAIL CTA BUTTON: " + free_cta_instruction + " — in square brackets."
+                    "\n\nRules: No em dashes. British-casual. Free email should tease the Pro content without giving it away. Create curiosity and urgency to upgrade."
+                    "\n\nWrite ONLY the Free email. Start with Subject Line: and Preview: on the first two lines.\n\n===FREE EMAIL START===\nSubject Line: [subject]\nPreview: [preview]\n\n[complete free email]\n===FREE EMAIL END===",
+                    max_tokens=2000, timeout=90
+                )
+                free_parsed = parse_delimited_emails(free_raw)
+                if "free" in free_parsed and len(free_parsed["free"].strip()) > 50:
+                    emails["free"] = free_parsed["free"]
+                    has_free = True
+            except Exception as e2:
+                print(f"Free email follow-up failed: {e2}", flush=True)
         # Apply clean_copy at storage time to catch any em dashes that slip through
         if "free" in emails:
             emails["free"] = clean_copy(extract_text(emails["free"]))
@@ -3517,7 +3557,7 @@ def _continue_social_after_format(chat_id):
 
     if has_report:
         fmt = state.get("selected_social_formats", [""])[0]
-        if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+        if fmt == "fmt_carousel":
             _extract_content_outline(chat_id)
         else:
             _go_to_social_angles(chat_id)
@@ -5507,6 +5547,34 @@ def handle_message(msg):
             "fix":     f"Fix the specific issue in this Cryptonary {label}. Only change what needs fixing - leave the rest intact. Issue to fix: {instruction}",
         }
         base_instruction = intent_instructions.get(intent, f"Improve this {label} in Adam's voice. Instruction: {instruction}")
+
+        # CONVERT: detect social format keywords and route to actual generation flow
+        if intent == "convert":
+            inst_lower = instruction.lower()
+            fmt_map = {
+                "reel": "fmt_reel", "reel script": "fmt_reel",
+                "carousel": "fmt_carousel",
+                "single slide story": "fmt_story_single", "single story": "fmt_story_single",
+                "story": "fmt_story_single",
+                "multi slide story": "fmt_story_multi", "multi-slide story": "fmt_story_multi",
+                "static": "fmt_static", "static post": "fmt_static", "instagram post": "fmt_static",
+            }
+            detected_fmt = None
+            for keyword, fmt_key in sorted(fmt_map.items(), key=lambda x: -len(x[0])):
+                if keyword in inst_lower:
+                    detected_fmt = fmt_key
+                    break
+            if detected_fmt:
+                # Route to social generation with original copy as report
+                user_state[chat_id] = {
+                    "stage": "pick_social_formats",
+                    "report": original[:4000],
+                    "selected_social_formats": [detected_fmt],
+                    "social_framework": "PAS" if detected_fmt in {"fmt_reel", "fmt_story_single", "fmt_story_multi"} else "AIDA",
+                }
+                send(chat_id, "Converting to " + detected_fmt.replace("fmt_", "").replace("_", " ") + "...")
+                _go_to_social_angles(chat_id)
+                return
 
         voice_ex = get_voice_corpus_context(chat_id)
         prompt = (
