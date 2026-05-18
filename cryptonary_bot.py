@@ -3204,9 +3204,11 @@ def gen_enhance(chat_id, mode="email"):
         send(chat_id, "Analysing emails against copywriting principles...")
         try:
             raw = claude(
-                "Analyse these Cryptonary emails against copywriting principles (Hormozi, Cashvertising LF8, Cialdini, Ogilvy). Generate exactly 8 specific, actionable improvement suggestions.\n\nEmails:\n" + email_text +
-                "\n\nFormat as a numbered list:\n1. PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific improvement]\n\n2. PRINCIPLE: ...\nAnd so on for all 8. Nothing else.",
-                max_tokens=1200
+                "Analyse these Cryptonary emails against copywriting principles (Hormozi, Cashvertising LF8, Cialdini, Ogilvy). Generate exactly 8 specific, actionable improvement suggestions.\n\n"
+                "CRITICAL: PREFIX every suggestion with [FREE] or [PRO] to indicate which email it applies to. If it applies to both, write [BOTH].\n\n"
+                "Emails:\n" + email_text +
+                "\n\nFormat as a numbered list:\n1. [FREE/PRO/BOTH] PRINCIPLE: [name]\nISSUE: [what is weak]\nFIX: [specific improvement]\n\n2. [FREE/PRO/BOTH] PRINCIPLE: ...\nAnd so on for all 8. Nothing else.",
+                max_tokens=1500
             )
             suggestions = parse_enhance_suggestions(raw)
             state["enhance_suggestions"] = suggestions
@@ -3790,16 +3792,48 @@ def gen_story(chat_id, multi=False):
         outline_block = ""
         if approved_outline:
             outline_block = "\n\nAPPROVED CONTENT POINTS (include all of these):\n" + approved_outline + "\n"
-        result = claude(
-            (voice_examples_story + "\n\n" if voice_examples_story else "") +
-            "Create an Instagram Story for Cryptonary: " + slide_instruction + "\n\n" +
-            ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
-            "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
-            "\nAngle: " + angle + "\nEmail reference: " + source_email +
-            outline_block +
-            "\n\nRULES:\n- Write ONLY the text/copy for each slide - no visual directions, no sticker notes, no background descriptions\n- Format: SLIDE N:\\n[slide text, max 30 words - enough to land the point with full context]\n- Each slide should carry ONE complete thought or insight - don't truncate ideas to hit a word count\n- Cliffhanger between slides if multi\n- Final slide: button CTA text only (e.g. 'Read the full report', 'Join Pro', 'Get the levels') - the button link is set separately, just write the CTA label\n- Urgent, direct tone. Short punchy sentences.\n\nReturn as plain string.",
-            max_tokens=700
-        )
+
+        if not multi:
+            # SINGLE SLIDE STORY — longer, punchier, always has CTA
+            result = claude(
+                (voice_examples_story + "\n\n" if voice_examples_story else "") +
+                "Create a SINGLE SLIDE Instagram Story for Cryptonary.\n\n" +
+                ("HEADLINE (use this as the opening line): " + hook + "\n\n" if hook else "") +
+                "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+                "\nAngle: " + angle + "\nEmail reference: " + source_email +
+                outline_block +
+                "\n\nRULES:\n"
+                "- This is ONE slide. Write 60-100 words of punchy, direct copy.\n"
+                "- Structure: Bold opening line → 2-3 short punchy sentences that build tension or curiosity → clear CTA at the bottom\n"
+                "- The CTA is a tappable button label (e.g. 'Read the Full Setup', 'Watch the Breakdown', 'Get the Levels'). Write it on its own line at the end.\n"
+                "- Urgent, direct tone. Short sentences. Every word earns its place.\n"
+                "- Include specific numbers, levels, and data from the report — don't be vague.\n"
+                "- Write ONLY the text/copy — no visual directions, no sticker notes, no background descriptions.\n"
+                "- Do NOT use bullet points. Write as flowing short sentences.\n\n"
+                "Return as plain string.",
+                max_tokens=800
+            )
+        else:
+            # MULTI-SLIDE STORY
+            result = claude(
+                (voice_examples_story + "\n\n" if voice_examples_story else "") +
+                "Create a " + str(story_slides) + "-slide Instagram Story series for Cryptonary.\n\n" +
+                ("OPENING SLIDE TEXT (use this as slide 1): " + hook + "\n\n" if hook else "") +
+                "SOURCE:\nReport: " + report + ("\nContext: " + context if context else "") +
+                "\nAngle: " + angle + "\nEmail reference: " + source_email +
+                outline_block +
+                "\n\nRULES:\n"
+                "- EXACTLY " + str(story_slides) + " slides, numbered SLIDE 1 through SLIDE " + str(story_slides) + "\n"
+                "- Each slide: 40-80 words of punchy copy. No bullet points. Flowing short sentences.\n"
+                "- Format: SLIDE N:\n[slide text]\n"
+                "- Include specific numbers, levels, and data — don't be vague.\n"
+                "- Build tension across slides — each one creates a cliffhanger for the next.\n"
+                "- Final slide MUST end with a CTA button label on its own line (e.g. 'Read the Full Report', 'Get the Levels').\n"
+                "- Write ONLY the text/copy — no visual directions, no sticker notes, no background descriptions.\n"
+                "- Urgent, direct tone. Every word earns its place.\n\n"
+                "Return as plain string.",
+                max_tokens=1200
+            )
         social_type = "Story (" + str(story_slides) + " slides)" if multi else "Story (single)"
         result = clean_copy(result)
         result, voice_issues = _check_voice_rules(result)
@@ -15128,14 +15162,23 @@ def run_critique(chat_id, content_type):
     send(chat_id, "Critiquing your " + label + "...")
 
     try:
-        result = claude(
-            "Critique this " + label + ".\n\n"
+        critique_prompt = "Critique this " + label + ".\n\n"
+        if content_type == "email":
+            critique_prompt += (
+                "CRITICAL: You are critiquing TWO separate emails (Free and Pro). "
+                "PREFIX every fix with [FREE] or [PRO] to indicate which email it applies to. "
+                "If a fix applies to both, write [BOTH].\n\n"
+            )
+        critique_prompt += (
             "CRITICAL RULES BEFORE YOU START:\n"
             "1. Read the COMPLETE content below before writing any critique\n"
             "2. Only flag issues that genuinely exist in what you can read\n"
             "3. If the content ends mid-sentence with '[...email continues]', ignore anything after that marker - do NOT flag missing CTAs, P.S., or sign-offs that may exist beyond the preview\n"
             "4. Do not invent problems. Only flag what is actually wrong\n\n"
-            "CONTENT TO CRITIQUE:\n\n" + content_to_critique,
+            "CONTENT TO CRITIQUE:\n\n" + content_to_critique
+        )
+        result = claude(
+            critique_prompt,
             max_tokens=1500,
             system=CRITIQUE_SYSTEM
         )
