@@ -2276,13 +2276,12 @@ def claude(prompt, max_tokens=1500, system=None, timeout=90, retries=2, model=No
         "system": system if system else VOICE_GUIDE,
         "messages": [{"role": "user", "content": prompt}]
     }
-    # Opus 4.7: adaptive thinking
+    # Opus 4.7: adaptive thinking + effort
     if is_opus:
         body["thinking"] = {"type": "adaptive"}
-    # Effort goes in output_config for Claude 4.6+ models
-    eff = effort or ("high" if is_opus else None)
-    if eff:
+        eff = effort or "high"
         body["output_config"] = {"effort": eff}
+    # Sonnet: no thinking, no effort — plain call
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
@@ -3550,6 +3549,70 @@ def _extract_cta_buttons(text):
                     "report", "levels", "inner", "circle", "subscribe"]
     ctas = [b for b in buttons if any(k in b.lower() for k in cta_keywords)]
     return ctas
+
+
+def handle_caption_from_image(chat_id, photo_obj):
+    """Analyse an uploaded graphic and write an Instagram caption for it."""
+    send(chat_id, "Analysing your graphic...")
+    try:
+        file_id = photo_obj.get("file_id", "")
+        path_data = tg("getFile", {"file_id": file_id})
+        file_path = path_data.get("result", {}).get("file_path", "")
+        if not file_path:
+            send(chat_id, "Could not get file from Telegram. Try again.")
+            return
+
+        download_url = "https://api.telegram.org/file/bot" + TELEGRAM_TOKEN + "/" + file_path
+        req = urllib.request.Request(download_url)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            image_data = r.read()
+        import base64
+        b64_image = base64.b64encode(image_data).decode("utf-8")
+
+        # Detect content type
+        if file_path.endswith(".png"):
+            media_type = "image/png"
+        elif file_path.endswith(".webp"):
+            media_type = "image/webp"
+        else:
+            media_type = "image/jpeg"
+
+        # Use anthropic_vision to analyse the image and write caption
+        messages = [{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64_image}},
+            {"type": "text", "text":
+                "You are writing an Instagram caption for Cryptonary — a crypto research and education platform.\n\n"
+                "ANALYSE this graphic and write a caption that:\n"
+                "1. Opens with a hook that stops the scroll (first line is critical)\n"
+                "2. References the specific content shown in the graphic — read any text, charts, numbers visible\n"
+                "3. Adds context or a take that makes someone want to engage\n"
+                "4. Ends with a CTA (save, share, follow, comment, link in bio)\n"
+                "5. Includes 3-5 relevant hashtags at the end\n\n"
+                "STYLE: Adam's voice — direct, punchy, British-casual. Short sentences. No em dashes. No fluff.\n"
+                "LENGTH: 80-150 words. Not a wall of text.\n\n"
+                "Return ONLY the caption text. No preamble."
+            }
+        ]}]
+
+        result = anthropic_vision(messages, max_tokens=800, system=VOICE_LITE)
+        result = clean_copy(result)
+        result, voice_issues = _check_voice_rules(result)
+
+        state = user_state.get(chat_id, {})
+        state["current_social"] = result
+        state["current_social_type"] = "Caption"
+        state["current_social_format"] = "fmt_static"
+        state["stage"] = "social_ready"
+
+        send_plain(chat_id, "*CAPTION*\n\n" + result)
+        stats = _word_count_line(result, "Caption")
+        if voice_issues:
+            stats += " | ⚠️ " + " | ".join(voice_issues)
+        send(chat_id, stats, social_action_keyboard())
+
+    except Exception as e:
+        print("Caption from image error:", e, flush=True)
+        send(chat_id, "Failed to analyse image: " + str(e)[:150] + "\n\nTry uploading a clearer image, or paste a description of what the graphic shows.")
 
 
 def _continue_social_after_format(chat_id):
@@ -5524,8 +5587,8 @@ def handle_message(msg):
         # Format is already selected (new flow: format first, then report)
         fmt = state.get("selected_social_formats", [""])[0] if state.get("selected_social_formats") else ""
         if fmt:
-            # Format already picked — go to outline (carousel/story) or angles
-            if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+            # Format already picked — carousel goes through outline, everything else straight to angles
+            if fmt == "fmt_carousel":
                 _extract_content_outline(chat_id)
             else:
                 _go_to_social_angles(chat_id)
@@ -5851,7 +5914,7 @@ def handle_message(msg):
             user_state[chat_id]["report"] = text
             fmt = user_state[chat_id].get("selected_social_formats", [""])[0] if user_state[chat_id].get("selected_social_formats") else ""
             if fmt:
-                if fmt in {"fmt_carousel", "fmt_story_single", "fmt_story_multi"}:
+                if fmt == "fmt_carousel":
                     _extract_content_outline(chat_id)
                 else:
                     _go_to_social_angles(chat_id)
@@ -5956,7 +6019,6 @@ def handle_callback(cb):
         keyboard = [
             [{"text": "Emails",              "callback_data": "mode_email"}],
             [{"text": "Socials",             "callback_data": "mode_social"}],
-            [{"text": "Adverts",             "callback_data": "mode_ads"}],
             [{"text": "Rework",              "callback_data": "mode_edit_existing"}],
         ]
         send(chat_id, "*Writing Studio*\n\nWhat do you want to create?", keyboard)
@@ -6162,6 +6224,10 @@ def handle_callback(cb):
         send(chat_id,
              "*YouTube Description*\n\nPaste anything - transcript, script, report, email copy, or a quick brief.\n\n_Already have a description? Tap below to tighten it instead._",
              keyboard)
+
+    elif data == "caption_from_image":
+        user_state[chat_id] = {"stage": "awaiting_caption_image"}
+        send(chat_id, "*Write Caption*\n\nUpload the graphic (reel thumbnail, static post, carousel cover, etc).\n\nI'll analyse it and write a caption that matches the visual.")
 
     elif data == "yt_mode_edit":
         state["yt_mode"] = "edit"
@@ -8671,21 +8737,24 @@ def poll():
                         elif "photo" in msg:
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             stage = user_state[chat_id].get("stage", "idle")
-                            content_stages = ["awaiting_report","buffering_report",
-                                "awaiting_email_report",
-                                "awaiting_social_report","awaiting_ad_theme",
-                                "awaiting_lp_context_text","awaiting_ad_existing_upload",
-                                "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction", "awaiting_custom_free_cta", "awaiting_custom_pro_cta"]
-                            ie_stages = ["ie_awaiting_screenshot_ideas",
-                                "ie_awaiting_screenshot_critique",
-                                "ie_awaiting_pasted_text",
-                                "ie_awaiting_inspiration"]
-                            if stage in content_stages:
-                                handle_content_file(chat_id, msg["photo"][-1], "image")
-                            elif stage in ie_stages:
-                                handle_ie_screenshot(chat_id, msg["photo"][-1], stage)
+                            if stage == "awaiting_caption_image":
+                                handle_caption_from_image(chat_id, msg["photo"][-1])
                             else:
-                                handle_ds_file(chat_id, msg["photo"][-1], "image")
+                                content_stages = ["awaiting_report","buffering_report",
+                                    "awaiting_email_report",
+                                    "awaiting_social_report","awaiting_ad_theme",
+                                    "awaiting_lp_context_text","awaiting_ad_existing_upload",
+                                    "yt_awaiting_content","yt_awaiting_existing","awaiting_ad_creative_upload","awaiting_revised_email","awaiting_storyboard_brief","awaiting_storyboard_report", "ie_awaiting_video_ideas", "awaiting_revised_social", "awaiting_revised_free_email", "awaiting_revised_pro_email", "awaiting_revised_ad", "yt_awaiting_quick_edit", "awaiting_revised_yt", "ec_awaiting_instruction", "ec_awaiting_specific", "ec_quick_editing", "awaiting_format_instruction", "awaiting_custom_free_cta", "awaiting_custom_pro_cta"]
+                                ie_stages = ["ie_awaiting_screenshot_ideas",
+                                    "ie_awaiting_screenshot_critique",
+                                    "ie_awaiting_pasted_text",
+                                    "ie_awaiting_inspiration"]
+                                if stage in content_stages:
+                                    handle_content_file(chat_id, msg["photo"][-1], "image")
+                                elif stage in ie_stages:
+                                    handle_ie_screenshot(chat_id, msg["photo"][-1], stage)
+                                else:
+                                    handle_ds_file(chat_id, msg["photo"][-1], "image")
                         elif "document" in msg:
                             user_state.setdefault(chat_id, {"stage": "idle"})
                             stage = user_state[chat_id].get("stage", "idle")
@@ -9911,6 +9980,7 @@ def show_standalone_social_menu(chat_id):
         [{"text": "Static Post + Caption",   "callback_data": "pick_fmt_fmt_static"}],
         [{"text": "Story - Single slide",    "callback_data": "pick_fmt_fmt_story_single"}],
         [{"text": "Story - Multi slide",     "callback_data": "pick_fmt_fmt_story_multi"}],
+        [{"text": "📸 Write Caption (upload graphic)", "callback_data": "caption_from_image"}],
         [{"text": "🎬 YouTube Description",  "callback_data": "social_mode_yt"}],
     ]
     send(chat_id, "*Pick a format:*", keyboard)
@@ -11671,6 +11741,10 @@ def transcribe_voice(file_id):
             audio_data + b"\r\n" +
             ("--" + boundary + "\r\n").encode() +
             b"Content-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n" +
+            ("--" + boundary + "\r\n").encode() +
+            b"Content-Disposition: form-data; name=\"language\"\r\n\r\nen\r\n" +
+            ("--" + boundary + "\r\n").encode() +
+            b"Content-Disposition: form-data; name=\"response_format\"\r\n\r\nverbose_json\r\n" +
             ("--" + boundary + "--\r\n").encode()
         )
         for attempt in range(2):
@@ -11683,9 +11757,12 @@ def transcribe_voice(file_id):
                         "Content-Type": "multipart/form-data; boundary=" + boundary
                     }
                 )
-                with urllib.request.urlopen(req, timeout=60) as r:
+                with urllib.request.urlopen(req, timeout=120) as r:
                     result = json.loads(r.read())
                     transcript = result.get("text", "").strip()
+                    duration = result.get("duration", 0)
+                    if duration:
+                        print(f"Whisper: transcribed {round(duration)}s audio, {len(transcript)} chars", flush=True)
                     return transcript, None
             except Exception as e:
                 err_str = str(e)
@@ -11726,6 +11803,10 @@ def handle_voice_message(chat_id, voice):
         "awaiting_custom_free_cta", "awaiting_custom_pro_cta",
         # Social flow
         "awaiting_social_report",
+        # YouTube description
+        "yt_awaiting_content", "yt_awaiting_existing", "yt_awaiting_quick_edit",
+        # Outline + regen feedback
+        "outline_awaiting_numbers", "awaiting_regen_feedback",
         # ALL quick edit stages
         "awaiting_quick_edit", "social_quick_edit",
         "awaiting_lp_quick_edit", "awaiting_ad_quick_edit", "awaiting_social_quick_edit",
