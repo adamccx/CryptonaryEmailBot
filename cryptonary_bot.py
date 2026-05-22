@@ -3615,6 +3615,101 @@ def handle_caption_from_image(chat_id, photo_obj):
         send(chat_id, "Failed to analyse image: " + str(e)[:150] + "\n\nTry uploading a clearer image, or paste a description of what the graphic shows.")
 
 
+def _run_proof_check(chat_id):
+    """Cross-check copy against source material for factual accuracy."""
+    state = user_state.get(chat_id, {})
+    copy = state.get("pc_copy", "")
+    source = state.get("pc_source", "")
+
+    if not copy or not source:
+        send(chat_id, "Missing copy or source. Start again.", [[{"text": "Rework", "callback_data": "mode_edit_existing"}]])
+        return
+
+    send(chat_id, "Cross-checking copy against source material...")
+    try:
+        raw = claude(
+            "You are a fact-checker for a crypto research platform. Cross-check this COPY against the SOURCE MATERIAL.\n\n"
+            "COPY TO CHECK:\n" + copy[:3000] +
+            "\n\nSOURCE MATERIAL:\n" + source[:3000] +
+            "\n\nFind EVERY factual inaccuracy, misquoted number, wrong level, incorrect percentage, "
+            "wrong date, misattributed claim, or any statement in the copy that contradicts or isn't supported by the source.\n\n"
+            "ALSO flag: numbers that are close but slightly wrong (e.g. source says $97.2K, copy says $97K — flag it), "
+            "directional claims that don't match (e.g. source says bearish, copy implies bullish), "
+            "and any data point in the copy that doesn't appear anywhere in the source.\n\n"
+            "For each issue, respond in this EXACT format:\n"
+            "ISSUE N:\n"
+            "WRONG: [exact text from copy that's wrong — copy it verbatim]\n"
+            "SHOULD BE: [what it should say based on the source]\n"
+            "REASON: [one sentence explaining the discrepancy]\n\n"
+            "If the copy is factually accurate, respond with: NO ISSUES FOUND.\n\n"
+            "Only flag genuine factual errors. Do NOT flag style, tone, or copywriting quality.",
+            max_tokens=2000
+        )
+
+        # Parse issues
+        issues = []
+        blocks = raw.split("ISSUE ")
+        for block in blocks[1:]:  # skip preamble
+            wrong = ""
+            fix = ""
+            reason = ""
+            for line in block.strip().split("\n"):
+                line = line.strip()
+                if line.startswith("WRONG:"):
+                    wrong = line[6:].strip()
+                elif line.startswith("SHOULD BE:"):
+                    fix = line[10:].strip()
+                elif line.startswith("REASON:"):
+                    reason = line[7:].strip()
+            if wrong and fix:
+                issues.append({"wrong": wrong, "fix": fix, "reason": reason, "applied": False})
+
+        state["pc_issues"] = issues
+        state["stage"] = "pc_review"
+
+        if not issues or "NO ISSUES FOUND" in raw.upper():
+            send(chat_id, "✅ *No factual issues found.* The copy matches the source material.", [
+                [{"text": "Back to Rework", "callback_data": "mode_edit_existing"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ])
+            return
+
+        _show_pc_issues(chat_id)
+
+    except Exception as e:
+        send(chat_id, "Proof check failed: " + str(e)[:150], [[{"text": "Try again", "callback_data": "proof_check"}]])
+
+
+def _show_pc_issues(chat_id):
+    """Display proof check issues with fix buttons."""
+    state = user_state.get(chat_id, {})
+    issues = state.get("pc_issues", [])
+
+    text = "*Proof Check — " + str(len(issues)) + " issue(s) found:*\n\n"
+    keyboard = []
+    unapplied = 0
+
+    for i, issue in enumerate(issues):
+        status = "✅" if issue.get("applied") else "❌"
+        text += status + " *Issue " + str(i + 1) + ":*\n"
+        text += "Wrong: _" + issue["wrong"][:80] + "_\n"
+        text += "Should be: _" + issue["fix"][:80] + "_\n"
+        if issue.get("reason"):
+            text += "Why: " + issue["reason"][:100] + "\n"
+        text += "\n"
+        if not issue.get("applied"):
+            keyboard.append([{"text": "Fix " + str(i + 1), "callback_data": "pc_fix_" + str(i)}])
+            unapplied += 1
+
+    if unapplied > 1:
+        keyboard.append([{"text": "Fix all (" + str(unapplied) + ")", "callback_data": "pc_fix_all"}])
+    keyboard.append([{"text": "👁 View corrected copy", "callback_data": "pc_view_corrected"}])
+    keyboard.append([{"text": "Back to Rework", "callback_data": "mode_edit_existing"}])
+
+    send_plain(chat_id, text)
+    send(chat_id, str(unapplied) + " unapplied fix(es).", keyboard)
+
+
 def _continue_social_after_format(chat_id):
     """After format (and framework) selected, check if report exists."""
     state = user_state.get(chat_id, {})
@@ -5542,6 +5637,17 @@ def handle_message(msg):
         handle_image_direction(chat_id, text)
         return
 
+    if stage == "pc_awaiting_copy":
+        state["pc_copy"] = text.strip()
+        state["stage"] = "pc_awaiting_source"
+        send(chat_id, "Got it. Now paste the *source material* — the report, data, research, or original content this copy was based on.\n\n_This is what I'll check the copy against for accuracy._")
+        return
+
+    if stage == "pc_awaiting_source":
+        state["pc_source"] = text.strip()
+        _run_proof_check(chat_id)
+        return
+
     if stage == "outline_awaiting_numbers":
         # User types numbers like "1,3,5,7" or "all" + optional extra content
         points = state.get("content_outline_points", [])
@@ -5969,6 +6075,7 @@ def handle_message(msg):
             "yt_awaiting_existing", "lp_awaiting_paste_back", "lp_awaiting_length_instruction",
             "awaiting_storyboard_brief", "awaiting_storyboard_report",
             "outline_awaiting_numbers", "awaiting_regen_feedback",
+            "pc_awaiting_copy", "pc_awaiting_source",
         }
         if current_stage in _legitimate_input_stages:
             return  # Let handle_message's stage routing handle it below
@@ -6071,9 +6178,10 @@ def handle_callback(cb):
             [{"text": "📧 Email",           "callback_data": "ec_type_email"}],
             [{"text": "📱 Socials",          "callback_data": "ec_type_social"}],
             [{"text": "📄 General",          "callback_data": "ec_type_general"}],
+            [{"text": "🔍 Proof Check",      "callback_data": "proof_check"}],
             [{"text": "Back",               "callback_data": "open_content_studio"}],
         ]
-        send(chat_id, "*Rework*\n\nWhat type of copy are you bringing in?", keyboard)
+        send(chat_id, "*Rework*\n\nWhat do you want to do?", keyboard)
 
     elif data.startswith("ec_type_"):
         ec_type = data.replace("ec_type_", "")
@@ -6148,6 +6256,72 @@ def handle_callback(cb):
             state["current_social"] = rewritten
             state["current_social_type"] = "Reworked " + ec_type
             gen_enhance(chat_id, mode="social")
+
+    elif data == "proof_check":
+        user_state[chat_id] = {"stage": "pc_awaiting_copy"}
+        send(chat_id, "*Proof Check*\n\nPaste the copy you want to fact-check:\n\n_This is the email, social post, or article you've written or generated._")
+
+    elif data.startswith("pc_fix_"):
+        fix_num = int(data.replace("pc_fix_", ""))
+        issues = state.get("pc_issues", [])
+        if fix_num < len(issues):
+            issue = issues[fix_num]
+            copy = state.get("pc_copy", "")
+            wrong_text = issue.get("wrong", "")
+            fix_text = issue.get("fix", "")
+            if wrong_text and fix_text and wrong_text in copy:
+                copy = copy.replace(wrong_text, fix_text, 1)
+                state["pc_copy"] = copy
+                state["pc_issues"][fix_num]["applied"] = True
+                send(chat_id, "✅ Fix " + str(fix_num + 1) + " applied.")
+                # Show updated issue list
+                _show_pc_issues(chat_id)
+            else:
+                send(chat_id, "Couldn't apply fix automatically. The exact text wasn't found in the copy.\n\nManual fix needed: replace\n_" + wrong_text[:80] + "_\nwith\n_" + fix_text[:80] + "_")
+        else:
+            send(chat_id, "Fix not found.")
+
+    elif data == "pc_fix_all":
+        issues = state.get("pc_issues", [])
+        copy = state.get("pc_copy", "")
+        applied = 0
+        for i, issue in enumerate(issues):
+            if issue.get("applied"):
+                continue
+            wrong = issue.get("wrong", "")
+            fix = issue.get("fix", "")
+            if wrong and fix and wrong in copy:
+                copy = copy.replace(wrong, fix, 1)
+                issues[i]["applied"] = True
+                applied += 1
+        state["pc_copy"] = copy
+        state["pc_issues"] = issues
+        send(chat_id, "✅ " + str(applied) + " fix(es) applied.")
+        _show_pc_issues(chat_id)
+
+    elif data == "pc_view_corrected":
+        copy = state.get("pc_copy", "")
+        if copy:
+            send_plain(chat_id, "*CORRECTED COPY:*\n\n" + copy)
+            keyboard = [
+                [{"text": "✅ Use this version", "callback_data": "pc_use"}],
+                [{"text": "Back to Rework",      "callback_data": "mode_edit_existing"}],
+            ]
+            send(chat_id, _word_count_line(copy), keyboard)
+        else:
+            send(chat_id, "No copy in session.")
+
+    elif data == "pc_use":
+        copy = state.get("pc_copy", "")
+        if copy:
+            state["ec_rewritten"] = copy
+            state["ec_original"] = copy
+            state["stage"] = "ec_done"
+            keyboard = [
+                [{"text": "Load into email flow", "callback_data": "ec_use_version"}],
+                [{"text": "Back to Writing Studio", "callback_data": "open_content_studio"}],
+            ]
+            send(chat_id, "Proof-checked copy ready.", keyboard)
 
     elif data == "ec_approve":
         # Save the rewritten version to voice corpus and proceed
@@ -11807,6 +11981,7 @@ def handle_voice_message(chat_id, voice):
         "yt_awaiting_content", "yt_awaiting_existing", "yt_awaiting_quick_edit",
         # Outline + regen feedback
         "outline_awaiting_numbers", "awaiting_regen_feedback",
+            "pc_awaiting_copy", "pc_awaiting_source",
         # ALL quick edit stages
         "awaiting_quick_edit", "social_quick_edit",
         "awaiting_lp_quick_edit", "awaiting_ad_quick_edit", "awaiting_social_quick_edit",
